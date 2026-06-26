@@ -9,6 +9,7 @@ import { BenchPanel } from "./BenchPanel";
 import { LogoDesignerModal } from "./LogoDesignerModal";
 import { MatchPoster } from "./MatchPoster";
 import { PosterToolbar } from "./PosterToolbar";
+import { UserAuthButton } from "./UserAuthButton";
 
 const PlayerEditModal = dynamic(
   () =>
@@ -86,6 +87,8 @@ export function AppShell() {
       <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
         <h1 className="text-sm font-black tracking-wide">⚽ Halı Saha Kadro</h1>
         <div className="flex items-center gap-2">
+          <UserAuthButton />
+          <div className="hidden sm:block h-5 w-px bg-zinc-800" />
           <div className="flex bg-zinc-800 rounded p-0.5 text-[11px]">
             <button
               type="button"

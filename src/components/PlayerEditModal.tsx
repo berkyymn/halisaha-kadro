@@ -15,6 +15,12 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { blobUrlToDataUrl, fileToDataUrl } from "@/lib/fileToDataUrl";
+import {
+  compressDataUrl,
+  getPhotoDisplayStyle,
+  getPhotoImgClassName,
+} from "@/lib/imageCompress";
+import { PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
 import { removeBackground } from "@/lib/backgroundRemoval";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import { useAppStore } from "@/store/useAppStore";
@@ -95,6 +101,7 @@ function PlayerEditModalBody({
   const [bgProgress, setBgProgress] = useState<string | null>(null);
   const [bgError, setBgError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [saving, setSaving] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const playerCardSize = useAppStore((s) => s.playerCardSize);
@@ -104,11 +111,12 @@ function PlayerEditModalBody({
     useModalBackdrop({
       open: true,
       onClose,
-      busy: removingBg,
+      busy: removingBg || saving,
     });
 
   const hasPhoto = Boolean(photoSource);
   const displaySrc = cutoutUrl || photoSource;
+  const isCutout = Boolean(cutoutUrl);
 
   const handleFile = async (file: File) => {
     clearPickingFile();
@@ -147,7 +155,8 @@ function PlayerEditModalBody({
         },
       });
       const dataUrl = await blobUrlToDataUrl(blobUrl);
-      setCutoutUrl(dataUrl);
+      const compressed = await compressDataUrl(dataUrl, { kind: "cutout" });
+      setCutoutUrl(compressed);
       setBgProgress(null);
     } catch (err) {
       console.error("Background removal failed:", err);
@@ -180,20 +189,34 @@ function PlayerEditModalBody({
     e.preventDefault();
     setCrop((c) => ({
       ...c,
-      scale: Math.max(1, Math.min(3, c.scale - e.deltaY * 0.002)),
+      scale: Math.max(1, Math.min(5, c.scale - e.deltaY * 0.002)),
     }));
   }, []);
 
-  const handleSave = () => {
-    onSave({
-      name: name.trim(),
-      number,
-      photoSource: photoSource ?? undefined,
-      cutoutUrl: cutoutUrl ?? undefined,
-      photoCrop: crop,
-      clearPhoto: !photoSource && !cutoutUrl,
-    });
-    onClose();
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      let finalPhoto = photoSource ?? undefined;
+      let finalCutout = cutoutUrl ?? undefined;
+      if (finalPhoto?.startsWith("data:")) {
+        finalPhoto = await compressDataUrl(finalPhoto, { kind: "photo" });
+      }
+      if (finalCutout?.startsWith("data:")) {
+        finalCutout = await compressDataUrl(finalCutout, { kind: "cutout" });
+      }
+      onSave({
+        name: name.trim(),
+        number,
+        photoSource: finalPhoto,
+        cutoutUrl: finalCutout,
+        photoCrop: crop,
+        clearPhoto: !finalPhoto && !finalCutout,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const previewPlayer: Player = {
@@ -347,11 +370,9 @@ function PlayerEditModalBody({
                     <img
                       src={displaySrc!}
                       alt=""
-                      className="w-full h-full object-cover pointer-events-none"
-                      style={{
-                        transform: `scale(${crop.scale}) translate(${crop.panX / crop.scale}px, ${crop.panY / crop.scale}px)`,
-                        transformOrigin: "center center",
-                      }}
+                      draggable={false}
+                      className={getPhotoImgClassName(isCutout)}
+                      style={getPhotoDisplayStyle(crop, isCutout, PHOTO_CROP_VIEWPORT_REF)}
                     />
                     {removingBg && (
                       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-1 px-2 text-center">
@@ -364,7 +385,8 @@ function PlayerEditModalBody({
                   </div>
                 </div>
                 <p className="text-center text-[10px] text-zinc-600 mt-1.5">
-                  Sürükle · scroll ile yakınlaştır
+                  Sürükle · scroll ile yakınlaştır (boydan fotoğraflarda yüzü
+                  ortalamak için yakınlaştır)
                 </p>
               </div>
 
@@ -373,7 +395,7 @@ function PlayerEditModalBody({
                 <input
                   type="range"
                   min={1}
-                  max={3}
+                  max={5}
                   step={0.05}
                   value={crop.scale}
                   onChange={(e) =>
@@ -470,10 +492,11 @@ function PlayerEditModalBody({
 
           <button
             type="button"
-            onClick={handleSave}
-            className="w-full h-10 rounded-xl bg-green-600 text-sm font-semibold text-white hover:bg-green-500 active:bg-green-700 transition-colors"
+            onClick={() => void handleSave()}
+            disabled={saving || removingBg}
+            className="w-full h-10 rounded-xl bg-green-600 text-sm font-semibold text-white hover:bg-green-500 active:bg-green-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
-            Kaydet
+            {saving ? "Kaydediliyor…" : "Kaydet"}
           </button>
         </div>
       </div>

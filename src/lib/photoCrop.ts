@@ -2,6 +2,9 @@ import type { PhotoCrop } from "@/types";
 
 export type { PhotoCrop };
 
+/** Kırpma editörünün iç daire çapı (px) — panX/panY bu ölçüye göre saklanır */
+export const PHOTO_CROP_VIEWPORT_REF = 94;
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -57,11 +60,18 @@ export async function renderPlayerAvatar(
   ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
   ctx.clip();
 
-  const cover = Math.max(faceSize / img.width, faceSize / img.height);
-  const scale = cover * crop.scale;
+  const fit = Math.min(faceSize / img.width, faceSize / img.height);
+  const scale = fit * crop.scale;
   const w = img.width * scale;
   const h = img.height * scale;
-  ctx.drawImage(img, cx - w / 2 + crop.panX, cy - h / 2 + crop.panY, w, h);
+  const panScale = faceSize / PHOTO_CROP_VIEWPORT_REF;
+  ctx.drawImage(
+    img,
+    cx - w / 2 + crop.panX * panScale,
+    cy - h / 2 + crop.panY * panScale,
+    w,
+    h
+  );
   ctx.restore();
 
   return canvas.toDataURL("image/png");

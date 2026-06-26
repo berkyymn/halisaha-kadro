@@ -11,7 +11,6 @@ import { normalizeJersey } from "@/lib/jerseyOptions";
 import { defaultAwayTeam, defaultHomeTeam, padPlayerIds } from "@/lib/defaults";
 import { buildDefaultRoster, fillEmptyRosterSlots } from "@/lib/defaultRoster";
 import {
-  buildPersistedPlayerRegistry,
   collectLineupPlayerIds,
   rebuildActivePlayers,
   sanitizeBenchIds,
@@ -33,35 +32,41 @@ import {
   DEFAULT_HOME_PRESET_ID,
 } from "@/lib/logoImagePresets";
 import { todayDisplayDate } from "@/lib/matchDate";
-import { DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
+import {
+  buildPosterSnapshot,
+  createDefaultMatchInfo,
+  finalizePosterSnapshot,
+  mergePosterSnapshot,
+  normalizeMatchInfo,
+  parsePosterSnapshot,
+  type PosterSnapshot,
+} from "@/lib/posterSnapshot";
 
-function createDefaultMatchInfo(): MatchInfo {
-  return {
-    titleLine1: "DERBİ",
-    titleLine2: "GECESİ",
-    ...DEFAULT_TITLE_STYLE,
-    venue: "DEMİR TEKLİ HALISAHA",
-    time: "21:00",
-    date: todayDisplayDate(),
+let appStoreHydrated = false;
+const appStoreHydrationWaiters = new Set<() => void>();
+
+export function hasAppStoreHydrated(): boolean {
+  return appStoreHydrated;
+}
+
+export function onAppStoreHydrated(callback: () => void): () => void {
+  if (appStoreHydrated) {
+    callback();
+    return () => {};
+  }
+  appStoreHydrationWaiters.add(callback);
+  return () => {
+    appStoreHydrationWaiters.delete(callback);
   };
 }
 
-function normalizeMatchInfo(info: Partial<MatchInfo> | undefined): MatchInfo {
-  const defaults = createDefaultMatchInfo();
-  if (!info) return defaults;
-  return {
-    ...defaults,
-    ...info,
-    titleSubtitle: info.titleSubtitle ?? "",
-    titleStyleId: info.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
-    titleEffectId: info.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
-    titleFontSize: info.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize,
-    titleLetterSpacing:
-      info.titleLetterSpacing ?? DEFAULT_TITLE_STYLE.titleLetterSpacing,
-    titleShadow: info.titleShadow ?? DEFAULT_TITLE_STYLE.titleShadow,
-    titleRotation: info.titleRotation ?? DEFAULT_TITLE_STYLE.titleRotation,
-    titleMaxWidth: info.titleMaxWidth ?? DEFAULT_TITLE_STYLE.titleMaxWidth,
-  };
+function markAppStoreHydrated(): void {
+  if (appStoreHydrated) return;
+  appStoreHydrated = true;
+  for (const callback of appStoreHydrationWaiters) {
+    callback();
+  }
+  appStoreHydrationWaiters.clear();
 }
 
 function withLogo(team: TeamConfig): TeamConfig {
@@ -109,7 +114,11 @@ interface AppStore {
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   logoDesignerTeam: "home" | "away" | null;
+  remoteHydrating: boolean;
 
+  setRemoteHydrating: (value: boolean) => void;
+  getPosterSnapshot: () => PosterSnapshot;
+  hydrateFromSnapshot: (snapshot: PosterSnapshot) => void;
   setMode: (mode: AppMode) => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
   setSquadSize: (size: SquadSize) => void;
@@ -206,6 +215,37 @@ export const useAppStore = create<AppStore>()(
       teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
       posterTheme: DEFAULT_POSTER_THEME,
       logoDesignerTeam: null,
+      remoteHydrating: false,
+
+      setRemoteHydrating: (value) => set({ remoteHydrating: value }),
+
+      getPosterSnapshot: () => buildPosterSnapshot(get()),
+
+      hydrateFromSnapshot: (snapshot) => {
+        const parsed = parsePosterSnapshot(snapshot);
+        if (!parsed) return;
+        const finalized = finalizePosterSnapshot(
+          mergePosterSnapshot(get(), parsed)
+        );
+        set({
+          mode: finalized.mode,
+          matchInfo: finalized.matchInfo,
+          squadSize: finalized.squadSize,
+          homeTeam: finalized.homeTeam,
+          awayTeam: finalized.awayTeam,
+          players: finalized.players,
+          savedPlayers: finalized.savedPlayers,
+          benchPlayerIds: finalized.benchPlayerIds,
+          homeFormationId: finalized.homeFormationId,
+          awayFormationId: finalized.awayFormationId,
+          pitchPlayers: finalized.pitchPlayers,
+          playerCardSize: finalized.playerCardSize,
+          photoScalePercent: finalized.photoScalePercent,
+          teamLogoDisplaySize: finalized.teamLogoDisplaySize,
+          posterTheme: finalized.posterTheme,
+          logoDesignerTeam: null,
+        });
+      },
 
       setMode: (mode) => {
         set((s) => ({
@@ -966,88 +1006,34 @@ export const useAppStore = create<AppStore>()(
         return state;
       },
       merge: (persisted, current) => {
-        const saved = persisted as Partial<AppStore>;
+        const saved = persisted as Partial<PosterSnapshot>;
         return {
           ...current,
-          ...saved,
-          posterTheme: normalizePosterTheme(
-            saved.posterTheme ?? current.posterTheme
-          ),
-          matchInfo: normalizeMatchInfo(saved.matchInfo ?? current.matchInfo),
+          ...mergePosterSnapshot(current, saved),
         };
       },
-      partialize: (s) => ({
-        mode: s.mode,
-        savedPlayers: buildPersistedPlayerRegistry(
-          s.players,
-          s.savedPlayers,
-          s.benchPlayerIds,
-          s.homeTeam,
-          s.awayTeam,
-          s.squadSize
-        ),
-        benchPlayerIds: s.benchPlayerIds,
-        matchInfo: s.matchInfo,
-        squadSize: s.squadSize,
-        homeTeam: s.homeTeam,
-        awayTeam: s.awayTeam,
-        homeFormationId: s.homeFormationId,
-        awayFormationId: s.awayFormationId,
-        pitchPlayers: s.pitchPlayers,
-        playerCardSize: s.playerCardSize,
-        photoScalePercent: s.photoScalePercent,
-        teamLogoDisplaySize: s.teamLogoDisplaySize,
-        posterTheme: s.posterTheme,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.matchInfo = normalizeMatchInfo(state.matchInfo);
-          state.homeTeam = withLogo(state.homeTeam);
-          state.awayTeam = withLogo(state.awayTeam);
-          if (!state.teamLogoDisplaySize) {
-            state.teamLogoDisplaySize = DEFAULT_LOGO_DISPLAY_SIZE;
-          }
-          state.benchPlayerIds = state.benchPlayerIds ?? [];
-          state.savedPlayers = state.savedPlayers ?? {};
-          state.posterTheme = normalizePosterTheme(state.posterTheme);
-
-          const homeFilled = fillEmptyRosterSlots(
-            state.squadSize,
-            padPlayerIds(state.homeTeam.playerIds, state.squadSize),
-            state.savedPlayers
-          );
-          const awayFilled = fillEmptyRosterSlots(
-            state.squadSize,
-            padPlayerIds(state.awayTeam.playerIds, state.squadSize),
-            homeFilled.players
-          );
-          state.savedPlayers = {
-            ...state.savedPlayers,
-            ...homeFilled.players,
-            ...awayFilled.players,
-          };
-          state.homeTeam = {
-            ...state.homeTeam,
-            playerIds: homeFilled.playerIds,
-          };
-          state.awayTeam = {
-            ...state.awayTeam,
-            playerIds: awayFilled.playerIds,
-          };
-          state.benchPlayerIds = sanitizeBenchIds(
-            state.benchPlayerIds,
-            state.homeTeam,
-            state.awayTeam,
-            state.squadSize
-          );
-          state.players = rebuildActivePlayers(
-            state.savedPlayers,
-            state.benchPlayerIds,
-            state.homeTeam,
-            state.awayTeam,
-            state.squadSize
-          );
-        }
+      partialize: (s) => buildPosterSnapshot(s),
+      onRehydrateStorage: () => (state, error) => {
+        markAppStoreHydrated();
+        if (error || !state) return;
+        const finalized = finalizePosterSnapshot({
+          mode: state.mode,
+          players: state.players,
+          savedPlayers: state.savedPlayers ?? {},
+          benchPlayerIds: state.benchPlayerIds ?? [],
+          matchInfo: state.matchInfo,
+          squadSize: state.squadSize,
+          homeTeam: state.homeTeam,
+          awayTeam: state.awayTeam,
+          homeFormationId: state.homeFormationId,
+          awayFormationId: state.awayFormationId,
+          pitchPlayers: state.pitchPlayers ?? [],
+          playerCardSize: state.playerCardSize,
+          photoScalePercent: state.photoScalePercent,
+          teamLogoDisplaySize: state.teamLogoDisplaySize,
+          posterTheme: state.posterTheme,
+        });
+        Object.assign(state, finalized);
       },
     }
   )

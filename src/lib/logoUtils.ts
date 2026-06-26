@@ -210,15 +210,25 @@ export function normalizeTeamLogo(
     mode = "preset";
   }
 
-  const presetId = raw.presetId;
-  const imageUrl =
+  let presetId = raw.presetId;
+  let imageUrl =
     raw.imageUrl ??
     (mode === "preset" && presetId
       ? resolveLogoImageSrc({ mode: "preset", presetId, imageUrl: undefined })
       : undefined);
 
-  if (imageUrl?.startsWith("/logos/presets/")) {
+  if (
+    mode !== "generated" &&
+    imageUrl?.startsWith("/logos/presets/")
+  ) {
     mode = "preset";
+  }
+
+  if (mode === "generated") {
+    presetId = undefined;
+    imageUrl = undefined;
+  } else if (mode === "upload") {
+    presetId = undefined;
   }
 
   return {

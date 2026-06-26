@@ -72,12 +72,9 @@ export function JerseyControls({
       )}
 
       {compact && (
-        <div className="flex items-center gap-2.5 pb-0.5">
-          <JerseyIcon jersey={jersey} number={10} size={40} numberAlign="right" />
-          <p className="text-[9px] text-zinc-500 leading-snug">
-            Logo seçince renkler otomatik gelir, buradan değiştirebilirsin.
-          </p>
-        </div>
+        <p className="text-[9px] text-zinc-500 leading-snug pb-0.5">
+          Tarz, renk ve numara rengini aşağıdan ayarla.
+        </p>
       )}
 
       <div>

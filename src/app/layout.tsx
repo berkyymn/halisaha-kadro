@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Geist } from "next/font/google";
+import { AppProviders } from "@/components/AppProviders";
 import "./globals.css";
 
 const geist = Geist({
@@ -23,7 +24,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="tr" className={`${geist.variable} ${bebas.variable} h-full`}>
-      <body className="h-full antialiased font-sans overflow-hidden">{children}</body>
+      <body className="h-full antialiased font-sans overflow-hidden">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

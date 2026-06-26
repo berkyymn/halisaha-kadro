@@ -1,7 +1,11 @@
 "use client";
 
 import { useId } from "react";
-import type { JerseyConfig, PhotoCrop, Player } from "@/types";
+import type { JerseyConfig, Player } from "@/types";
+import {
+  getPhotoDisplayStyle,
+  getPhotoImgClassName,
+} from "@/lib/imageCompress";
 
 export type PlayerCardVariant = "light" | "dark";
 
@@ -34,20 +38,6 @@ function photoSrc(player?: PlayerAvatarProps["player"]) {
     player?.photoUrl ||
     player?.avatarUrl
   );
-}
-
-function cropStyle(crop?: PhotoCrop, isCutout?: boolean): React.CSSProperties {
-  const base: React.CSSProperties = {
-    objectPosition: isCutout ? "center 6%" : "center 22%",
-  };
-
-  if (!crop) return base;
-
-  return {
-    ...base,
-    transform: `scale(${crop.scale}) translate(${crop.panX / crop.scale}px, ${crop.panY / crop.scale}px)`,
-    transformOrigin: "center center",
-  };
 }
 
 function jerseyBodyBackground(jersey: JerseyConfig): string {
@@ -221,10 +211,8 @@ export function PlayerAvatar({
             src={src}
             alt=""
             draggable={false}
-            className={`pointer-events-none h-full w-full ${
-              isCutout ? "object-contain object-top scale-110" : "object-cover"
-            }`}
-            style={cropStyle(player?.photoCrop, isCutout)}
+            className={getPhotoImgClassName(isCutout)}
+            style={getPhotoDisplayStyle(player?.photoCrop, isCutout, photoD)}
           />
         ) : (
           <PlaceholderSilhouette gradId={`sil-${uid}`} />
