@@ -1,24 +1,43 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/app";
 import { enqueueFirestoreWrite } from "@/lib/firestoreWriteQueue";
-import { compressDataUrl, compressPlayerPhotos } from "@/lib/imageCompress";
+import { compressPlayerPhotos } from "@/lib/imageCompress";
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import {
   fallbackLogoAfterUploadStrip,
   isUploadLogoWithImage,
-  slimTeamLogoForCloud,
 } from "@/lib/teamLogoCloud";
-import type { PosterSnapshot } from "@/lib/posterSnapshot";
+import {
+  buildBrandingSnapshot,
+  parseBrandingSnapshot,
+  slimBrandingForCloud,
+  slimTeamConfigForCloud,
+  type TeamBrandingSnapshot,
+} from "@/lib/brandingSnapshot";
+import type { PosterSnapshot, PosterSnapshotSource } from "@/lib/posterSnapshot";
 import { parsePosterSnapshot } from "@/lib/posterSnapshot";
 import { fingerprintPosterSnapshot } from "@/lib/snapshotFingerprint";
+import {
+  hydrateLogoFromStorage,
+  hydratePlayerPhotosFromStorage,
+  uploadLogoMediaForCloud,
+  uploadPlayerMediaForCloud,
+} from "@/lib/mediaSync";
 import type { Player, TeamLogo } from "@/types";
 
 export type CloudPosterDoc = {
   userId: string;
   data: PosterSnapshot;
   updatedAt: string;
+  branding?: TeamBrandingSnapshot;
+  brandingUpdatedAt?: string;
   photosOmitted?: boolean;
   logosOmitted?: boolean;
+};
+
+export type BrandingSaveResult = {
+  updatedAt: string;
+  revision: number;
 };
 
 export type CloudSaveResult = {
@@ -44,9 +63,9 @@ type CompressTier = {
 };
 
 const COMPRESS_TIERS: CompressTier[] = [
-  { photoMax: 480, cutoutMax: 400, photoQuality: 0.8, cutoutQuality: 0.82 },
-  { photoMax: 400, cutoutMax: 360, photoQuality: 0.76, cutoutQuality: 0.78 },
-  { photoMax: 320, cutoutMax: 288, photoQuality: 0.72, cutoutQuality: 0.74 },
+  { photoMax: 180, cutoutMax: 180, photoQuality: 0.75, cutoutQuality: 0.75 },
+  { photoMax: 140, cutoutMax: 140, photoQuality: 0.70, cutoutQuality: 0.70 },
+  { photoMax: 100, cutoutMax: 100, photoQuality: 0.65, cutoutQuality: 0.65 },
 ];
 
 let preparedSnapshotCache: {
@@ -86,13 +105,27 @@ function countPlayerPhotos(players: Record<string, Player>): number {
 
 /** Bulutta gereksiz / çift medya alanlarını çıkarır */
 function slimPlayerForCloud(player: Player): Player {
-  const { avatarUrl, photoUrl, photoSource, cutoutUrl, ...rest } = player;
+  const {
+    avatarUrl,
+    photoUrl,
+    photoSource,
+    cutoutUrl,
+    cutoutStoragePath,
+    photoSourceStoragePath,
+    ...rest
+  } = player;
   void avatarUrl;
   void photoUrl;
 
+  if (cutoutStoragePath) {
+    return { ...rest, cutoutStoragePath };
+  }
   if (cutoutUrl) {
     void photoSource;
     return { ...rest, cutoutUrl };
+  }
+  if (photoSourceStoragePath) {
+    return { ...rest, photoSourceStoragePath };
   }
   if (photoSource) {
     return { ...rest, photoSource };
@@ -108,14 +141,8 @@ function slimSnapshotForCloud(snapshot: PosterSnapshot): PosterSnapshot {
   return {
     ...snapshot,
     savedPlayers,
-    homeTeam: {
-      ...snapshot.homeTeam,
-      logo: slimTeamLogoForCloud(snapshot.homeTeam.logo),
-    },
-    awayTeam: {
-      ...snapshot.awayTeam,
-      logo: slimTeamLogoForCloud(snapshot.awayTeam.logo),
-    },
+    homeTeam: slimTeamConfigForCloud(snapshot.homeTeam) as PosterSnapshot["homeTeam"],
+    awayTeam: slimTeamConfigForCloud(snapshot.awayTeam) as PosterSnapshot["awayTeam"],
   };
 }
 
@@ -166,23 +193,6 @@ function stripUploadedLogos(snapshot: PosterSnapshot): PosterSnapshot {
   };
 }
 
-async function compressTeamLogo(
-  logo: TeamLogo,
-  tier: CompressTier
-): Promise<TeamLogo> {
-  if (logo.mode !== "upload" || !logo.imageUrl?.startsWith("data:")) {
-    return logo;
-  }
-  return {
-    ...logo,
-    imageUrl: await compressDataUrl(logo.imageUrl, {
-      kind: "photo",
-      maxEdge: 220,
-      quality: tier.photoQuality,
-    }),
-  };
-}
-
 async function compressSnapshotMedia(
   snapshot: PosterSnapshot,
   tier: CompressTier
@@ -199,21 +209,15 @@ async function compressSnapshotMedia(
     savedPlayers[id] = { ...slim, ...photos };
   }
 
-  const [homeLogo, awayLogo] = await Promise.all([
-    compressTeamLogo(snapshot.homeTeam.logo, tier),
-    compressTeamLogo(snapshot.awayTeam.logo, tier),
-  ]);
-
   return {
     ...snapshot,
     savedPlayers,
-    homeTeam: { ...snapshot.homeTeam, logo: homeLogo },
-    awayTeam: { ...snapshot.awayTeam, logo: awayLogo },
   };
 }
 
 export async function prepareSnapshotForCloud(
-  snapshot: PosterSnapshot
+  snapshot: PosterSnapshot,
+  userId?: string
 ): Promise<{ snapshot: PosterSnapshot; result: CloudSaveResult }> {
   const sourceFingerprint = fingerprintPosterSnapshot(snapshot);
   if (preparedSnapshotCache?.sourceFingerprint === sourceFingerprint) {
@@ -223,9 +227,18 @@ export async function prepareSnapshotForCloud(
     };
   }
 
-  const photosBefore = countPlayerPhotos(snapshot.savedPlayers);
-  const uploadLogosBefore = countUploadLogos(snapshot);
-  let next = slimSnapshotForCloud(snapshot);
+  let working = snapshot;
+  if (userId) {
+    const uploadedPlayers = await uploadPlayerMediaForCloud(
+      userId,
+      snapshot.savedPlayers
+    );
+    working = { ...snapshot, savedPlayers: uploadedPlayers };
+  }
+
+  const photosBefore = countPlayerPhotos(working.savedPlayers);
+  const uploadLogosBefore = countUploadLogos(working);
+  let next = slimSnapshotForCloud(working);
   let strippedMedia = false;
 
   const buildResult = (payload: PosterSnapshot): CloudSaveResult => ({
@@ -315,16 +328,71 @@ export async function fetchUserPoster(
   const parsed = parsePosterSnapshot(raw.data);
   if (!parsed) return { status: "corrupt" };
 
+  const hydratedPlayers = await hydratePlayerPhotosFromStorage(parsed.savedPlayers);
+  const data: PosterSnapshot = { ...parsed, savedPlayers: hydratedPlayers };
+
+  let branding = parseBrandingSnapshot(raw.branding) ?? undefined;
+  if (branding) {
+    const [homeLogo, awayLogo] = await Promise.all([
+      hydrateLogoFromStorage(branding.home.logo),
+      hydrateLogoFromStorage(branding.away.logo),
+    ]);
+    branding = {
+      ...branding,
+      home: { ...branding.home, logo: homeLogo },
+      away: { ...branding.away, logo: awayLogo },
+    };
+  }
+
   return {
     status: "ok",
     doc: {
       userId,
-      data: parsed,
+      data,
       updatedAt: (raw.updatedAt as string) ?? "",
+      branding,
+      brandingUpdatedAt: (raw.brandingUpdatedAt as string) ?? undefined,
       photosOmitted: Boolean(raw.photosOmitted),
       logosOmitted: Boolean(raw.logosOmitted),
     },
   };
+}
+
+export function buildBrandingFromPosterSource(
+  source: PosterSnapshotSource
+): TeamBrandingSnapshot {
+  return buildBrandingSnapshot(source, Date.now());
+}
+
+export async function saveUserBranding(
+  userId: string,
+  source: PosterSnapshotSource
+): Promise<BrandingSaveResult> {
+  return enqueueFirestoreWrite(async () => {
+    const built = buildBrandingFromPosterSource(source);
+    const [homeLogo, awayLogo] = await Promise.all([
+      uploadLogoMediaForCloud(userId, "home", built.home.logo),
+      uploadLogoMediaForCloud(userId, "away", built.away.logo),
+    ]);
+    const branding = slimBrandingForCloud({
+      ...built,
+      home: { ...built.home, logo: homeLogo },
+      away: { ...built.away, logo: awayLogo },
+    });
+    const brandingUpdatedAt = new Date().toISOString();
+    const ref = doc(getFirebaseDb(), COLLECTION, userId);
+
+    await setDoc(
+      ref,
+      stripUndefinedForFirestore({
+        branding,
+        brandingUpdatedAt,
+      }),
+      { merge: true }
+    );
+
+    return { updatedAt: brandingUpdatedAt, revision: branding.revision };
+  }, { priority: true });
 }
 
 export async function saveUserPoster(
@@ -333,7 +401,7 @@ export async function saveUserPoster(
 ): Promise<CloudSaveResultWithMeta> {
   return enqueueFirestoreWrite(async () => {
     const { snapshot: cloudSnapshot, result } =
-      await prepareSnapshotForCloud(snapshot);
+      await prepareSnapshotForCloud(snapshot, userId);
     const ref = doc(getFirebaseDb(), COLLECTION, userId);
     const updatedAt = new Date().toISOString();
 

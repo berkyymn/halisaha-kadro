@@ -46,6 +46,11 @@ export function isBrokenUploadLogo(logo: TeamLogo | undefined): boolean {
 
 /** Buluta kayıt: preset için yalnızca presetId; generated için görsel alanları temizle */
 export function slimTeamLogoForCloud(logo: TeamLogo): TeamLogo {
+  if (logo.storagePath) {
+    const { imageUrl, ...rest } = logo;
+    void imageUrl;
+    return rest;
+  }
   if (logo.mode === "preset" && logo.presetId) {
     const { imageUrl, ...rest } = logo;
     void imageUrl;
@@ -80,9 +85,18 @@ export function fallbackLogoAfterUploadStrip(
 export function mergeTeamLogoPreservingLocal(
   local: TeamLogo,
   remote: TeamLogo,
-  side: TeamSide
+  side: TeamSide,
+  preferLocalIfBothCustomized = false
 ): TeamLogo {
   if (!remoteHasUsableLogo(remote, side) && isTeamLogoCustomized(local, side)) {
+    return local;
+  }
+
+  if (
+    preferLocalIfBothCustomized &&
+    isTeamLogoCustomized(local, side) &&
+    isTeamLogoCustomized(remote, side)
+  ) {
     return local;
   }
 

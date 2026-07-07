@@ -42,6 +42,9 @@ export interface Player {
   /** @deprecated eski kayıtlar */
   photoUrl?: string;
   cutoutUrl?: string;
+  /** Firebase Storage yolu — bulutta data URL yerine */
+  cutoutStoragePath?: string;
+  photoSourceStoragePath?: string;
 }
 
 export interface TeamConfig {
@@ -140,6 +143,8 @@ export interface TeamLogo {
   textColor: string;
   /** Poster / preview display size in px */
   displaySize: number;
+  /** Firebase Storage yolu — bulutta data URL yerine */
+  storagePath?: string;
   /** @deprecated use initials */
   letter?: string;
   /** @deprecated use primaryColor */
@@ -220,4 +225,5 @@ export interface AppState {
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
+  localUpdatedAt?: string;
 }

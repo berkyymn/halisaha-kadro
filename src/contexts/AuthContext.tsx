@@ -21,8 +21,10 @@ import {
   describeCloudSaveResult,
   fetchUserPoster,
   mapFirestoreError,
+  saveUserBranding,
   saveUserPoster,
 } from "@/lib/cloudPoster";
+import { mergeCloudBrandingIntoSnapshot } from "@/lib/brandingSnapshot";
 import { isResourceExhaustedError } from "@/lib/firestoreWriteQueue";
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import { countCustomTeamLogos } from "@/lib/teamLogoCloud";
@@ -36,7 +38,9 @@ import {
   markPosterSnapshotSynced,
   resetCloudSyncState,
   notifyCloudSyncDirty,
+  subscribeCloudSyncStatus,
 } from "@/hooks/useCloudSync";
+import type { CloudSyncPhase } from "@/lib/cloudSyncManager";
 
 export type SyncStatus = "idle" | "loading" | "syncing" | "saved" | "error";
 
@@ -45,6 +49,7 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   syncStatus: SyncStatus;
+  syncPhase: CloudSyncPhase;
   syncError: string | null;
   authModalOpen: boolean;
   openAuthModal: () => void;
@@ -74,12 +79,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(configured);
   const [storeReady, setStoreReady] = useState(() => hasAppStoreHydrated());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [syncPhase, setSyncPhase] = useState<CloudSyncPhase>("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const loadGenerationRef = useRef(0);
   const loadedUserRef = useRef<string | null>(null);
   const lastRemoteUpdatedAtRef = useRef<string | null>(null);
+  const lastRemoteBrandingUpdatedAtRef = useRef<string | null>(null);
   const pendingRepushRef = useRef(false);
+  const repushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleRepush = useCallback(() => {
+    if (repushTimerRef.current) clearTimeout(repushTimerRef.current);
+    repushTimerRef.current = setTimeout(() => {
+      repushTimerRef.current = null;
+      notifyCloudSyncDirty();
+    }, 3000);
+  }, []);
 
   const hydrateFromSnapshot = useAppStore((s) => s.hydrateFromSnapshot);
   const getPosterSnapshot = useAppStore((s) => s.getPosterSnapshot);
@@ -97,10 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       parsed: PosterSnapshot,
       row: {
         updatedAt: string;
+        brandingUpdatedAt?: string;
         photosOmitted?: boolean;
         logosOmitted?: boolean;
       },
-      localSnapshot: PosterSnapshot
+      localSnapshot: PosterSnapshot,
+      cloudBranding?: Parameters<typeof mergeCloudBrandingIntoSnapshot>[1]
     ) => {
       const localPhotos = countPhotos(localSnapshot);
       const localCustomLogos = countCustomTeamLogos(
@@ -108,7 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localSnapshot.awayTeam.logo
       );
 
-      hydrateFromSnapshot(parsed);
+      const cloudData = mergeCloudBrandingIntoSnapshot(
+        parsed,
+        cloudBranding,
+        row.brandingUpdatedAt
+      );
+
+      hydrateFromSnapshot(cloudData, row.updatedAt);
       const merged = getPosterSnapshot();
       const mergedPhotos = countPhotos(merged);
       const mergedCustomLogos = countCustomTeamLogos(
@@ -121,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       lastRemoteUpdatedAtRef.current = row.updatedAt || null;
+      lastRemoteBrandingUpdatedAtRef.current = row.brandingUpdatedAt || null;
       setSyncStatus("saved");
 
       if (row.photosOmitted) {
@@ -155,8 +180,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const mergedFingerprint = fingerprintPosterSnapshot(merged);
       const cloudFingerprint = fingerprintPosterSnapshot(parsed);
-      markPosterSnapshotSynced(parsed);
-      pendingRepushRef.current = mergedFingerprint !== cloudFingerprint;
+      if (mergedFingerprint === cloudFingerprint) {
+        markPosterSnapshotSynced(merged);
+        pendingRepushRef.current = false;
+      } else {
+        pendingRepushRef.current = true;
+      }
     },
     [hydrateFromSnapshot, getPosterSnapshot]
   );
@@ -171,7 +200,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        applyCloudRow(row.doc.data, row.doc, getPosterSnapshot());
+        applyCloudRow(
+          row.doc.data,
+          row.doc,
+          getPosterSnapshot(),
+          row.doc.branding
+        );
       } catch (err) {
         console.error("Bulut yenileme hatası:", err);
         setSyncError(mapFirestoreError(err));
@@ -181,12 +215,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRemoteHydrating(false);
           if (pendingRepushRef.current) {
             pendingRepushRef.current = false;
-            notifyCloudSyncDirty();
+            scheduleRepush();
           }
         }
       }
     },
-    [applyCloudRow, getPosterSnapshot, setRemoteHydrating]
+    [applyCloudRow, getPosterSnapshot, setRemoteHydrating, scheduleRepush]
   );
 
   const loadCloudPoster = useCallback(
@@ -204,7 +238,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (generation !== loadGenerationRef.current) return;
 
         if (row.status === "ok") {
-          applyCloudRow(row.doc.data, row.doc, localSnapshot);
+          applyCloudRow(
+            row.doc.data,
+            row.doc,
+            localSnapshot,
+            row.doc.branding
+          );
           loadedUserRef.current = userId;
           return;
         }
@@ -237,7 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRemoteHydrating(false);
           if (pendingRepushRef.current) {
             pendingRepushRef.current = false;
-            notifyCloudSyncDirty();
+            scheduleRepush();
           }
         }
       }
@@ -248,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applyCloudRow,
       getPosterSnapshot,
       setRemoteHydrating,
+      scheduleRepush,
     ]
   );
 
@@ -278,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     resetCloudSyncState();
     lastRemoteUpdatedAtRef.current = null;
+    lastRemoteBrandingUpdatedAtRef.current = null;
   }, [user?.uid]);
 
   useEffect(() => {
@@ -291,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadGenerationRef.current += 1;
     loadedUserRef.current = null;
     lastRemoteUpdatedAtRef.current = null;
+    lastRemoteBrandingUpdatedAtRef.current = null;
     resetCloudSyncState();
     await firebaseSignOut(getFirebaseAuth());
     setUser(null);
@@ -323,23 +365,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false };
       }
     },
-    [configured, user, softReloadFromCloud]
+    [configured, user]
   );
 
+  const pushBranding = useCallback(async () => {
+    const uid = user?.uid;
+    if (!configured || !uid) return { ok: false };
+
+    try {
+      const result = await saveUserBranding(uid, useAppStore.getState());
+      lastRemoteUpdatedAtRef.current = result.updatedAt;
+      return { ok: true, updatedAt: result.updatedAt };
+    } catch (err) {
+      if (isResourceExhaustedError(err)) {
+        return { ok: false, rateLimited: true };
+      }
+      console.error("Branding bulut kayıt hatası:", err);
+      return { ok: false };
+    }
+  }, [configured, user]);
+
   const handleForeignTabSync = useCallback(
-    (payload: { fingerprint: string; updatedAt?: string }) => {
+    (payload: {
+      fingerprint: string;
+      updatedAt?: string;
+      brandingUpdatedAt?: string;
+    }) => {
       if (!user) return;
-      if (
-        payload.updatedAt &&
-        lastRemoteUpdatedAtRef.current &&
-        payload.updatedAt <= lastRemoteUpdatedAtRef.current
-      ) {
+      const dataStale =
+        !payload.updatedAt ||
+        !lastRemoteUpdatedAtRef.current ||
+        payload.updatedAt > lastRemoteUpdatedAtRef.current;
+      const brandingStale =
+        Boolean(payload.brandingUpdatedAt) &&
+        (!lastRemoteBrandingUpdatedAtRef.current ||
+          payload.brandingUpdatedAt! > lastRemoteBrandingUpdatedAtRef.current);
+      if (!dataStale && !brandingStale) {
         return;
       }
       void softReloadFromCloud(user.uid);
     },
     [user, softReloadFromCloud]
   );
+
+  useEffect(() => {
+    if (!configured || !user) return;
+    return subscribeCloudSyncStatus(({ phase }) => {
+      setSyncPhase(phase);
+    });
+  }, [configured, user]);
+
+  useEffect(() => {
+    return () => {
+      if (repushTimerRef.current) clearTimeout(repushTimerRef.current);
+    };
+  }, []);
 
   const remoteHydrating = useAppStore((s) => s.remoteHydrating);
 
@@ -348,6 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     paused: remoteHydrating,
     sessionKey: user?.uid ?? null,
     onSync: pushSnapshot,
+    onBrandingSync: pushBranding,
     onForeignTabSync: handleForeignTabSync,
   });
 
@@ -357,13 +438,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       syncStatus,
+      syncPhase: configured && user ? syncPhase : "idle",
       syncError,
       authModalOpen,
       openAuthModal: () => setAuthModalOpen(true),
       closeAuthModal: () => setAuthModalOpen(false),
       signOut,
     }),
-    [configured, user, loading, syncStatus, syncError, authModalOpen, signOut]
+    [configured, user, loading, syncStatus, syncPhase, syncError, authModalOpen, signOut]
   );
 
   return (

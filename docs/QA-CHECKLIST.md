@@ -112,6 +112,23 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 ---
 
+## 7b. Logo kalıcılığı (bulut + yerel)
+
+**Dosyalar:** `src/lib/brandingSnapshot.ts`, `src/lib/cloudPoster.ts`, `src/contexts/AuthContext.tsx`, `src/store/useAppStore.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| Giriş yap, sol takım preset değiştir (ör. bordo-mavi) | Poster güncellenir |
+| 30 sn bekle, sayfayı yenile | Logo korunur |
+| Logo değiştir, hemen yenile (6 sn beklemeden) | Logo korunur |
+| İki sekme: A'da logo değiştir, B'de 10 sn bekle | B de yeni logoyu gösterir |
+| Çıkış yap / tekrar giriş | Özelleştirilmiş logolar korunur |
+| Sağ takım preset değiştir | Her iki takım logosu bağımsız korunur |
+
+- [ ] Geçti
+
+---
+
 ## 8. Başlık düzenleme
 
 **Dosyalar:** `src/components/PosterTitleDisplay.tsx`, `src/components/PosterTitleModal.tsx`
@@ -150,6 +167,22 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 |------|----------|
 | "Poster İndir" | `halisaha-kadro.png` iner |
 | İndirilen görsel | Ekrandaki posterle uyumlu, bozuk değil |
+
+- [ ] Geçti
+
+---
+
+## 11. Bulut sync stabilitesi
+
+**Dosyalar:** `src/lib/cloudSyncManager.ts`, `src/lib/firestoreWriteQueue.ts`, `src/lib/cloudPoster.ts`, `src/contexts/AuthContext.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| Giriş yapmış kullanıcıda 10 ardışık oyuncu fotoğrafı ekle | `resource-exhausted` hatası olmamalı; toolbar'da "Kaydediliyor..." görünür |
+| Logo + kadro + tema değişimi burst (30 sn içinde) | Firestore'a en fazla birkaç yazı; çift branding+data duplicate yazımı yok |
+| Sekme kapat / aç veya sayfa yenile | Kadro, logo ve fotoğraflar korunur |
+| İki sekmede eşzamanlı düzenleme | Son yazan kazanır; veri kaybı veya corrupt state olmamalı |
+| `resource-exhausted` sonrası | Toolbar "Bulut dinleniyor" gösterir; cooldown bitince otomatik devam |
 
 - [ ] Geçti
 

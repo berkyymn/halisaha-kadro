@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { useAuth } from "@/contexts/AuthContext";
+import { compressAllSavedPlayers } from "@/lib/imageCompress";
 import {
   hasAppStoreHydrated,
   onAppStoreHydrated,
@@ -26,6 +27,26 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
   }, [storeReady]);
 
   const appReady = storeReady && !authLoading && !remoteHydrating;
+  const migrationTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!appReady || migrationTriggeredRef.current) return;
+    migrationTriggeredRef.current = true;
+
+    const runMigration = () => {
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        window.requestIdleCallback(() => {
+          void compressAllSavedPlayers();
+        });
+      } else {
+        setTimeout(() => {
+          void compressAllSavedPlayers();
+        }, 1000);
+      }
+    };
+
+    runMigration();
+  }, [appReady]);
 
   if (!appReady) {
     return <AppLoadingScreen />;

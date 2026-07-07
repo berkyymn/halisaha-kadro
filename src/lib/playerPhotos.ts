@@ -13,7 +13,9 @@ export function hasPlayerPhoto(
     player.cutoutUrl ||
       player.photoSource ||
       player.avatarUrl ||
-      player.photoUrl
+      player.photoUrl ||
+      player.cutoutStoragePath ||
+      player.photoSourceStoragePath
   );
 }
 

@@ -23,13 +23,14 @@ export function buildPersistedPlayerRegistry(
   awayTeam: TeamConfig,
   squadSize: SquadSize
 ): Record<string, Player> {
-  const registry = { ...savedPlayers };
+  const registry: Record<string, Player> = {};
   const ids = new Set([
     ...benchPlayerIds,
     ...collectLineupPlayerIds(homeTeam, awayTeam, squadSize),
   ]);
   for (const id of ids) {
     if (players[id]) registry[id] = players[id];
+    else if (savedPlayers[id]) registry[id] = savedPlayers[id];
   }
   return registry;
 }

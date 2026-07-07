@@ -1,22 +1,27 @@
 import { buildPosterSnapshot, type PosterSnapshot } from "@/lib/posterSnapshot";
 import { fingerprintPosterSnapshot } from "@/lib/snapshotFingerprint";
 import {
+  DEFAULT_SYNC_REVISIONS,
+  hasUnsyncedRevisions,
+  isBrandingOnlyDirty,
+  type SyncRevisions,
+} from "@/lib/syncRevisions";
+import {
   getFirestoreWriteCooldownRemainingMs,
   isFirestoreWriteCooldown,
 } from "@/lib/firestoreWriteQueue";
 import { useAppStore } from "@/store/useAppStore";
 
-const DEBOUNCE_MS = 6_000;
-const MAX_WAIT_MS = 20_000;
-const FOLLOW_UP_MS = 2_000;
-const LIFECYCLE_FLUSH_MIN_GAP_MS = 5_000;
+const DEBOUNCE_MS = 8_000;
+const MAX_WAIT_MS = 45_000;
+const LIFECYCLE_FLUSH_MIN_GAP_MS = 15_000;
 const LOCK_NAME = "halisaha-poster-cloud-sync";
 const TAB_CHANNEL = "halisaha-poster-sync";
 
 const MIN_RETRY_MS = 3_000;
 const MAX_RETRY_MS = 60_000;
 
-export type CloudSyncPhase = "idle" | "pending" | "syncing" | "paused";
+export type CloudSyncPhase = "idle" | "pending" | "syncing" | "paused" | "cooldown";
 
 export type CloudSyncSaveResult = {
   ok: boolean;
@@ -32,10 +37,12 @@ export type CloudSyncStatus = {
 };
 
 type SaveHandler = (snapshot: PosterSnapshot) => Promise<CloudSyncSaveResult>;
+type BrandingSaveHandler = () => Promise<CloudSyncSaveResult>;
 type StatusListener = (status: CloudSyncStatus) => void;
 type ForeignTabSyncHandler = (payload: {
   fingerprint: string;
   updatedAt?: string;
+  brandingUpdatedAt?: string;
 }) => void;
 
 function computeBackoffMs(attempt: number): number {
@@ -46,6 +53,7 @@ function computeBackoffMs(attempt: number): number {
 
 class CloudSyncManager {
   private handler: SaveHandler | null = null;
+  private brandingHandler: BrandingSaveHandler | null = null;
   private onForeignTabSync: ForeignTabSyncHandler | null = null;
   private enabled = false;
   private paused = false;
@@ -54,13 +62,13 @@ class CloudSyncManager {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private followUpTimer: ReturnType<typeof setTimeout> | null = null;
 
   private inFlight = false;
   private dirty = false;
   private dirtySince: number | null = null;
   private retryAttempt = 0;
   private lastSyncedFingerprint: string | null = null;
+  private lastSyncedRevisions: SyncRevisions | null = null;
   private sessionKey: string | null = null;
   private sessionGeneration = 0;
 
@@ -72,6 +80,10 @@ class CloudSyncManager {
 
   configure(handler: SaveHandler) {
     this.handler = handler;
+  }
+
+  configureBranding(handler: BrandingSaveHandler) {
+    this.brandingHandler = handler;
   }
 
   setForeignTabSyncHandler(handler: ForeignTabSyncHandler | null) {
@@ -100,6 +112,7 @@ class CloudSyncManager {
   getStatus(): CloudSyncStatus {
     let phase: CloudSyncPhase = "idle";
     if (this.paused) phase = "paused";
+    else if (isFirestoreWriteCooldown()) phase = "cooldown";
     else if (this.inFlight) phase = "syncing";
     else if (this.dirty || this.debounceTimer || this.maxWaitTimer || this.retryTimer) {
       phase = "pending";
@@ -126,13 +139,10 @@ class CloudSyncManager {
 
     this.unsubscribe = useAppStore.subscribe((state, prevState) => {
       if (state.remoteHydrating || this.paused) return;
-
-      const next = buildPosterSnapshot(state);
-      const prev = buildPosterSnapshot(prevState);
-      const nextFp = fingerprintPosterSnapshot(next);
-      const prevFp = fingerprintPosterSnapshot(prev);
-      if (nextFp === prevFp) return;
-
+      if (state.syncRevisions === prevState.syncRevisions) return;
+      if (!hasUnsyncedRevisions(state.syncRevisions, this.lastSyncedRevisions)) {
+        return;
+      }
       this.markDirty();
     });
 
@@ -163,7 +173,7 @@ class CloudSyncManager {
   resume() {
     if (!this.paused) return;
     this.paused = false;
-    if (this.enabled && this.hasUnsyncedChanges()) {
+    if (this.enabled && this.hasPendingSync()) {
       this.markDirty();
     }
     this.emitStatus();
@@ -171,6 +181,7 @@ class CloudSyncManager {
 
   reset() {
     this.lastSyncedFingerprint = null;
+    this.lastSyncedRevisions = null;
     this.retryAttempt = 0;
     this.dirty = false;
     this.dirtySince = null;
@@ -179,8 +190,9 @@ class CloudSyncManager {
   }
 
   markSynced(snapshot: PosterSnapshot) {
-    const fp = fingerprintPosterSnapshot(snapshot);
-    this.lastSyncedFingerprint = fp;
+    const state = useAppStore.getState();
+    this.lastSyncedFingerprint = fingerprintPosterSnapshot(snapshot);
+    this.lastSyncedRevisions = { ...state.syncRevisions };
     this.dirty = false;
     this.dirtySince = null;
     this.retryAttempt = 0;
@@ -196,6 +208,8 @@ class CloudSyncManager {
     if (!this.enabled || this.paused || useAppStore.getState().remoteHydrating) {
       return;
     }
+    if (!this.hasPendingSync()) return;
+
     const now = Date.now();
     if (now - this.lastLifecycleFlushAt < LIFECYCLE_FLUSH_MIN_GAP_MS) {
       return;
@@ -205,10 +219,13 @@ class CloudSyncManager {
     void this.flush();
   }
 
-  private hasUnsyncedChanges(): boolean {
-    const snapshot = buildPosterSnapshot(useAppStore.getState());
-    const fp = fingerprintPosterSnapshot(snapshot);
-    return fp !== this.lastSyncedFingerprint;
+  requestBrandingFlush() {
+    this.markDirty();
+  }
+
+  private hasPendingSync(): boolean {
+    const revisions = useAppStore.getState().syncRevisions;
+    return hasUnsyncedRevisions(revisions, this.lastSyncedRevisions);
   }
 
   private markDirty() {
@@ -262,10 +279,6 @@ class CloudSyncManager {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
-    if (this.followUpTimer) {
-      clearTimeout(this.followUpTimer);
-      this.followUpTimer = null;
-    }
   }
 
   private scheduleRetry(rateLimited = false) {
@@ -280,19 +293,17 @@ class CloudSyncManager {
     this.emitStatus();
   }
 
-  private scheduleFollowUp() {
-    if (this.followUpTimer) clearTimeout(this.followUpTimer);
-    this.followUpTimer = setTimeout(() => {
-      this.followUpTimer = null;
-      void this.flush();
-    }, FOLLOW_UP_MS);
-  }
-
   private async flush(): Promise<void> {
     this.clearDebounceTimers();
 
-    if (!this.enabled || this.paused || !this.handler) return;
+    if (!this.enabled || this.paused) return;
     if (useAppStore.getState().remoteHydrating) return;
+    if (!this.hasPendingSync()) {
+      this.dirty = false;
+      this.dirtySince = null;
+      this.emitStatus();
+      return;
+    }
 
     if (isFirestoreWriteCooldown()) {
       this.dirty = true;
@@ -302,16 +313,19 @@ class CloudSyncManager {
 
     const flushGeneration = this.sessionGeneration;
     const flushSession = this.sessionKey;
-
-    const snapshot = buildPosterSnapshot(useAppStore.getState());
-    const fingerprint = fingerprintPosterSnapshot(snapshot);
-
-    if (fingerprint === this.lastSyncedFingerprint) {
-      this.dirty = false;
-      this.dirtySince = null;
-      this.emitStatus();
-      return;
-    }
+    const revisions = useAppStore.getState().syncRevisions;
+    const synced = this.lastSyncedRevisions;
+    const brandingDirty =
+      !synced || revisions.branding > synced.branding;
+    const dataDirty =
+      !synced ||
+      revisions.roster > synced.roster ||
+      revisions.layout > synced.layout ||
+      revisions.media > synced.media;
+    const brandingOnly =
+      brandingDirty &&
+      !dataDirty &&
+      isBrandingOnlyDirty(revisions, synced);
 
     if (this.inFlight) {
       this.dirty = true;
@@ -321,12 +335,37 @@ class CloudSyncManager {
     this.inFlight = true;
     this.emitStatus();
 
+    let result: CloudSyncSaveResult = { ok: false };
+    let savedBranding = false;
+    let savedData = false;
+
     const runSave = async (): Promise<CloudSyncSaveResult> => {
-      if (!this.handler) return { ok: false };
-      return this.handler(snapshot);
+      if (brandingOnly && this.brandingHandler) {
+        savedBranding = true;
+        return this.brandingHandler();
+      }
+      if (!dataDirty || !this.handler) {
+        if (brandingDirty && this.brandingHandler) {
+          savedBranding = true;
+          return this.brandingHandler();
+        }
+        return { ok: false };
+      }
+
+      const snapshot = buildPosterSnapshot(useAppStore.getState());
+      savedData = true;
+      const dataResult = await this.handler(snapshot);
+      if (!dataResult.ok || !brandingDirty || !this.brandingHandler) {
+        return dataResult;
+      }
+
+      const brandingResult = await this.brandingHandler();
+      if (brandingResult.ok) {
+        savedBranding = true;
+      }
+      return brandingResult.ok ? brandingResult : dataResult;
     };
 
-    let result: CloudSyncSaveResult = { ok: false };
     try {
       if (typeof navigator !== "undefined" && "locks" in navigator) {
         await navigator.locks.request(LOCK_NAME, async () => {
@@ -362,10 +401,24 @@ class CloudSyncManager {
       }
 
       if (result.ok) {
+        const snapshot = buildPosterSnapshot(useAppStore.getState());
+        const fingerprint = fingerprintPosterSnapshot(snapshot);
+        const currentRevisions = useAppStore.getState().syncRevisions;
+        const base = this.lastSyncedRevisions ?? { ...DEFAULT_SYNC_REVISIONS };
+        this.lastSyncedRevisions = {
+          branding: savedBranding
+            ? currentRevisions.branding
+            : base.branding,
+          roster: savedData ? currentRevisions.roster : base.roster,
+          layout: savedData ? currentRevisions.layout : base.layout,
+          media: savedData ? currentRevisions.media : base.media,
+        };
         this.lastSyncedFingerprint = fingerprint;
         this.retryAttempt = 0;
-        this.dirty = false;
-        this.dirtySince = null;
+        this.dirty = this.hasPendingSync();
+        if (!this.dirty) {
+          this.dirtySince = null;
+        }
         this.tabChannel?.postMessage({
           type: "synced",
           fingerprint,
@@ -380,16 +433,6 @@ class CloudSyncManager {
       this.inFlight = false;
       this.emitStatus();
     }
-
-    if (
-      result.ok &&
-      flushGeneration === this.sessionGeneration &&
-      flushSession === this.sessionKey &&
-      this.hasUnsyncedChanges()
-    ) {
-      this.dirty = true;
-      this.scheduleFollowUp();
-    }
   }
 
   private bindTabChannel() {
@@ -400,6 +443,7 @@ class CloudSyncManager {
         type?: string;
         fingerprint?: string;
         updatedAt?: string;
+        brandingUpdatedAt?: string;
       }>
     ) => {
       if (event.data?.type !== "synced" || !event.data.fingerprint) return;
@@ -411,7 +455,10 @@ class CloudSyncManager {
 
       if (localFingerprint === remoteFingerprint) {
         this.lastSyncedFingerprint = remoteFingerprint;
-        if (!this.hasUnsyncedChanges()) {
+        this.lastSyncedRevisions = {
+          ...useAppStore.getState().syncRevisions,
+        };
+        if (!this.hasPendingSync()) {
           this.dirty = false;
           this.dirtySince = null;
           this.clearTimers();
@@ -424,6 +471,7 @@ class CloudSyncManager {
         this.onForeignTabSync?.({
           fingerprint: remoteFingerprint,
           updatedAt: event.data.updatedAt,
+          brandingUpdatedAt: event.data.brandingUpdatedAt,
         });
       }
     };

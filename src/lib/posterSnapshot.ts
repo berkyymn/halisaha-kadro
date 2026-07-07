@@ -37,6 +37,7 @@ export type PosterSnapshot = {
   photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
+  localUpdatedAt?: string;
 };
 
 export function createDefaultMatchInfo(): MatchInfo {
@@ -92,6 +93,7 @@ export type PosterSnapshotSource = {
   photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
+  localUpdatedAt?: string;
 };
 
 export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapshot {
@@ -118,15 +120,26 @@ export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapsho
     photoScalePercent: source.photoScalePercent,
     teamLogoDisplaySize: source.teamLogoDisplaySize,
     posterTheme: source.posterTheme,
+    localUpdatedAt: source.localUpdatedAt,
   };
 }
 
 function mergeTeamConfig(
   local: TeamConfig,
   remote: TeamConfig,
-  side: "home" | "away"
+  side: "home" | "away",
+  forceLocal = false,
+  preferLocalBrandingWhenBothCustomized = false
 ): TeamConfig {
-  const logo = mergeTeamLogoPreservingLocal(local.logo, remote.logo, side);
+  if (forceLocal) {
+    return local;
+  }
+  const logo = mergeTeamLogoPreservingLocal(
+    local.logo,
+    remote.logo,
+    side,
+    preferLocalBrandingWhenBothCustomized
+  );
   const preferLocalBranding = shouldPreferLocalTeamBranding(local, remote, side);
   return {
     ...remote,
@@ -138,13 +151,29 @@ function mergeTeamConfig(
   };
 }
 
+export type MergePosterSnapshotOptions = {
+  remoteDocUpdatedAt?: string;
+};
+
 export function mergePosterSnapshot(
   current: PosterSnapshotSource,
-  saved: Partial<PosterSnapshot>
+  saved: Partial<PosterSnapshot>,
+  options?: MergePosterSnapshotOptions
 ): PosterSnapshotSource {
+  const localTime = current.localUpdatedAt || "";
+  const remoteTime =
+    saved.localUpdatedAt || options?.remoteDocUpdatedAt || "";
+  const preferLocal = Boolean(localTime && (!remoteTime || localTime > remoteTime));
+  const preferLocalBrandingWhenBothCustomized = preferLocal;
+
+  if (preferLocal) {
+    return current;
+  }
+
   return {
     ...current,
     ...saved,
+    localUpdatedAt: remoteTime || current.localUpdatedAt,
     savedPlayers: saved.savedPlayers
       ? mergeSavedPlayersPreservingLocalPhotos(
           current.savedPlayers ?? {},
@@ -152,10 +181,22 @@ export function mergePosterSnapshot(
         )
       : current.savedPlayers,
     homeTeam: saved.homeTeam
-      ? mergeTeamConfig(current.homeTeam, saved.homeTeam, "home")
+      ? mergeTeamConfig(
+          current.homeTeam,
+          saved.homeTeam,
+          "home",
+          preferLocal,
+          preferLocalBrandingWhenBothCustomized
+        )
       : current.homeTeam,
     awayTeam: saved.awayTeam
-      ? mergeTeamConfig(current.awayTeam, saved.awayTeam, "away")
+      ? mergeTeamConfig(
+          current.awayTeam,
+          saved.awayTeam,
+          "away",
+          preferLocal,
+          preferLocalBrandingWhenBothCustomized
+        )
       : current.awayTeam,
     posterTheme: normalizePosterTheme(saved.posterTheme ?? current.posterTheme),
     matchInfo: normalizeMatchInfo(saved.matchInfo ?? current.matchInfo),
@@ -239,5 +280,6 @@ export function parsePosterSnapshot(raw: unknown): PosterSnapshot | null {
     photoScalePercent: data.photoScalePercent ?? 100,
     teamLogoDisplaySize: data.teamLogoDisplaySize ?? DEFAULT_LOGO_DISPLAY_SIZE,
     posterTheme: normalizePosterTheme(data.posterTheme),
+    localUpdatedAt: data.localUpdatedAt,
   };
 }

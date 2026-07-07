@@ -9,6 +9,7 @@ import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { maxPlayersInRow } from "@/lib/formationEngine";
 import { useAppStore } from "@/store/useAppStore";
 import { POSTER_THEME_LIST, normalizePosterTheme } from "@/lib/posterThemes";
+import { useAuth } from "@/contexts/AuthContext";
 import type { SquadSize } from "@/types";
 import {
   MIN_PLAYER_CARD_SIZE,
@@ -28,6 +29,23 @@ export function PosterToolbar() {
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
   const setPosterTheme = useAppStore((s) => s.setPosterTheme);
   const metrics = usePosterMetrics();
+  const { user, configured, syncPhase } = useAuth();
+
+  const cloudSyncLabel = (() => {
+    if (!configured || !user) return null;
+    switch (syncPhase) {
+      case "pending":
+        return "Kaydediliyor...";
+      case "syncing":
+        return "Buluta kaydediliyor...";
+      case "cooldown":
+        return "Bulut dinleniyor";
+      case "paused":
+        return "Senkron beklemede";
+      default:
+        return null;
+    }
+  })();
 
   const formations = getFormationsForSize(squadSize);
   const homeFormation = getFormationById(homeFormationId);
@@ -168,6 +186,23 @@ export function PosterToolbar() {
             {photoScalePercent}%
           </span>
         </label>
+
+        {cloudSyncLabel ? (
+          <>
+            <div className="hidden sm:block h-5 w-px bg-zinc-800 shrink-0" />
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-wide shrink-0 ${
+                syncPhase === "cooldown"
+                  ? "text-amber-400"
+                  : syncPhase === "syncing" || syncPhase === "pending"
+                    ? "text-sky-400"
+                    : "text-zinc-500"
+              }`}
+            >
+              {cloudSyncLabel}
+            </span>
+          </>
+        ) : null}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import { useAppStore } from "@/store/useAppStore";
 import { PlayerAvatar } from "./PlayerAvatar";
@@ -35,12 +36,21 @@ export function PlayerOnPitch({
   const homePlayerIds = useAppStore((s) => s.homeTeam.playerIds);
   const awayPlayerIds = useAppStore((s) => s.awayTeam.playerIds);
   const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
+  const activeSwapTarget = useAppStore((s) => s.activeSwapTarget);
+  const setActiveDrag = useAppStore((s) => s.setActiveDrag);
+  const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
+  const swapPlayers = useAppStore((s) => s.swapPlayers);
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
 
   const [dragging, setDragging] = useState(false);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const pointerStart = useRef({ x: 0, y: 0 });
+  const startPosition = useRef({ x: 0, y: 0, hasCustom: false });
   const moved = useRef(false);
+  const pendingSwapTarget = useRef<{ team: "home" | "away"; slotIndex: number } | null>(
+    null
+  );
 
   const pitchPlayer = pitchPlayers.find(
     (p) => p.team === team && p.slotIndex === slotIndex
@@ -70,41 +80,37 @@ export function PlayerOnPitch({
   const playerId = resolvedPlayerId;
   const isCaptain = Boolean(playerId && captainId && playerId === captainId);
 
-  const updatePosition = (clientX: number, clientY: number) => {
-    if (isGoalkeeper) return;
-    const pitch = pitchRef.current;
-    if (!pitch) return;
-    const rect = pitch.getBoundingClientRect();
-    let newX =
-      ((clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
-    let newY =
-      ((clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
-    if (team === "home") newX = clamp(newX, 4, 45);
-    else newX = clamp(newX, 55, 96);
-    newY = clamp(newY, 6, 94);
-    movePitchPlayer(team, slotIndex, newX, newY);
-  };
-
   const handleClick = () => onEdit(team, slotIndex);
+
+  const isSwapTarget = activeSwapTarget?.team === team && activeSwapTarget?.slotIndex === slotIndex;
+  
+  // Bu kart şu an sürükleniyor VE geçerli bir değişim hedefi var
+  const isDraggedWithTarget = dragging && activeSwapTarget !== null;
+
+  const shouldShowSwapIndicator = isSwapTarget || isDraggedWithTarget;
 
   return (
     <div
+      data-player-card="true"
+      data-team={team}
+      data-slot-index={slotIndex}
       className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none ${
         dragging
-          ? "z-40 cursor-grabbing"
+          ? "z-50 cursor-grabbing"
           : isGoalkeeper
             ? "z-[25] cursor-pointer"
             : hasCustomPosition
               ? "z-30 cursor-grab"
               : "z-20 cursor-grab"
       }`}
-      style={{ left: `${x}%`, top: `${y}%` }}
+      style={{ left: `${dragging ? dragPos.x : x}%`, top: `${dragging ? dragPos.y : y}%` }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
-        if (isGoalkeeper) return;
         e.preventDefault();
         moved.current = false;
         pointerStart.current = { x: e.clientX, y: e.clientY };
+        startPosition.current = { x, y, hasCustom: hasCustomPosition };
+        setDragPos({ x, y });
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         setDragging(true);
         const pitch = pitchRef.current;
@@ -113,31 +119,107 @@ export function PlayerOnPitch({
         const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
         const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
         dragOffset.current = { x: pointerX - x, y: pointerY - y };
+        setActiveDrag({ team, slotIndex, x, y });
       }}
       onPointerMove={(e) => {
-        if (isGoalkeeper || !dragging) return;
+        if (!dragging) return;
         const dx = e.clientX - pointerStart.current.x;
         const dy = e.clientY - pointerStart.current.y;
         if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
           moved.current = true;
         }
-        if (moved.current) updatePosition(e.clientX, e.clientY);
+        if (moved.current) {
+          const pitch = pitchRef.current;
+          if (pitch) {
+            const rect = pitch.getBoundingClientRect();
+            let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
+            let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
+            
+            newX = clamp(newX, 4, 96);
+            newY = clamp(newY, 6, 94);
+
+            setDragPos({ x: newX, y: newY });
+            setActiveDrag({ team, slotIndex, x: newX, y: newY });
+
+            // Yakındaki değişilebilir oyuncuları bul (DOM tabanlı mesafe kontrolü)
+            const cards = pitch.querySelectorAll("[data-player-card]");
+            let closestTarget: { team: "home" | "away"; slotIndex: number } | null = null;
+            let minDistance = Infinity;
+
+            cards.forEach((cardEl) => {
+              const targetTeam = cardEl.getAttribute("data-team") as "home" | "away";
+              const targetSlotIndex = parseInt(cardEl.getAttribute("data-slot-index") ?? "", 10);
+
+              // Kendisiyle eşleşmesin
+              if (targetTeam === team && targetSlotIndex === slotIndex) return;
+
+              const cardRect = cardEl.getBoundingClientRect();
+              const centerX = cardRect.left + cardRect.width / 2;
+              const centerY = cardRect.top + cardRect.height / 2;
+
+              const distance = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+              
+              // Kart genişliğinin %70'ine kadar yakınlaşınca takas moduna girer
+              const threshold = cardRect.width * 0.70;
+              if (distance < threshold && distance < minDistance) {
+                minDistance = distance;
+                closestTarget = { team: targetTeam, slotIndex: targetSlotIndex };
+              }
+            });
+
+            pendingSwapTarget.current = closestTarget;
+            setActiveSwapTarget(closestTarget);
+          }
+        }
       }}
       onPointerUp={(e) => {
-        if (isGoalkeeper) return;
+        const swapTarget = pendingSwapTarget.current;
+        pendingSwapTarget.current = null;
+
         setDragging(false);
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-        if (!moved.current) handleClick();
+        setActiveDrag(null);
+        setActiveSwapTarget(null);
+
+        if (!moved.current) {
+          handleClick();
+          return;
+        }
+
+        if (swapTarget) {
+          swapPlayers(team, slotIndex, swapTarget.team, swapTarget.slotIndex);
+        } else {
+          // Boşluğa bırakıldı: Yarı saha kontrolü veya Kaleci snap-back kontrolü
+          const pitch = pitchRef.current;
+          if (pitch) {
+            const rect = pitch.getBoundingClientRect();
+            const finalX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
+            const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
+
+            const isOpponentHalf =
+              (team === "home" && finalX >= 48) || (team === "away" && finalX <= 52);
+
+            if (isGoalkeeper || isOpponentHalf) {
+              // Geri sekme (Snapback) - hiçbir şey yapmamız gerekmiyor çünkü store hiç değişmedi!
+              // Sadece görsel olarak eski haline dönecek.
+            } else {
+              // Kalıcı kaydet
+              movePitchPlayer(team, slotIndex, clamp(finalX, 4, 96), clamp(finalY, 6, 94));
+            }
+          }
+        }
       }}
       onPointerCancel={(e) => {
-        if (isGoalkeeper) return;
+        pendingSwapTarget.current = null;
         setDragging(false);
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        setActiveDrag(null);
+        setActiveSwapTarget(null);
       }}
       onClick={isGoalkeeper ? handleClick : undefined}
     >
       <div
-        className={`transition-transform duration-150 ${
+        className={`relative transition-transform duration-150 ${
           dragging ? "scale-[1.06] z-40" : isGoalkeeper ? "" : "hover:scale-[1.03]"
         }`}
         style={
@@ -159,6 +241,18 @@ export function PlayerOnPitch({
           showName
           variant={team === "home" ? "light" : "dark"}
         />
+
+        {/* Pulsating Swap Indicator Overlay */}
+        {shouldShowSwapIndicator && (
+          <div className="absolute inset-0 rounded-[18%] overflow-hidden bg-green-500/30 border-2 border-green-400 flex flex-col items-center justify-center animate-pulse z-30 shadow-[0_0_15px_rgba(34,197,94,0.6)]">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-green-600 shadow-md transform rotate-180 transition-transform duration-300">
+              <RefreshCw className="w-5 h-5 animate-spin-slow" />
+            </div>
+            <span className="mt-1.5 text-[9px] font-black tracking-wider text-white bg-green-600 px-1.5 py-0.5 rounded shadow">
+              DEĞİŞTİR
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

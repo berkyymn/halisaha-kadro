@@ -14,6 +14,7 @@ import {
   collectLineupPlayerIds,
   rebuildActivePlayers,
   sanitizeBenchIds,
+  buildPersistedPlayerRegistry,
 } from "@/lib/playerPool";
 import { resolveSameTeamJerseyConflicts } from "@/lib/teamJerseyNumbers";
 import { DEFAULT_LOGO_DISPLAY_SIZE, MAX_PLAYER_CARD_SIZE, MIN_PLAYER_CARD_SIZE } from "@/types";
@@ -41,6 +42,9 @@ import {
   parsePosterSnapshot,
   type PosterSnapshot,
 } from "@/lib/posterSnapshot";
+import { maxIsoTimestamp } from "@/lib/brandingSnapshot";
+import { bumpSyncRevisions, DEFAULT_SYNC_REVISIONS } from "@/lib/syncRevisionBump";
+import type { SyncRevisions } from "@/lib/syncRevisions";
 
 let appStoreHydrated = false;
 const appStoreHydrationWaiters = new Set<() => void>();
@@ -115,10 +119,12 @@ interface AppStore {
   posterTheme: PosterThemeId;
   logoDesignerTeam: "home" | "away" | null;
   remoteHydrating: boolean;
+  localUpdatedAt?: string;
+  syncRevisions: SyncRevisions;
 
   setRemoteHydrating: (value: boolean) => void;
   getPosterSnapshot: () => PosterSnapshot;
-  hydrateFromSnapshot: (snapshot: PosterSnapshot) => void;
+  hydrateFromSnapshot: (snapshot: PosterSnapshot, updatedAt?: string) => void;
   setMode: (mode: AppMode) => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
   setSquadSize: (size: SquadSize) => void;
@@ -147,6 +153,7 @@ interface AppStore {
     x: number,
     y: number
   ) => void;
+  clearPitchPlayerPosition: (team: "home" | "away", slotIndex: number) => void;
   applyFormations: (options?: {
     resetHome?: boolean;
     resetAway?: boolean;
@@ -180,6 +187,20 @@ interface AppStore {
     benchPlayerId: string
   ) => void;
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
+  activeDrag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null;
+  activeSwapTarget: { team: "home" | "away"; slotIndex: number } | null;
+  setActiveDrag: (
+    drag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null
+  ) => void;
+  setActiveSwapTarget: (
+    target: { team: "home" | "away"; slotIndex: number } | null
+  ) => void;
+  swapPlayers: (
+    team1: "home" | "away",
+    slotIndex1: number,
+    team2: "home" | "away",
+    slotIndex2: number
+  ) => void;
 }
 
 function registerPlayer(
@@ -198,53 +219,123 @@ const initialRoster = buildDefaultRoster(7);
 
 export const useAppStore = create<AppStore>()(
   persist(
-    (set, get) => ({
-      mode: "guest",
-      matchInfo: createDefaultMatchInfo(),
-      squadSize: 7,
-      homeTeam: { ...defaultHomeTeam, playerIds: initialRoster.homePlayerIds },
-      awayTeam: { ...defaultAwayTeam, playerIds: initialRoster.awayPlayerIds },
-      players: initialRoster.players,
-      savedPlayers: initialRoster.players,
-      benchPlayerIds: [],
-      homeFormationId: initialFormations[0]?.id ?? "7-1-3-2",
-      awayFormationId: initialFormations[0]?.id ?? "7-1-3-2",
-      pitchPlayers: [],
-      playerCardSize: 100,
-      photoScalePercent: 100,
-      teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
-      posterTheme: DEFAULT_POSTER_THEME,
-      logoDesignerTeam: null,
-      remoteHydrating: false,
+    (realSet, get) => {
+      const set: typeof realSet = (state, replace) => {
+        const prev = get();
+        const nextState =
+          typeof state === "function"
+            ? (state as (s: AppStore) => Partial<AppStore>)(prev)
+            : state;
+
+        const posterKeys = [
+          "mode",
+          "matchInfo",
+          "squadSize",
+          "homeTeam",
+          "awayTeam",
+          "players",
+          "savedPlayers",
+          "benchPlayerIds",
+          "homeFormationId",
+          "awayFormationId",
+          "pitchPlayers",
+          "playerCardSize",
+          "photoScalePercent",
+          "teamLogoDisplaySize",
+          "posterTheme",
+        ];
+
+        const hasPosterChanges =
+          nextState &&
+          Object.keys(nextState).some((k) => posterKeys.includes(k));
+
+        const mergedState = {
+          ...nextState,
+          ...(hasPosterChanges
+            ? {
+                localUpdatedAt: new Date().toISOString(),
+                syncRevisions: bumpSyncRevisions(
+                  prev.syncRevisions,
+                  prev,
+                  nextState as Record<string, unknown>
+                ),
+              }
+            : {}),
+        };
+
+        realSet(
+          mergedState as unknown as (
+            | AppStore
+            | Partial<AppStore>
+            | ((state: AppStore) => AppStore | Partial<AppStore>)
+          ),
+          replace as false | undefined
+        );
+      };
+
+      return {
+        mode: "guest",
+        matchInfo: createDefaultMatchInfo(),
+        squadSize: 7,
+        homeTeam: { ...defaultHomeTeam, playerIds: initialRoster.homePlayerIds },
+        awayTeam: { ...defaultAwayTeam, playerIds: initialRoster.awayPlayerIds },
+        players: initialRoster.players,
+        savedPlayers: initialRoster.players,
+        benchPlayerIds: [],
+        homeFormationId: initialFormations[0]?.id ?? "7-1-3-2",
+        awayFormationId: initialFormations[0]?.id ?? "7-1-3-2",
+        pitchPlayers: [],
+        playerCardSize: 100,
+        photoScalePercent: 100,
+        teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
+        posterTheme: DEFAULT_POSTER_THEME,
+        logoDesignerTeam: null,
+        remoteHydrating: false,
+        activeDrag: null,
+        activeSwapTarget: null,
+        localUpdatedAt: undefined,
+        syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
 
       setRemoteHydrating: (value) => set({ remoteHydrating: value }),
 
       getPosterSnapshot: () => buildPosterSnapshot(get()),
 
-      hydrateFromSnapshot: (snapshot) => {
+      hydrateFromSnapshot: (snapshot, updatedAt) => {
         const parsed = parsePosterSnapshot(snapshot);
         if (!parsed) return;
+        const current = get();
         const finalized = finalizePosterSnapshot(
-          mergePosterSnapshot(get(), parsed)
+          mergePosterSnapshot(current, parsed, {
+            remoteDocUpdatedAt: updatedAt,
+          })
         );
-        set({
-          mode: finalized.mode,
-          matchInfo: finalized.matchInfo,
-          squadSize: finalized.squadSize,
-          homeTeam: finalized.homeTeam,
-          awayTeam: finalized.awayTeam,
-          players: finalized.players,
-          savedPlayers: finalized.savedPlayers,
-          benchPlayerIds: finalized.benchPlayerIds,
-          homeFormationId: finalized.homeFormationId,
-          awayFormationId: finalized.awayFormationId,
-          pitchPlayers: finalized.pitchPlayers,
-          playerCardSize: finalized.playerCardSize,
-          photoScalePercent: finalized.photoScalePercent,
-          teamLogoDisplaySize: finalized.teamLogoDisplaySize,
-          posterTheme: finalized.posterTheme,
-          logoDesignerTeam: null,
-        });
+        const resolvedUpdatedAt = maxIsoTimestamp(
+          current.localUpdatedAt,
+          parsed.localUpdatedAt,
+          updatedAt
+        );
+        realSet(
+          {
+            mode: finalized.mode,
+            matchInfo: finalized.matchInfo,
+            squadSize: finalized.squadSize,
+            homeTeam: finalized.homeTeam,
+            awayTeam: finalized.awayTeam,
+            players: finalized.players,
+            savedPlayers: finalized.savedPlayers,
+            benchPlayerIds: finalized.benchPlayerIds,
+            homeFormationId: finalized.homeFormationId,
+            awayFormationId: finalized.awayFormationId,
+            pitchPlayers: finalized.pitchPlayers,
+            playerCardSize: finalized.playerCardSize,
+            photoScalePercent: finalized.photoScalePercent,
+            teamLogoDisplaySize: finalized.teamLogoDisplaySize,
+            posterTheme: finalized.posterTheme,
+            logoDesignerTeam: null,
+            localUpdatedAt: resolvedUpdatedAt,
+          },
+          false
+        );
       },
 
       setMode: (mode) => {
@@ -460,6 +551,15 @@ export const useAppStore = create<AppStore>()(
           pitchPlayers: s.pitchPlayers.map((pp) =>
             pp.team === team && pp.slotIndex === slotIndex
               ? { ...pp, x, y }
+              : pp
+          ),
+        })),
+
+      clearPitchPlayerPosition: (team, slotIndex) =>
+        set((s) => ({
+          pitchPlayers: s.pitchPlayers.map((pp) =>
+            pp.team === team && pp.slotIndex === slotIndex
+              ? { ...pp, x: undefined, y: undefined }
               : pp
           ),
         })),
@@ -756,10 +856,150 @@ export const useAppStore = create<AppStore>()(
         });
         get().applyFormations();
       },
-    }),
+
+      setActiveDrag: (drag) => set({ activeDrag: drag }),
+
+      setActiveSwapTarget: (target) => set({ activeSwapTarget: target }),
+
+      swapPlayers: (team1, slotIndex1, team2, slotIndex2) => {
+        set((state) => {
+          if (team1 === team2 && slotIndex1 === slotIndex2) return {};
+
+          const team1Key = team1 === "home" ? "homeTeam" : "awayTeam";
+          const team2Key = team2 === "home" ? "homeTeam" : "awayTeam";
+
+          const t1 = { ...state[team1Key] };
+          const t2 = team1 === team2 ? t1 : { ...state[team2Key] };
+
+          const ids1 = [...padPlayerIds(t1.playerIds, state.squadSize)];
+          const ids2 =
+            team1 === team2
+              ? ids1
+              : [...padPlayerIds(t2.playerIds, state.squadSize)];
+
+          const id1 = ids1[slotIndex1];
+          const id2 = ids2[slotIndex2];
+
+          if (team1 === team2) {
+            ids1[slotIndex1] = id2;
+            ids1[slotIndex2] = id1;
+            t1.playerIds = ids1;
+          } else {
+            ids1[slotIndex1] = id2;
+            ids2[slotIndex2] = id1;
+            t1.playerIds = ids1;
+            t2.playerIds = ids2;
+          }
+
+          // Handle captaincy swap
+          const hCaptain = state.homeTeam.captainId;
+          const aCaptain = state.awayTeam.captainId;
+          let newHomeCaptain = hCaptain;
+          let newAwayCaptain = aCaptain;
+
+          if (team1 !== team2) {
+            if (hCaptain === id1) {
+              newHomeCaptain = id2 || undefined;
+            } else if (hCaptain === id2) {
+              newHomeCaptain = id1 || undefined;
+            }
+            if (aCaptain === id1) {
+              newAwayCaptain = id2 || undefined;
+            } else if (aCaptain === id2) {
+              newAwayCaptain = id1 || undefined;
+            }
+          }
+
+          const playersRegistry = { ...state.players };
+          const savedPlayersRegistry = { ...state.savedPlayers };
+
+          // Jersey number conflict resolution helper
+          const getNextFreeNumber = (startNum: number, usedNumbers: Set<number>): number => {
+            let num = startNum;
+            let checked = 0;
+            while (usedNumbers.has(num) && checked < 100) {
+              num = num + 1;
+              if (num > 99) num = 1;
+              checked++;
+            }
+            return num;
+          };
+
+          const collectTeamNumbersExcluding = (
+            teamConfig: TeamConfig,
+            excludeId: string
+          ): Set<number> => {
+            const numbers = new Set<number>();
+            for (let i = 0; i < state.squadSize; i++) {
+              const id = teamConfig.playerIds[i] ?? "";
+              if (!id || id === excludeId) continue;
+              const p = playersRegistry[id];
+              if (p?.number != null) numbers.add(p.number);
+            }
+            return numbers;
+          };
+
+          // If different teams, resolve jersey conflicts
+          if (team1 !== team2) {
+            // Player 1 moving to team2
+            if (id1) {
+              const p1 = playersRegistry[id1];
+              if (p1) {
+                const usedInTeam2 = collectTeamNumbersExcluding(t2, id1);
+                if (usedInTeam2.has(p1.number)) {
+                  const nextNum = getNextFreeNumber(p1.number + 1, usedInTeam2);
+                  const updatedP1 = { ...p1, number: nextNum };
+                  playersRegistry[id1] = updatedP1;
+                  savedPlayersRegistry[id1] = updatedP1;
+                }
+              }
+            }
+
+            // Player 2 moving to team1
+            if (id2) {
+              const p2 = playersRegistry[id2];
+              if (p2) {
+                const usedInTeam1 = collectTeamNumbersExcluding(t1, id2);
+                if (usedInTeam1.has(p2.number)) {
+                  const nextNum = getNextFreeNumber(p2.number + 1, usedInTeam1);
+                  const updatedP2 = { ...p2, number: nextNum };
+                  playersRegistry[id2] = updatedP2;
+                  savedPlayersRegistry[id2] = updatedP2;
+                }
+              }
+            }
+          }
+
+          const finalHomeTeam = {
+            ...state.homeTeam,
+            ...(team1 === "home" ? { playerIds: t1.playerIds } : {}),
+            ...(team2 === "home" ? { playerIds: t2.playerIds } : {}),
+            captainId: newHomeCaptain,
+          };
+
+          const finalAwayTeam = {
+            ...state.awayTeam,
+            ...(team1 === "away" ? { playerIds: t1.playerIds } : {}),
+            ...(team2 === "away" ? { playerIds: t2.playerIds } : {}),
+            captainId: newAwayCaptain,
+          };
+
+          return {
+            homeTeam: finalHomeTeam,
+            awayTeam: finalAwayTeam,
+            players: playersRegistry,
+            savedPlayers: savedPlayersRegistry,
+            activeDrag: null,
+            activeSwapTarget: null,
+          };
+        });
+
+        get().applyFormations();
+      },
+    }},
     {
       name: "halisaha-kadro",
-      version: 26,
+      version: 28,
       migrate: (persisted, version) => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -1003,16 +1243,56 @@ export const useAppStore = create<AppStore>()(
             posterTheme: normalizePosterTheme(state.posterTheme),
           };
         }
+        if (version < 27) {
+          // Branding bulut alanı eklendi; mevcut logo/forma verisi korunur.
+        }
+        if (version < 28) {
+          state = {
+            ...state,
+            syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
+          };
+          const squadSize = (state.squadSize as SquadSize) || 7;
+          const homeTeam = state.homeTeam as TeamConfig;
+          const awayTeam = state.awayTeam as TeamConfig;
+          const benchPlayerIds = (state.benchPlayerIds as string[]) || [];
+          const savedPlayers = (state.savedPlayers as Record<string, Player>) || {};
+          const players = (state.players as Record<string, Player>) || {};
+          const pruned = buildPersistedPlayerRegistry(
+            players,
+            savedPlayers,
+            benchPlayerIds,
+            homeTeam,
+            awayTeam,
+            squadSize
+          );
+          state = {
+            ...state,
+            savedPlayers: pruned,
+            players: rebuildActivePlayers(
+              pruned,
+              benchPlayerIds,
+              homeTeam,
+              awayTeam,
+              squadSize
+            ),
+          };
+        }
         return state;
       },
       merge: (persisted, current) => {
-        const saved = persisted as Partial<PosterSnapshot>;
+        const saved = persisted as Partial<PosterSnapshot> & {
+          syncRevisions?: SyncRevisions;
+        };
         return {
           ...current,
           ...mergePosterSnapshot(current, saved),
+          syncRevisions: saved.syncRevisions ?? current.syncRevisions,
         };
       },
-      partialize: (s) => buildPosterSnapshot(s),
+      partialize: (s) => ({
+        ...buildPosterSnapshot(s),
+        syncRevisions: s.syncRevisions,
+      }),
       onRehydrateStorage: () => (state, error) => {
         markAppStoreHydrated();
         if (error || !state) return;
@@ -1032,6 +1312,7 @@ export const useAppStore = create<AppStore>()(
           photoScalePercent: state.photoScalePercent,
           teamLogoDisplaySize: state.teamLogoDisplaySize,
           posterTheme: state.posterTheme,
+          localUpdatedAt: state.localUpdatedAt,
         });
         Object.assign(state, finalized);
       },

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { PhotoCrop } from "@/types";
 import { loadImage, PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
+import { useAppStore } from "@/store/useAppStore";
 
 export type CompressOptions = {
   maxEdge?: number;
@@ -9,8 +10,8 @@ export type CompressOptions = {
   kind?: "photo" | "cutout";
 };
 
-const DEFAULT_PHOTO_MAX = 640;
-const DEFAULT_CUTOUT_MAX = 512;
+const DEFAULT_PHOTO_MAX = 200;
+const DEFAULT_CUTOUT_MAX = 200;
 
 export function getPhotoImgClassName(isCutout: boolean): string {
   return `pointer-events-none h-full w-full object-contain ${
@@ -47,12 +48,12 @@ export async function compressDataUrl(
   const kind = options.kind ?? (dataUrl.includes("png") ? "cutout" : "photo");
   const maxEdge =
     options.maxEdge ?? (kind === "cutout" ? DEFAULT_CUTOUT_MAX : DEFAULT_PHOTO_MAX);
-  const quality = options.quality ?? (kind === "cutout" ? 0.84 : 0.82);
+  const quality = options.quality ?? 0.75;
   const mime = kind === "cutout" ? "image/webp" : "image/jpeg";
 
   const img = await loadImage(dataUrl);
   const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
-  if (scale >= 1 && dataUrl.length < 180_000) {
+  if (scale >= 1 && dataUrl.length < 20000) {
     return dataUrl;
   }
 
@@ -134,4 +135,33 @@ export async function compressPlayerPhotos(
     photoUrl: next.photoUrl,
     didCompress,
   };
+}
+
+export async function compressAllSavedPlayers(): Promise<void> {
+  const store = useAppStore.getState();
+  const savedPlayers = { ...store.savedPlayers };
+  const players = { ...store.players };
+  let anyChanged = false;
+
+  for (const [id, player] of Object.entries(savedPlayers)) {
+    const result = await compressPlayerPhotos(player);
+    if (result.didCompress) {
+      anyChanged = true;
+      const updated = {
+        ...player,
+        photoSource: result.photoSource,
+        cutoutUrl: result.cutoutUrl,
+        avatarUrl: result.avatarUrl,
+        photoUrl: result.photoUrl,
+      };
+      savedPlayers[id] = updated;
+      if (players[id]) {
+        players[id] = updated;
+      }
+    }
+  }
+
+  if (anyChanged) {
+    useAppStore.setState({ savedPlayers, players });
+  }
 }

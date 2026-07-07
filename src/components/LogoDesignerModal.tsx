@@ -18,6 +18,7 @@ import {
   type LogoImagePreset,
 } from "@/lib/logoImagePresets";
 import { fileToDataUrl } from "@/lib/fileToDataUrl";
+import { compressDataUrl } from "@/lib/imageCompress";
 import { defaultAwayLogo, defaultHomeLogo } from "@/lib/defaults";
 import { randomizeTeamLogo } from "@/lib/logoRandomize";
 
@@ -68,7 +69,12 @@ export function LogoDesignerModal({
   const handleUpload = async (file: File) => {
     setUploadError(null);
     try {
-      const imageUrl = await fileToDataUrl(file);
+      const rawUrl = await fileToDataUrl(file);
+      const imageUrl = await compressDataUrl(rawUrl, {
+        maxEdge: 220,
+        quality: 0.8,
+        kind: "photo",
+      });
       onLogoChange({ ...logo, mode: "upload", presetId: undefined, imageUrl });
       setPanel("logo");
     } catch {
