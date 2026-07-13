@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
 import { toPng } from "html-to-image";
@@ -43,7 +43,7 @@ export function AppShell() {
     slotIndex: number;
   } | null>(null);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     const el = document.getElementById("match-poster");
     if (!el) return;
     setExporting(true);
@@ -58,7 +58,17 @@ export function AppShell() {
     } finally {
       setExporting(false);
     }
-  };
+  }, []);
+
+  const handleEditPlayer = useCallback(
+    (team: "home" | "away", slotIndex: number) => setEditing({ team, slotIndex }),
+    []
+  );
+
+  const handleLogoClick = useCallback(
+    (team: "home" | "away") => setLogoDesignerTeam(team),
+    [setLogoDesignerTeam]
+  );
 
   const editCtx = editing
     ? {
@@ -136,8 +146,8 @@ export function AppShell() {
       <main className="flex-1 flex min-h-0 min-w-0 bg-black">
         <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0">
           <MatchPoster
-            onEditPlayer={(team, slotIndex) => setEditing({ team, slotIndex })}
-            onLogoClick={(team) => setLogoDesignerTeam(team)}
+            onEditPlayer={handleEditPlayer}
+            onLogoClick={handleLogoClick}
           />
         </div>
         <BenchPanel

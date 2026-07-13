@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { memo, useId } from "react";
 import type { JerseyConfig, Player } from "@/types";
 import {
   getPhotoDisplayStyle,
@@ -78,7 +78,7 @@ function PlaceholderSilhouette({ gradId }: { gradId: string }) {
   );
 }
 
-export function PlayerAvatar({
+export const PlayerAvatar = memo(function PlayerAvatar({
   player,
   jersey,
   number,
@@ -282,4 +282,4 @@ export function PlayerAvatar({
       )}
     </div>
   );
-}
+});

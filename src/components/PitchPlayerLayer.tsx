@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getFormationById } from "@/lib/formations";
 import {
   computeFormationLayout,
@@ -10,9 +10,8 @@ import {
 import { getEffectiveCardSize } from "@/lib/posterLayout";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { useAppStore } from "@/store/useAppStore";
-import { PlayerOnPitch } from "./PlayerOnPitch";
+import { PlayerOnPitch, type SlotPosition } from "./PlayerOnPitch";
 
-/** Görsel saha arka planda; bu katman yalnızca oyuncu konumlandırması için */
 export function PitchPlayerLayer({
   onEditPlayer,
 }: {
@@ -23,8 +22,23 @@ export function PitchPlayerLayer({
   const awayFormationId = useAppStore((s) => s.awayFormationId);
   const homePlayerIds = useAppStore((s) => s.homeTeam.playerIds);
   const awayPlayerIds = useAppStore((s) => s.awayTeam.playerIds);
-  const applyFormations = useAppStore((s) => s.applyFormations);
+  const homeCaptainId = useAppStore((s) => s.homeTeam.captainId);
+  const awayCaptainId = useAppStore((s) => s.awayTeam.captainId);
+  const homeJersey = useAppStore((s) => s.homeTeam.jersey);
+  const awayJersey = useAppStore((s) => s.awayTeam.jersey);
+  const players = useAppStore((s) => s.players);
+  const pitchPlayers = useAppStore((s) => s.pitchPlayers);
   const playerCardSize = useAppStore((s) => s.playerCardSize);
+  const photoScalePercent = useAppStore((s) => s.photoScalePercent);
+  const activeDrag = useAppStore((s) => s.activeDrag);
+  const activeSwapTarget = useAppStore((s) => s.activeSwapTarget);
+  const applyFormations = useAppStore((s) => s.applyFormations);
+
+  const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
+  const setActiveDrag = useAppStore((s) => s.setActiveDrag);
+  const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
+  const swapPlayers = useAppStore((s) => s.swapPlayers);
+
   const metrics = usePosterMetrics();
   const homeFormation = getFormationById(homeFormationId);
   const awayFormation = getFormationById(awayFormationId);
@@ -42,12 +56,7 @@ export function PitchPlayerLayer({
   const homeLayout = useMemo(
     () =>
       homeFormation
-        ? computeFormationLayout(
-            homeFormation,
-            "home",
-            metrics,
-            effectiveCardSize
-          )
+        ? computeFormationLayout(homeFormation, "home", metrics, effectiveCardSize)
         : [],
     [homeFormation, metrics, effectiveCardSize]
   );
@@ -55,50 +64,126 @@ export function PitchPlayerLayer({
   const awayLayout = useMemo(
     () =>
       awayFormation
-        ? computeFormationLayout(
-            awayFormation,
-            "away",
-            metrics,
-            effectiveCardSize
-          )
+        ? computeFormationLayout(awayFormation, "away", metrics, effectiveCardSize)
         : [],
     [awayFormation, metrics, effectiveCardSize]
   );
+
+  const allSlotPositions = useMemo<SlotPosition[]>(() => {
+    const positions: SlotPosition[] = [];
+
+    homeLayout.forEach((slot, i) => {
+      const pp = pitchPlayers.find((p) => p.team === "home" && p.slotIndex === i);
+      positions.push({
+        team: "home",
+        slotIndex: i,
+        x: pp?.x ?? slot.x,
+        y: pp?.y ?? slot.y,
+      });
+    });
+
+    awayLayout.forEach((slot, i) => {
+      const pp = pitchPlayers.find((p) => p.team === "away" && p.slotIndex === i);
+      positions.push({
+        team: "away",
+        slotIndex: i,
+        x: pp?.x ?? slot.x,
+        y: pp?.y ?? slot.y,
+      });
+    });
+
+    return positions;
+  }, [homeLayout, awayLayout, pitchPlayers]);
 
   useEffect(() => {
     applyFormations();
   }, [applyFormations, homePlayerIds, awayPlayerIds]);
 
-  const homeSlotCount = homeFormation
-    ? getFormationSlotCount(homeFormation)
-    : 0;
-  const awaySlotCount = awayFormation
-    ? getFormationSlotCount(awayFormation)
-    : 0;
+  const homeSlotCount = homeFormation ? getFormationSlotCount(homeFormation) : 0;
+  const awaySlotCount = awayFormation ? getFormationSlotCount(awayFormation) : 0;
+
+  const renderCard = useCallback(
+    (team: "home" | "away", i: number, layoutSlot: (typeof homeLayout)[number] | undefined) => {
+      const playerIds = team === "home" ? homePlayerIds : awayPlayerIds;
+      const slotPlayerId = playerIds[i] ?? "";
+      const pp = pitchPlayers.find((p) => p.team === team && p.slotIndex === i);
+      const resolvedPlayerId = pp?.playerId || slotPlayerId;
+      const player = resolvedPlayerId ? players[resolvedPlayerId] : undefined;
+      const jersey = team === "home" ? homeJersey : awayJersey;
+      const captainId = team === "home" ? homeCaptainId : awayCaptainId;
+      const isCaptain = Boolean(resolvedPlayerId && captainId === resolvedPlayerId);
+      const num = player?.number ?? i + 1;
+      const dName = player?.name?.trim() || `Oyuncu ${i + 1}`;
+      const isGk = layoutSlot?.isGoalkeeper ?? false;
+      const hasCustom = !isGk && pp?.x != null && pp?.y != null;
+      const posX = isGk ? (layoutSlot?.x ?? 50) : (pp?.x ?? layoutSlot?.x ?? 50);
+      const posY = isGk ? (layoutSlot?.y ?? 50) : (pp?.y ?? layoutSlot?.y ?? 50);
+
+      const isDraggingThisCard = activeDrag?.team === team && activeDrag?.slotIndex === i;
+
+      return (
+        <PlayerOnPitch
+          key={`${team}-${i}`}
+          pitchRef={pitchRef}
+          team={team}
+          slotIndex={i}
+          cardSize={effectiveCardSize}
+          layoutSlot={layoutSlot}
+          onEdit={onEditPlayer}
+          player={player}
+          jersey={jersey}
+          isCaptain={isCaptain}
+          number={num}
+          displayName={dName}
+          hasCustomPosition={hasCustom}
+          positionX={posX}
+          positionY={posY}
+          isGoalkeeper={isGk}
+          pitchPlayer={pp}
+          isSwapTarget={
+            !isDraggingThisCard &&
+            activeSwapTarget?.team === team &&
+            activeSwapTarget?.slotIndex === i
+          }
+          isDraggedWithTarget={isDraggingThisCard && activeSwapTarget !== null}
+          allSlotPositions={allSlotPositions}
+          movePitchPlayer={movePitchPlayer}
+          setActiveDrag={setActiveDrag}
+          setActiveSwapTarget={setActiveSwapTarget}
+          swapPlayers={swapPlayers}
+          photoScalePercent={photoScalePercent}
+        />
+      );
+    },
+    [
+      homePlayerIds,
+      awayPlayerIds,
+      players,
+      pitchPlayers,
+      homeJersey,
+      awayJersey,
+      homeCaptainId,
+      awayCaptainId,
+      effectiveCardSize,
+      onEditPlayer,
+      activeDrag,
+      activeSwapTarget,
+      allSlotPositions,
+      movePitchPlayer,
+      setActiveDrag,
+      setActiveSwapTarget,
+      swapPlayers,
+      photoScalePercent,
+    ]
+  );
 
   return (
     <div ref={pitchRef} className="relative h-full w-full">
       {Array.from({ length: homeSlotCount }, (_, i) => (
-        <PlayerOnPitch
-          key={`home-${i}`}
-          team="home"
-          slotIndex={i}
-          pitchRef={pitchRef}
-          cardSize={effectiveCardSize}
-          layoutSlot={homeLayout[i]}
-          onEdit={onEditPlayer}
-        />
+        renderCard("home", i, homeLayout[i])
       ))}
       {Array.from({ length: awaySlotCount }, (_, i) => (
-        <PlayerOnPitch
-          key={`away-${i}`}
-          team="away"
-          slotIndex={i}
-          pitchRef={pitchRef}
-          cardSize={effectiveCardSize}
-          layoutSlot={awayLayout[i]}
-          onEdit={onEditPlayer}
-        />
+        renderCard("away", i, awayLayout[i])
       ))}
     </div>
   );

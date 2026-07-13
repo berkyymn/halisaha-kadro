@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
-import { useAppStore } from "@/store/useAppStore";
+import type { JerseyConfig, PitchPlayer, Player } from "@/types";
 import { PlayerAvatar } from "./PlayerAvatar";
 
 function clamp(value: number, min: number, max: number) {
@@ -12,82 +12,189 @@ function clamp(value: number, min: number, max: number) {
 
 const DRAG_THRESHOLD = 6;
 
-export function PlayerOnPitch({
+export interface SlotPosition {
+  team: "home" | "away";
+  slotIndex: number;
+  x: number;
+  y: number;
+}
+
+interface PlayerOnPitchProps {
+  team: "home" | "away";
+  slotIndex: number;
+  pitchRef: React.RefObject<HTMLDivElement | null>;
+  cardSize: number;
+  layoutSlot: ResolvedFormationSlot | undefined;
+  onEdit: (team: "home" | "away", slotIndex: number) => void;
+  player: Player | undefined;
+  jersey: JerseyConfig;
+  isCaptain: boolean;
+  number: number;
+  displayName: string;
+  hasCustomPosition: boolean;
+  positionX: number;
+  positionY: number;
+  isGoalkeeper: boolean;
+  pitchPlayer: PitchPlayer | undefined;
+  isSwapTarget: boolean;
+  isDraggedWithTarget: boolean;
+  allSlotPositions: SlotPosition[];
+  movePitchPlayer: (team: "home" | "away", slotIndex: number, x: number, y: number) => void;
+  setActiveDrag: (drag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null) => void;
+  setActiveSwapTarget: (target: { team: "home" | "away"; slotIndex: number } | null) => void;
+  swapPlayers: (team1: "home" | "away", slotIndex1: number, team2: "home" | "away", slotIndex2: number) => void;
+  photoScalePercent: number;
+}
+
+export const PlayerOnPitch = memo(function PlayerOnPitch({
   team,
   slotIndex,
   pitchRef,
   cardSize,
   layoutSlot,
   onEdit,
-}: {
-  team: "home" | "away";
-  slotIndex: number;
-  pitchRef: React.RefObject<HTMLDivElement | null>;
-  cardSize: number;
-  layoutSlot?: ResolvedFormationSlot;
-  onEdit: (team: "home" | "away", slotIndex: number) => void;
-}) {
-  const pitchPlayers = useAppStore((s) => s.pitchPlayers);
-  const players = useAppStore((s) => s.players);
-  const homeJersey = useAppStore((s) => s.homeTeam.jersey);
-  const awayJersey = useAppStore((s) => s.awayTeam.jersey);
-  const homeCaptainId = useAppStore((s) => s.homeTeam.captainId);
-  const awayCaptainId = useAppStore((s) => s.awayTeam.captainId);
-  const homePlayerIds = useAppStore((s) => s.homeTeam.playerIds);
-  const awayPlayerIds = useAppStore((s) => s.awayTeam.playerIds);
-  const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
-  const activeSwapTarget = useAppStore((s) => s.activeSwapTarget);
-  const setActiveDrag = useAppStore((s) => s.setActiveDrag);
-  const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
-  const swapPlayers = useAppStore((s) => s.swapPlayers);
-  const photoScalePercent = useAppStore((s) => s.photoScalePercent);
-
+  player,
+  jersey,
+  isCaptain,
+  number,
+  displayName,
+  hasCustomPosition,
+  positionX,
+  positionY,
+  isGoalkeeper,
+  isSwapTarget,
+  isDraggedWithTarget,
+  allSlotPositions,
+  movePitchPlayer,
+  setActiveDrag,
+  setActiveSwapTarget,
+  swapPlayers,
+  photoScalePercent,
+}: PlayerOnPitchProps) {
   const [dragging, setDragging] = useState(false);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const pointerStart = useRef({ x: 0, y: 0 });
   const startPosition = useRef({ x: 0, y: 0, hasCustom: false });
   const moved = useRef(false);
-  const pendingSwapTarget = useRef<{ team: "home" | "away"; slotIndex: number } | null>(
-    null
-  );
+  const pendingSwapTarget = useRef<{ team: "home" | "away"; slotIndex: number } | null>(null);
 
-  const pitchPlayer = pitchPlayers.find(
-    (p) => p.team === team && p.slotIndex === slotIndex
-  );
-  const playerIds = team === "home" ? homePlayerIds : awayPlayerIds;
-  const slotPlayerId = playerIds[slotIndex] ?? "";
-  const resolvedPlayerId = pitchPlayer?.playerId || slotPlayerId;
-  const player = resolvedPlayerId ? players[resolvedPlayerId] : undefined;
-  const jersey = team === "home" ? homeJersey : awayJersey;
+  const effectiveX = dragging ? dragPos.x : positionX;
+  const effectiveY = dragging ? dragPos.y : positionY;
 
-  if (!layoutSlot) return null;
-
-  const isGoalkeeper = layoutSlot.isGoalkeeper;
-  const formationX = layoutSlot.x;
-  const formationY = layoutSlot.y;
-
-  const hasCustomPosition =
-    !isGoalkeeper &&
-    pitchPlayer?.x != null &&
-    pitchPlayer?.y != null;
-
-  const x = isGoalkeeper ? formationX : (pitchPlayer?.x ?? formationX);
-  const y = isGoalkeeper ? formationY : (pitchPlayer?.y ?? formationY);
-  const number = player?.number ?? slotIndex + 1;
-  const displayName = player?.name?.trim() || `Oyuncu ${slotIndex + 1}`;
-  const captainId = team === "home" ? homeCaptainId : awayCaptainId;
-  const playerId = resolvedPlayerId;
-  const isCaptain = Boolean(playerId && captainId && playerId === captainId);
-
-  const handleClick = () => onEdit(team, slotIndex);
-
-  const isSwapTarget = activeSwapTarget?.team === team && activeSwapTarget?.slotIndex === slotIndex;
-  
-  // Bu kart şu an sürükleniyor VE geçerli bir değişim hedefi var
-  const isDraggedWithTarget = dragging && activeSwapTarget !== null;
+  const handleClick = useCallback(() => {
+    onEdit(team, slotIndex);
+  }, [onEdit, team, slotIndex]);
 
   const shouldShowSwapIndicator = isSwapTarget || isDraggedWithTarget;
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    moved.current = false;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    startPosition.current = { x: effectiveX, y: effectiveY, hasCustom: hasCustomPosition };
+    setDragPos({ x: effectiveX, y: effectiveY });
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDragging(true);
+    const pitch = pitchRef.current;
+    if (!pitch) return;
+    const rect = pitch.getBoundingClientRect();
+    const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
+    const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
+    dragOffset.current = { x: pointerX - effectiveX, y: pointerY - effectiveY };
+    setActiveDrag({ team, slotIndex, x: effectiveX, y: effectiveY });
+  }, [pitchRef, team, slotIndex, effectiveX, effectiveY, hasCustomPosition, setActiveDrag]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging) return;
+    const dx = e.clientX - pointerStart.current.x;
+    const dy = e.clientY - pointerStart.current.y;
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+      moved.current = true;
+    }
+    if (!moved.current) return;
+
+    const pitch = pitchRef.current;
+    if (!pitch) return;
+
+    const rect = pitch.getBoundingClientRect();
+    let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
+    let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
+
+    newX = clamp(newX, 4, 96);
+    newY = clamp(newY, 6, 94);
+
+    setDragPos({ x: newX, y: newY });
+    setActiveDrag({ team, slotIndex, x: newX, y: newY });
+
+    let closestTarget: { team: "home" | "away"; slotIndex: number } | null = null;
+    let minDistance = Infinity;
+    const thresholdPx = cardSize * 0.70;
+
+    for (const slot of allSlotPositions) {
+      if (slot.team === team && slot.slotIndex === slotIndex) continue;
+
+      const slotCenterX = rect.left + (slot.x / 100) * rect.width;
+      const slotCenterY = rect.top + (slot.y / 100) * rect.height;
+
+      const distance = Math.hypot(e.clientX - slotCenterX, e.clientY - slotCenterY);
+
+      if (distance < thresholdPx && distance < minDistance) {
+        minDistance = distance;
+        closestTarget = { team: slot.team, slotIndex: slot.slotIndex };
+      }
+    }
+
+    pendingSwapTarget.current = closestTarget;
+    setActiveSwapTarget(closestTarget);
+  }, [pitchRef, dragging, cardSize, allSlotPositions, team, slotIndex, setActiveDrag, setActiveSwapTarget]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const swapTarget = pendingSwapTarget.current;
+    pendingSwapTarget.current = null;
+
+    setDragging(false);
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    setActiveDrag(null);
+    setActiveSwapTarget(null);
+
+    if (!moved.current) {
+      handleClick();
+      return;
+    }
+
+    if (swapTarget) {
+      swapPlayers(team, slotIndex, swapTarget.team, swapTarget.slotIndex);
+      return;
+    }
+
+    const pitch = pitchRef.current;
+    if (pitch) {
+      const rect = pitch.getBoundingClientRect();
+      const finalX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
+      const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
+
+      const isOpponentHalf =
+        (team === "home" && finalX >= 48) || (team === "away" && finalX <= 52);
+
+      if (isGoalkeeper || isOpponentHalf) {
+        return;
+      }
+
+      movePitchPlayer(team, slotIndex, clamp(finalX, 4, 96), clamp(finalY, 6, 94));
+    }
+  }, [pitchRef, team, slotIndex, isGoalkeeper, swapPlayers, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    pendingSwapTarget.current = null;
+    setDragging(false);
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    setActiveDrag(null);
+    setActiveSwapTarget(null);
+  }, [setActiveDrag, setActiveSwapTarget]);
+
+  if (!layoutSlot) return null;
 
   return (
     <div
@@ -103,119 +210,15 @@ export function PlayerOnPitch({
               ? "z-30 cursor-grab"
               : "z-20 cursor-grab"
       }`}
-      style={{ left: `${dragging ? dragPos.x : x}%`, top: `${dragging ? dragPos.y : y}%` }}
-      onPointerDown={(e) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        moved.current = false;
-        pointerStart.current = { x: e.clientX, y: e.clientY };
-        startPosition.current = { x, y, hasCustom: hasCustomPosition };
-        setDragPos({ x, y });
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        setDragging(true);
-        const pitch = pitchRef.current;
-        if (!pitch) return;
-        const rect = pitch.getBoundingClientRect();
-        const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
-        const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
-        dragOffset.current = { x: pointerX - x, y: pointerY - y };
-        setActiveDrag({ team, slotIndex, x, y });
+      style={{
+        left: `${effectiveX}%`,
+        top: `${effectiveY}%`,
+        willChange: dragging ? "transform, left, top" : undefined,
       }}
-      onPointerMove={(e) => {
-        if (!dragging) return;
-        const dx = e.clientX - pointerStart.current.x;
-        const dy = e.clientY - pointerStart.current.y;
-        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-          moved.current = true;
-        }
-        if (moved.current) {
-          const pitch = pitchRef.current;
-          if (pitch) {
-            const rect = pitch.getBoundingClientRect();
-            let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
-            let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
-            
-            newX = clamp(newX, 4, 96);
-            newY = clamp(newY, 6, 94);
-
-            setDragPos({ x: newX, y: newY });
-            setActiveDrag({ team, slotIndex, x: newX, y: newY });
-
-            // Yakındaki değişilebilir oyuncuları bul (DOM tabanlı mesafe kontrolü)
-            const cards = pitch.querySelectorAll("[data-player-card]");
-            let closestTarget: { team: "home" | "away"; slotIndex: number } | null = null;
-            let minDistance = Infinity;
-
-            cards.forEach((cardEl) => {
-              const targetTeam = cardEl.getAttribute("data-team") as "home" | "away";
-              const targetSlotIndex = parseInt(cardEl.getAttribute("data-slot-index") ?? "", 10);
-
-              // Kendisiyle eşleşmesin
-              if (targetTeam === team && targetSlotIndex === slotIndex) return;
-
-              const cardRect = cardEl.getBoundingClientRect();
-              const centerX = cardRect.left + cardRect.width / 2;
-              const centerY = cardRect.top + cardRect.height / 2;
-
-              const distance = Math.hypot(e.clientX - centerX, e.clientY - centerY);
-              
-              // Kart genişliğinin %70'ine kadar yakınlaşınca takas moduna girer
-              const threshold = cardRect.width * 0.70;
-              if (distance < threshold && distance < minDistance) {
-                minDistance = distance;
-                closestTarget = { team: targetTeam, slotIndex: targetSlotIndex };
-              }
-            });
-
-            pendingSwapTarget.current = closestTarget;
-            setActiveSwapTarget(closestTarget);
-          }
-        }
-      }}
-      onPointerUp={(e) => {
-        const swapTarget = pendingSwapTarget.current;
-        pendingSwapTarget.current = null;
-
-        setDragging(false);
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-        setActiveDrag(null);
-        setActiveSwapTarget(null);
-
-        if (!moved.current) {
-          handleClick();
-          return;
-        }
-
-        if (swapTarget) {
-          swapPlayers(team, slotIndex, swapTarget.team, swapTarget.slotIndex);
-        } else {
-          // Boşluğa bırakıldı: Yarı saha kontrolü veya Kaleci snap-back kontrolü
-          const pitch = pitchRef.current;
-          if (pitch) {
-            const rect = pitch.getBoundingClientRect();
-            const finalX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
-            const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
-
-            const isOpponentHalf =
-              (team === "home" && finalX >= 48) || (team === "away" && finalX <= 52);
-
-            if (isGoalkeeper || isOpponentHalf) {
-              // Geri sekme (Snapback) - hiçbir şey yapmamız gerekmiyor çünkü store hiç değişmedi!
-              // Sadece görsel olarak eski haline dönecek.
-            } else {
-              // Kalıcı kaydet
-              movePitchPlayer(team, slotIndex, clamp(finalX, 4, 96), clamp(finalY, 6, 94));
-            }
-          }
-        }
-      }}
-      onPointerCancel={(e) => {
-        pendingSwapTarget.current = null;
-        setDragging(false);
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-        setActiveDrag(null);
-        setActiveSwapTarget(null);
-      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onClick={isGoalkeeper ? handleClick : undefined}
     >
       <div
@@ -242,7 +245,6 @@ export function PlayerOnPitch({
           variant={team === "home" ? "light" : "dark"}
         />
 
-        {/* Pulsating Swap Indicator Overlay */}
         {shouldShowSwapIndicator && (
           <div className="absolute inset-0 rounded-[18%] overflow-hidden bg-green-500/30 border-2 border-green-400 flex flex-col items-center justify-center animate-pulse z-30 shadow-[0_0_15px_rgba(34,197,94,0.6)]">
             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-green-600 shadow-md transform rotate-180 transition-transform duration-300">
@@ -256,4 +258,4 @@ export function PlayerOnPitch({
       </div>
     </div>
   );
-}
+});
