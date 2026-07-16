@@ -8,7 +8,23 @@ import {
 } from "@/lib/firebase/storage";
 import type { Player, TeamLogo } from "@/types";
 
-const uploadCache = new Map<string, string>();
+class _MediaUploadCache {
+  private _cache = new Map<string, string>();
+
+  get(path: string, dataUrl: string): string | undefined {
+    return this._cache.get(cacheKey(path, dataUrl));
+  }
+
+  set(path: string, dataUrl: string, storagePath: string): void {
+    this._cache.set(cacheKey(path, dataUrl), storagePath);
+  }
+
+  reset(): void {
+    this._cache.clear();
+  }
+}
+
+const _uploadCache = new _MediaUploadCache();
 
 function cacheKey(path: string, dataUrl: string): string {
   return `${path}:${dataUrl.length}:${dataUrl.slice(0, 48)}`;
@@ -19,12 +35,12 @@ async function uploadIfDataUrl(
   dataUrl: string | undefined
 ): Promise<string | undefined> {
   if (!dataUrl?.startsWith("data:")) return undefined;
-  const key = cacheKey(path, dataUrl);
-  const cached = uploadCache.get(key);
+  const cached = _uploadCache.get(path, dataUrl);
   if (cached) return cached;
 
+  console.log("[SYNC-DIAG] uploadIfDataUrl uploading", JSON.stringify({ path }));
   const storagePath = await uploadDataUrlToStorage(path, dataUrl);
-  uploadCache.set(key, storagePath);
+  _uploadCache.set(path, dataUrl, storagePath);
   return storagePath;
 }
 
@@ -117,5 +133,5 @@ export async function hydrateLogoFromStorage(logo: TeamLogo): Promise<TeamLogo> 
 }
 
 export function clearMediaUploadCache() {
-  uploadCache.clear();
+  _uploadCache.reset();
 }

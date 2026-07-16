@@ -228,7 +228,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `syncRevisionBump.ts` — domain-aware revision increment in store `set()`
 - [x] Sync manager subscribes to `syncRevisions` instead of full JSON diff
 - [x] Partial `lastSyncedRevisions` update after branding-only vs data saves
-- [x] Repush debounce 3s in `AuthContext`
+- [x] Repush debounce 3s in `AuthContext` (v2: timestamp-based detection replaces fingerprint for pending repush)
 - [x] Foreign-tab reload checks both `updatedAt` and `brandingUpdatedAt`
 - [x] Slim cloud team config (`slimTeamConfigForCloud`) — logo/jersey only in `branding` field
 - [x] Cloud single-photo rule: strip `photoSource` when `cutoutUrl` present
@@ -276,6 +276,34 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] Build/lint gates documented
 - [x] Change log and smoke audit table in checklist
 - [x] `docs/IMPLEMENTATION.md` (this architecture reference)
+
+---
+
+## Phase 22 — Sync baseline fix (no-op open)
+
+- [x] `applyCloudRow` her zaman `markPosterSnapshotSynced()` çağırır; fingerprint uyuşmazlığı engellendi
+- [x] `pendingRepush` tespiti fingerprint yerine `localUpdatedAt > cloudUpdatedAt` timestamp karşılaştırması
+- [x] Split branding (data/branding) fingerprint mismatch kök nedeni giderildi
+- [x] No-op açılışta sync UI idle kalır; gereksiz pending/syncing oluşmaz
+
+---
+
+## Phase 23 — Sync refactor: write callback extraction (Phase 2)
+
+- [x] `src/lib/cloudActions.ts` — `createCloudSaveHandlers` factory (pushSnapshot + pushBranding)
+- [x] AuthContext: pushSnapshot/pushBranding useCallback → useMemo + factory, 2 unused import kaldırıldı
+- [x] Factory React/Zustand hook bağımlılığı yok, callback injection ile beslenir
+- [x] Runtime davranış sıfır değişiklik; tüm status/error handling satır satır korundu
+
+---
+
+## Phase 24 — Sync refactor: read-path extraction (Phase 3)
+
+- [x] `src/lib/cloudLoader.ts` — `createCloudLoadHandlers` factory (loadCloudPoster, softReloadFromCloud, applyCloudRow)
+- [x] AuthContext: read-path useCallback'ler kaldırıldı, useMemo + factory wiring eklendi
+- [x] AuthContext'ten ~8 import kaldırıldı (cloudPoster, brandingSnapshot, playerPhotos, teamLogoCloud, PosterSnapshot)
+- [x] `pendingRepushRef` AuthContext'ten kaldırıldı — factory internal `_pendingRepush` ile yönetiliyor
+- [x] AuthContext 421 → 253 satır; sadece auth + UI state + wiring
 
 ---
 

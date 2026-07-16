@@ -18,6 +18,7 @@ export async function uploadDataUrlToStorage(
   path: string,
   dataUrl: string
 ): Promise<string> {
+  console.log("[SYNC-DIAG] uploadDataUrlToStorage", JSON.stringify({ path }));
   const storageRef = ref(getFirebaseStorage(), path);
   await uploadString(storageRef, dataUrl, "data_url");
   return path;

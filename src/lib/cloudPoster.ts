@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/app";
-import { enqueueFirestoreWrite } from "@/lib/firestoreWriteQueue";
+import { firestoreWriteQueue } from "@/lib/firestoreWriteQueue";
 import { compressPlayerPhotos } from "@/lib/imageCompress";
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import {
@@ -219,6 +219,7 @@ export async function prepareSnapshotForCloud(
   snapshot: PosterSnapshot,
   userId?: string
 ): Promise<{ snapshot: PosterSnapshot; result: CloudSaveResult }> {
+  console.log("[SYNC-DIAG] prepareSnapshotForCloud called", JSON.stringify({ userId, photosBefore: countPlayerPhotos(snapshot.savedPlayers) }));
   const sourceFingerprint = fingerprintPosterSnapshot(snapshot);
   if (preparedSnapshotCache?.sourceFingerprint === sourceFingerprint) {
     return {
@@ -368,7 +369,7 @@ export async function saveUserBranding(
   userId: string,
   source: PosterSnapshotSource
 ): Promise<BrandingSaveResult> {
-  return enqueueFirestoreWrite(async () => {
+  return firestoreWriteQueue.enqueue(async () => {
     const built = buildBrandingFromPosterSource(source);
     const [homeLogo, awayLogo] = await Promise.all([
       uploadLogoMediaForCloud(userId, "home", built.home.logo),
@@ -399,7 +400,8 @@ export async function saveUserPoster(
   userId: string,
   snapshot: PosterSnapshot
 ): Promise<CloudSaveResultWithMeta> {
-  return enqueueFirestoreWrite(async () => {
+  console.log("[SYNC-DIAG] saveUserPoster called", JSON.stringify({ userId }));
+  return firestoreWriteQueue.enqueue(async () => {
     const { snapshot: cloudSnapshot, result } =
       await prepareSnapshotForCloud(snapshot, userId);
     const ref = doc(getFirebaseDb(), COLLECTION, userId);

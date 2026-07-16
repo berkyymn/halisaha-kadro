@@ -176,6 +176,8 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 **Dosyalar:** `src/lib/cloudSyncManager.ts`, `src/lib/firestoreWriteQueue.ts`, `src/lib/cloudPoster.ts`, `src/contexts/AuthContext.tsx`
 
+> **Sync refactor regresyon testleri için:** `docs/SYNC-REFACTOR-CHECKLIST.md` (§S1–§S10)
+
 | Adım | Beklenen |
 |------|----------|
 | Giriş yapmış kullanıcıda 10 ardışık oyuncu fotoğrafı ekle | `resource-exhausted` hatası olmamalı; toolbar'da "Kaydediliyor..." görünür |

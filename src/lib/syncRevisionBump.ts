@@ -4,7 +4,14 @@ import {
   type SyncRevisions,
 } from "@/lib/syncRevisions";
 
-const LAYOUT_KEYS = new Set([
+/**
+ * Store alanı → sync domain sınıflandırması.
+ * Yeni bir persisted alan eklendiğinde ilgili Set'e eklenmeli.
+ * homeTeam / awayTeam alt alanları branding vs roster için ayrıca kontrol edilir.
+ * Fotoğraf/medya değişiklikleri savedPlayers/players üzerinden karşılaştırmalı tespit edilir.
+ */
+
+const LAYOUT_STORE_KEYS = new Set([
   "mode",
   "matchInfo",
   "homeFormationId",
@@ -15,7 +22,7 @@ const LAYOUT_KEYS = new Set([
   "posterTheme",
 ]);
 
-const ROSTER_KEYS = new Set([
+const ROSTER_STORE_KEYS = new Set([
   "players",
   "savedPlayers",
   "benchPlayerIds",
@@ -55,7 +62,7 @@ function teamRosterChanged(
   );
 }
 
-function playerRegistryMediaChanged(
+function detectPlayerMediaChange(
   prev: Record<string, Player>,
   next: Record<string, Player>
 ): boolean {
@@ -102,9 +109,9 @@ export function bumpSyncRevisions(
       if (teamRosterChanged(prevState.awayTeam, patch)) roster = true;
     } else if (key === "teamLogoDisplaySize") {
       branding = true;
-    } else if (ROSTER_KEYS.has(key)) {
+    } else if (ROSTER_STORE_KEYS.has(key)) {
       roster = true;
-    } else if (LAYOUT_KEYS.has(key)) {
+    } else if (LAYOUT_STORE_KEYS.has(key)) {
       layout = true;
     }
   }
@@ -115,8 +122,8 @@ export function bumpSyncRevisions(
       (next.savedPlayers as Record<string, Player> | undefined) ??
       prevState.savedPlayers;
     if (
-      playerRegistryMediaChanged(prevState.players, nextPlayers) ||
-      playerRegistryMediaChanged(prevState.savedPlayers, nextSaved)
+      detectPlayerMediaChange(prevState.players, nextPlayers) ||
+      detectPlayerMediaChange(prevState.savedPlayers, nextSaved)
     ) {
       media = true;
     }

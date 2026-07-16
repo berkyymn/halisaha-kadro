@@ -319,6 +319,10 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 
 **Multi-tab:** `BroadcastChannel` `halisaha-poster-sync`; foreign tab triggers `softReloadFromCloud` when `updatedAt` or `brandingUpdatedAt` is newer.
 
+**Sync baseline:** `applyCloudRow` always calls `markPosterSnapshotSynced` after cloud load to set `lastSyncedRevisions`. Pending repush detection uses `localSnapshot.localUpdatedAt > row.updatedAt` (not fingerprint comparison, which fails against split-branding slim `data` snapshots without logo/jersey).
+
+**Regression guard:** `docs/SYNC-REFACTOR-CHECKLIST.md` — her sync refactor phase sonrası çalıştır.
+
 ### F12 — Image compression bootstrap
 
 | | |
