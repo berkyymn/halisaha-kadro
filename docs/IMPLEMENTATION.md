@@ -237,8 +237,9 @@ Themes: `derby-night`, `champions-night`, `dark-arena`, `summer-cup`. Background
 | **Lib** | `backgroundRemoval.ts` — **static import** of `@imgly/background-removal` (required; dynamic import breaks dev HMR) |
 | **Persist** | Save cutout as **data URL** via `fileToDataUrl`; never blob URL |
 | **QA** | §3 |
+| **Preload** | `preloadBackgroundRemovalModel()` called on idle via `AppBootstrapGate`; uses `imglyPreload()` to download ~40MB model in background |
 
-First run downloads ~40MB ONNX model; needs network.
+Config: model `isnet_quint8`, output `image/webp` Q90, GPU inference with CPU fallback. Progress separates `fetch:` (model download) from `compute:` (inference). `isModelReady()` lets UI check preload status.
 
 ### F5 — Drag, drop & swap on pitch
 

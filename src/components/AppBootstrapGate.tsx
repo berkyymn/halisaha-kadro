@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressAllSavedPlayers } from "@/lib/imageCompress";
+import { preloadBackgroundRemovalModel } from "@/lib/backgroundRemoval";
 import {
   hasAppStoreHydrated,
   onAppStoreHydrated,
@@ -37,10 +38,12 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
       if (typeof window !== "undefined" && "requestIdleCallback" in window) {
         window.requestIdleCallback(() => {
           void compressAllSavedPlayers();
+          void preloadBackgroundRemovalModel();
         });
       } else {
         setTimeout(() => {
           void compressAllSavedPlayers();
+          void preloadBackgroundRemovalModel();
         }, 1000);
       }
     };

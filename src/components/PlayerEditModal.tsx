@@ -21,7 +21,7 @@ import {
   getPhotoImgClassName,
 } from "@/lib/imageCompress";
 import { PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
-import { removeBackground } from "@/lib/backgroundRemoval";
+import { removeBackground, isModelReady } from "@/lib/backgroundRemoval";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import { useAppStore } from "@/store/useAppStore";
 import type { JerseyConfig, PhotoCrop, Player } from "@/types";
@@ -134,24 +134,20 @@ function PlayerEditModalBody({
     if (!src || removingBg) return;
     setRemovingBg(true);
     setBgError(null);
-    setBgProgress("Hazırlanıyor…");
+    setBgProgress(isModelReady() ? "Arka plan kaldırılıyor…" : "Model indiriliyor…");
     setBeforeCutout(cutoutUrl);
     try {
-      const res = await fetch(src);
-      if (!res.ok) {
-        throw new Error("Fotoğraf okunamadı.");
-      }
-      const blob = await res.blob();
-      const file = new File([blob], "photo.jpg", {
-        type: blob.type || "image/jpeg",
-      });
-      const blobUrl = await removeBackground(file, {
+      const blobUrl = await removeBackground(src, {
         onProgress: ({ label, percent }) => {
           if (label.startsWith("fetch:")) {
             setBgProgress(`Model indiriliyor… %${percent}`);
             return;
           }
-          setBgProgress("Arka plan kaldırılıyor…");
+          if (label.startsWith("compute:")) {
+            setBgProgress("Arka plan kaldırılıyor…");
+            return;
+          }
+          setBgProgress(`${label}… %${percent}`);
         },
       });
       const dataUrl = await blobUrlToDataUrl(blobUrl);

@@ -319,6 +319,18 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 26 — Arka plan kaldırma optimizasyonu
+
+- [x] `preloadBackgroundRemovalModel()` — `@imgly/background-removal` `preload()` API ile modeli app açılışında indir
+- [x] `AppBootstrapGate` idle callback'te `compressAllSavedPlayers` ile beraber preload çağrısı
+- [x] `removeBackground()` data URL'yi direkt `ImageSource` olarak kabul eder — fetch+Blob+File dönüşümü kalktı
+- [x] Çıktı formatı: PNG → `image/webp` Q90 (daha küçük boyut, daha az sıkıştırma)
+- [x] GPU inference (`device: "gpu"`) denenir, yoksa CPU fallback
+- [x] Progress: `fetch:` (model indirme) vs `compute:` (işleme) ayrı label, `isModelReady()` ile durum kontrolü
+- [x] `getPreloadState()` / `isModelReady()` — UI model durumunu okuyabilir
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud

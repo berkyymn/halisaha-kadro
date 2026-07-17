@@ -1,6 +1,6 @@
 "use client";
 
-import { removeBackground as imglyRemoveBackground } from "@imgly/background-removal";
+import { removeBackground as imglyRemoveBackground, preload as imglyPreload } from "@imgly/background-removal";
 
 export type BackgroundRemovalProgress = {
   label: string;
@@ -9,16 +9,64 @@ export type BackgroundRemovalProgress = {
 
 export type BackgroundRemovalOptions = {
   onProgress?: (progress: BackgroundRemovalProgress) => void;
-  /** Smaller model (~40MB) — faster first run than default medium (~80MB). */
   model?: "isnet_quint8" | "isnet_fp16" | "isnet";
 };
 
+type PreloadState = "idle" | "loading" | "ready" | "error";
+
+let preloadState: PreloadState = "idle";
+let preloadPromise: Promise<void> | null = null;
+
+export function getPreloadState(): PreloadState {
+  return preloadState;
+}
+
+export function isModelReady(): boolean {
+  return preloadState === "ready";
+}
+
+export async function preloadBackgroundRemovalModel(): Promise<void> {
+  if (preloadState === "ready" || preloadState === "loading") {
+    if (preloadPromise) return preloadPromise;
+    return;
+  }
+
+  preloadState = "loading";
+  preloadPromise = imglyPreload({ model: "isnet_quint8" })
+    .then(() => {
+      preloadState = "ready";
+      preloadPromise = null;
+    })
+    .catch((err) => {
+      console.warn("[BG-REMOVAL] Model preload failed:", err);
+      preloadState = "error";
+      preloadPromise = null;
+    });
+
+  return preloadPromise;
+}
+
+function supportsGPU(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
 export async function removeBackground(
-  file: File,
+  source: File | string,
   options: BackgroundRemovalOptions = {}
 ): Promise<string> {
-  const blob = await imglyRemoveBackground(file, {
+  const blob = await imglyRemoveBackground(source as Parameters<typeof imglyRemoveBackground>[0], {
     model: options.model ?? "isnet_quint8",
+    device: supportsGPU() ? "gpu" : "cpu",
+    output: {
+      format: "image/webp",
+      quality: 0.9,
+    },
     progress: options.onProgress
       ? (key, current, total) => {
           options.onProgress?.({
