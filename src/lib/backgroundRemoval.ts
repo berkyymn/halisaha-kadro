@@ -32,7 +32,7 @@ export async function preloadBackgroundRemovalModel(): Promise<void> {
   }
 
   preloadState = "loading";
-  preloadPromise = imglyPreload({ model: "isnet_quint8" })
+  preloadPromise = imglyPreload({ model: "isnet_quint8", device: "cpu" })
     .then(() => {
       preloadState = "ready";
       preloadPromise = null;
@@ -46,23 +46,13 @@ export async function preloadBackgroundRemovalModel(): Promise<void> {
   return preloadPromise;
 }
 
-function supportsGPU(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
-    return !!gl;
-  } catch {
-    return false;
-  }
-}
-
 export async function removeBackground(
   source: File | string,
   options: BackgroundRemovalOptions = {}
 ): Promise<string> {
   const blob = await imglyRemoveBackground(source as Parameters<typeof imglyRemoveBackground>[0], {
     model: options.model ?? "isnet_quint8",
-    device: supportsGPU() ? "gpu" : "cpu",
+    device: "cpu",
     output: {
       format: "image/webp",
       quality: 0.9,

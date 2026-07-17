@@ -325,7 +325,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `AppBootstrapGate` idle callback'te `compressAllSavedPlayers` ile beraber preload çağrısı
 - [x] `removeBackground()` data URL'yi direkt `ImageSource` olarak kabul eder — fetch+Blob+File dönüşümü kalktı
 - [x] Çıktı formatı: PNG → `image/webp` Q90 (daha küçük boyut, daha az sıkıştırma)
-- [x] GPU inference (`device: "gpu"`) denenir, yoksa CPU fallback
+- [x] CPU inference (GPU WebGPU/JSEP uyumsuzluğu nedeniyle devre dışı)
 - [x] Progress: `fetch:` (model indirme) vs `compute:` (işleme) ayrı label, `isModelReady()` ile durum kontrolü
 - [x] `getPreloadState()` / `isModelReady()` — UI model durumunu okuyabilir
 

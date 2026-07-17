@@ -239,7 +239,7 @@ Themes: `derby-night`, `champions-night`, `dark-arena`, `summer-cup`. Background
 | **QA** | §3 |
 | **Preload** | `preloadBackgroundRemovalModel()` called on idle via `AppBootstrapGate`; uses `imglyPreload()` to download ~40MB model in background |
 
-Config: model `isnet_quint8`, output `image/webp` Q90, GPU inference with CPU fallback. Progress separates `fetch:` (model download) from `compute:` (inference). `isModelReady()` lets UI check preload status.
+Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress separates `fetch:` (model download) from `compute:` (inference). `isModelReady()` lets UI check preload status.
 
 ### F5 — Drag, drop & swap on pitch
 

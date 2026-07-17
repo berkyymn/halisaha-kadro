@@ -47,7 +47,7 @@ Tam regresyon için tüm maddeleri baştan sona çalıştır.
 | İkinci kullanımda (model cached) | "Arka plan kaldırılıyor…" direkt görünür, bekleme yok |
 | İşlem bitince | Arka plansız önizleme, WebP formatında |
 | Kaydet + sayfayı yenile | Cutout **kaybolmaz** (data URL olarak saklanır) |
-| GPU varsa | inference GPU'da çalışır, CPU'ya fallback sorunsuz |
+| CPU inference | WASM/ONNX ile CPU'da çalışır, GPU gerekmez |
 | App açılışında | Model idle callback ile arka planda preload edilir |
 
 - [ ] Geçti
