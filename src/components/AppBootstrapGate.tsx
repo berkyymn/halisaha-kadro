@@ -21,6 +21,10 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
   const [storeReady, setStoreReady] = useState(() => hasAppStoreHydrated());
 
   useEffect(() => {
+    void preloadBackgroundRemovalModel();
+  }, []);
+
+  useEffect(() => {
     if (storeReady) return;
     return onAppStoreHydrated(() => {
       setStoreReady(true);
@@ -38,12 +42,10 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
       if (typeof window !== "undefined" && "requestIdleCallback" in window) {
         window.requestIdleCallback(() => {
           void compressAllSavedPlayers();
-          void preloadBackgroundRemovalModel();
         });
       } else {
         setTimeout(() => {
           void compressAllSavedPlayers();
-          void preloadBackgroundRemovalModel();
         }, 1000);
       }
     };
