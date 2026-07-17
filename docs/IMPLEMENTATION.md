@@ -330,7 +330,24 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 | **UI** | `AppBootstrapGate.tsx` |
 | **Lib** | `imageCompress.compressAllSavedPlayers` on idle after app ready |
 
-One-time migration-style compression of legacy large data URLs in localStorage.
+One-time migration-style compression of legacy large data URLs in localStorage. Uses `Player.didCompress` flag to track which players have been processed. Only re-compresses players where `didCompress` is falsy.
+
+### F13 — Photo quality optimization (v29)
+
+| | |
+|---|---|
+| **Lib** | `imageCompress.ts`, `cloudPoster.ts` |
+
+|| Parameter | Before | After |
+||-----------|--------|-------|
+|| `DEFAULT_PHOTO_MAX` | 200px | **400px** |
+|| `DEFAULT_CUTOUT_MAX` | 200px | **400px** |
+|| Default JPEG/WebP quality | 0.75 | **0.85** |
+|| Cloud tier 1 max edge | 180px @ 0.75 | **300px @ 0.80** |
+|| Cloud tier 2 max edge | 140px @ 0.70 | **200px @ 0.75** |
+|| Cloud tier 3 max edge | 100px @ 0.65 | **140px @ 0.70** |
+
+Store version 28 → 29 migration marks all `savedPlayers`/`players` with `didCompress: false`. `AppBootstrapGate` idle callback re-compresses at new quality. Firebase Storage upload uses new tier parameters. localStorage footprint ~1.5MB for 18 players (within 5-10MB limit).
 
 ---
 

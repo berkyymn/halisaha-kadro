@@ -63,9 +63,9 @@ type CompressTier = {
 };
 
 const COMPRESS_TIERS: CompressTier[] = [
-  { photoMax: 180, cutoutMax: 180, photoQuality: 0.75, cutoutQuality: 0.75 },
+  { photoMax: 300, cutoutMax: 300, photoQuality: 0.80, cutoutQuality: 0.80 },
+  { photoMax: 200, cutoutMax: 200, photoQuality: 0.75, cutoutQuality: 0.75 },
   { photoMax: 140, cutoutMax: 140, photoQuality: 0.70, cutoutQuality: 0.70 },
-  { photoMax: 100, cutoutMax: 100, photoQuality: 0.65, cutoutQuality: 0.65 },
 ];
 
 let preparedSnapshotCache: {

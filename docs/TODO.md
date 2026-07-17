@@ -307,6 +307,18 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 25 — Fotoğraf kalitesi iyileştirmesi
+
+- [x] `DEFAULT_PHOTO_MAX` 200 → 400px, `DEFAULT_CUTOUT_MAX` 200 → 400px
+- [x] Varsayılan JPEG/WebP kalitesi 0.75 → 0.85
+- [x] Cloud `COMPRESS_TIERS` 180/140/100 → 300/200/140, kalite 0.75/0.70/0.65 → 0.80/0.75/0.70
+- [x] `Player.didCompress` alanı eklendi — sıkıştırma migrate takibi için
+- [x] Store version 28 → 29, migration ile tüm `didCompress` → false
+- [x] `compressAllSavedPlayers` sadece `didCompress: false` olanları işler, işlenenleri `true` yapar
+- [x] `AppBootstrapGate` mevcut idle callback mekanizması üzerinden otomatik migrate
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud

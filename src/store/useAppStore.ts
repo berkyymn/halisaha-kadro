@@ -999,7 +999,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 28,
+      version: 29,
       migrate: (persisted, version) => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -1275,6 +1275,23 @@ export const useAppStore = create<AppStore>()(
               awayTeam,
               squadSize
             ),
+          };
+        }
+        if (version < 29) {
+          const savedPlayers = (state.savedPlayers as Record<string, Player>) || {};
+          const updatedSaved: Record<string, Player> = {};
+          for (const [id, p] of Object.entries(savedPlayers)) {
+            updatedSaved[id] = { ...p, didCompress: false };
+          }
+          const players = (state.players as Record<string, Player>) || {};
+          const updatedPlayers: Record<string, Player> = {};
+          for (const [id, p] of Object.entries(players)) {
+            updatedPlayers[id] = { ...p, didCompress: false };
+          }
+          state = {
+            ...state,
+            savedPlayers: updatedSaved,
+            players: updatedPlayers,
           };
         }
         return state;

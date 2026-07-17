@@ -45,6 +45,8 @@ export interface Player {
   /** Firebase Storage yolu — bulutta data URL yerine */
   cutoutStoragePath?: string;
   photoSourceStoragePath?: string;
+  /** Sıkıştırma migrate edildi mi */
+  didCompress?: boolean;
 }
 
 export interface TeamConfig {

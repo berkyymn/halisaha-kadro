@@ -10,8 +10,8 @@ export type CompressOptions = {
   kind?: "photo" | "cutout";
 };
 
-const DEFAULT_PHOTO_MAX = 200;
-const DEFAULT_CUTOUT_MAX = 200;
+const DEFAULT_PHOTO_MAX = 400;
+const DEFAULT_CUTOUT_MAX = 400;
 
 export function getPhotoImgClassName(isCutout: boolean): string {
   return `pointer-events-none h-full w-full object-contain ${
@@ -48,7 +48,7 @@ export async function compressDataUrl(
   const kind = options.kind ?? (dataUrl.includes("png") ? "cutout" : "photo");
   const maxEdge =
     options.maxEdge ?? (kind === "cutout" ? DEFAULT_CUTOUT_MAX : DEFAULT_PHOTO_MAX);
-  const quality = options.quality ?? 0.75;
+  const quality = options.quality ?? 0.85;
   const mime = kind === "cutout" ? "image/webp" : "image/jpeg";
 
   const img = await loadImage(dataUrl);
@@ -144,6 +144,7 @@ export async function compressAllSavedPlayers(): Promise<void> {
   let anyChanged = false;
 
   for (const [id, player] of Object.entries(savedPlayers)) {
+    if (player.didCompress) continue;
     const result = await compressPlayerPhotos(player);
     if (result.didCompress) {
       anyChanged = true;
@@ -153,11 +154,18 @@ export async function compressAllSavedPlayers(): Promise<void> {
         cutoutUrl: result.cutoutUrl,
         avatarUrl: result.avatarUrl,
         photoUrl: result.photoUrl,
+        didCompress: true,
       };
       savedPlayers[id] = updated;
       if (players[id]) {
         players[id] = updated;
       }
+    } else {
+      savedPlayers[id] = { ...player, didCompress: true };
+      if (players[id]) {
+        players[id] = { ...players[id], didCompress: true };
+      }
+      anyChanged = true;
     }
   }
 

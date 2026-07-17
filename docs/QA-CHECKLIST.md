@@ -226,4 +226,18 @@ npm run lint
 
 **Asset kontrolü:** `public/posters/` (4 PNG), `public/logos/presets/` (6 PNG) — 404 yok.
 
+### 12 — Fotoğraf kalitesi
+
+| Adım | Beklenen |
+|------|----------|
+| Sayfayı yenile (store v29 migrate) | `didCompress: false` ile işaretlenir |
+| App boşta beklerken idle callback | `compressAllSavedPlayers` eski fotoğrafları 400px'te yeniden sıkıştırır |
+| Yeni oyuncu fotoğrafı ekle | `photoSource` 400px max edge, JPEG Q85 olmalı (200px/75'ten iyileşme) |
+| Arka plan kaldır | `cutoutUrl` 400px max edge, WebP Q85 olmalı |
+| Poster export (2x) | Fotoğraflar bulanık değil, net görünmeli |
+| Firebase Storage upload | `source.jpg` ve `cutout.webp` yeni kalitede yüklenmeli |
+| Eski cihazda localStorage | ~1-1.5MB (18 oyuncu × 2 foto), 5MB limit altında kalır |
+
+**Bilinen sınırlama:** `substituteTarget` sayfa yenilenince sıfırlanır (React state).
+
 **Bilinen sınırlama:** `substituteTarget` sayfa yenilenince sıfırlanır (React state).
