@@ -37,6 +37,7 @@ const PHOTO_FIELDS: (keyof Player)[] = [
   "photoUrl",
   "cutoutStoragePath",
   "photoSourceStoragePath",
+  "didCompress",
 ];
 
 function teamBrandingChanged(

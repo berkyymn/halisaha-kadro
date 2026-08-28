@@ -170,6 +170,6 @@ export async function compressAllSavedPlayers(): Promise<void> {
   }
 
   if (anyChanged) {
-    useAppStore.setState({ savedPlayers, players });
+    useAppStore.getState().applyCompressedPlayers(players, savedPlayers);
   }
 }

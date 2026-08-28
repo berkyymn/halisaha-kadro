@@ -18,8 +18,6 @@ const PlayerEditModal = dynamic(
 );
 
 export function AppShell() {
-  const mode = useAppStore((s) => s.mode);
-  const setMode = useAppStore((s) => s.setMode);
   const resetGuestSession = useAppStore((s) => s.resetGuestSession);
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);
@@ -99,36 +97,14 @@ export function AppShell() {
         <div className="flex items-center gap-2">
           <UserAuthButton />
           <div className="hidden sm:block h-5 w-px bg-zinc-800" />
-          <div className="flex bg-zinc-800 rounded p-0.5 text-[11px]">
-            <button
-              type="button"
-              onClick={() => setMode("guest")}
-              className={`px-2.5 py-1 rounded ${
-                mode === "guest" ? "bg-zinc-600 text-white" : "text-zinc-400"
-              }`}
-            >
-              Misafir
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("saved")}
-              className={`px-2.5 py-1 rounded ${
-                mode === "saved" ? "bg-green-700 text-white" : "text-zinc-400"
-              }`}
-            >
-              Kayıtlı
-            </button>
-          </div>
-          {mode === "guest" && (
-            <button
-              type="button"
-              onClick={resetGuestSession}
-              className="p-1.5 text-zinc-500 hover:text-white"
-              title="Sıfırla"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={resetGuestSession}
+            className="p-1.5 text-zinc-500 hover:text-white"
+            title="Posteri sıfırla"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
           <button
             type="button"
             onClick={handleExport}

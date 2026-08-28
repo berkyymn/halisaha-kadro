@@ -39,9 +39,15 @@ async function uploadIfDataUrl(
   if (cached) return cached;
 
   console.log("[SYNC-DIAG] uploadIfDataUrl uploading", JSON.stringify({ path }));
-  const storagePath = await uploadDataUrlToStorage(path, dataUrl);
-  _uploadCache.set(path, dataUrl, storagePath);
-  return storagePath;
+  try {
+    const storagePath = await uploadDataUrlToStorage(path, dataUrl);
+    _uploadCache.set(path, dataUrl, storagePath);
+    return storagePath;
+  } catch (error) {
+    // Storage is optional; a failed media upload must not block poster data.
+    console.warn("Storage media upload failed:", path, error);
+    return undefined;
+  }
 }
 
 export async function uploadPlayerMediaForCloud(
@@ -70,8 +76,16 @@ export async function uploadPlayerMediaForCloud(
 
     next[id] = {
       ...player,
-      ...(cutoutStoragePath ? { cutoutStoragePath } : {}),
-      ...(photoSourceStoragePath ? { photoSourceStoragePath } : {}),
+      ...(cutoutStoragePath
+        ? { cutoutStoragePath }
+        : player.cutoutUrl?.startsWith("data:")
+          ? { cutoutStoragePath: undefined }
+          : {}),
+      ...(photoSourceStoragePath
+        ? { photoSourceStoragePath }
+        : player.photoSource?.startsWith("data:")
+          ? { photoSourceStoragePath: undefined }
+          : {}),
     };
   }
   return next;
@@ -91,7 +105,7 @@ export async function uploadLogoMediaForCloud(
     teamLogoStoragePath(userId, side),
     logo.imageUrl
   );
-  if (!storagePath) return logo;
+  if (!storagePath) return { ...logo, storagePath: undefined };
 
   return {
     ...logo,
@@ -108,12 +122,24 @@ export async function hydratePlayerPhotosFromStorage(
   const next: Record<string, Player> = { ...players };
   await Promise.all(
     Object.entries(players).map(async ([id, player]) => {
-      if (player.cutoutUrl || !player.cutoutStoragePath) return;
       try {
-        const cutoutUrl = await resolveStorageDownloadUrl(player.cutoutStoragePath);
-        next[id] = { ...player, cutoutUrl };
+        const [cutoutUrl, photoSource] = await Promise.all([
+          !player.cutoutUrl && player.cutoutStoragePath
+            ? resolveStorageDownloadUrl(player.cutoutStoragePath)
+            : Promise.resolve(undefined),
+          !player.photoSource && player.photoSourceStoragePath
+            ? resolveStorageDownloadUrl(player.photoSourceStoragePath)
+            : Promise.resolve(undefined),
+        ]);
+        if (cutoutUrl || photoSource) {
+          next[id] = {
+            ...player,
+            ...(cutoutUrl ? { cutoutUrl } : {}),
+            ...(photoSource ? { photoSource } : {}),
+          };
+        }
       } catch (error) {
-        console.warn("Storage cutout hydrate failed:", id, error);
+        console.warn("Storage player media hydrate failed:", id, error);
       }
     })
   );

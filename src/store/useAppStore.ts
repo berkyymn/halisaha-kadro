@@ -147,6 +147,10 @@ interface AppStore {
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   setCaptain: (team: "home" | "away", slotIndex: number | null) => void;
   updatePlayer: (id: string, data: Partial<Player>) => void;
+  applyCompressedPlayers: (
+    players: Record<string, Player>,
+    savedPlayers: Record<string, Player>
+  ) => void;
   movePitchPlayer: (
     team: "home" | "away",
     slotIndex: number,
@@ -545,6 +549,9 @@ export const useAppStore = create<AppStore>()(
           const savedPlayers = { ...s.savedPlayers, [id]: updated };
           return { players, savedPlayers };
         }),
+
+      applyCompressedPlayers: (players, savedPlayers) =>
+        set({ players, savedPlayers }),
 
       movePitchPlayer: (team, slotIndex, x, y) =>
         set((s) => ({

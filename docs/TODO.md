@@ -27,7 +27,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `hasAppStoreHydrated()` / `onAppStoreHydrated()` for bootstrap gating
 - [x] Poster snapshot module (`src/lib/posterSnapshot.ts`): build, parse, merge, finalize, normalize
 - [x] Player pool helpers (`src/lib/playerPool.ts`): lineup IDs, bench sanitize, active registry rebuild
-- [x] Persist version **v28** with `syncRevisions` field
+- [x] Persist version **v29** with `syncRevisions` and `didCompress` fields
 
 ---
 
@@ -331,6 +331,30 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 27 — Firebase veri akışı hardening
+
+- [x] Storage bucket oluşturuldu ve production Storage rules deploy edildi
+- [x] Firebase proje yapılandırması (`firebase.json`, `.firebaserc`) eklendi
+- [x] Storage upload hatası medya bazında fail-soft; poster Firestore kaydını kilitlemez
+- [x] Data save `updateDoc` ile bütün `data` map’ini değiştirir; deep-merge kaynaklı eski inline medya temizlenir
+- [x] Cloud hydrate, Storage path yanında kalan inline medya için bir defalık repush planlar
+- [x] Idle fotoğraf sıkıştırması store action üzerinden revision ve cloud sync akışına girer
+- [x] Firebase MCP ile proje, rules, bucket ve poster dokümanı doğrulandı
+
+### Gelecek mimari kararlar
+
+- [ ] Firestore server-authoritative revision ve stale-write protection
+- [ ] Offline durable outbox; mobil background/terminate senaryosu
+- [ ] Firestore `onSnapshot` realtime listener; BroadcastChannel yalnızca optimizasyon
+- [ ] Storage path allowlist, orphan media cleanup ve hesap silme akışı
+- [ ] Firestore rules schema/type/size doğrulaması ve App Check değerlendirmesi
+
+### Kapsam kararı
+
+- [x] Tek kullanıcı için tek poster modeli korunacak; çoklu poster ve poster geçmişi yapılmayacak
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud
@@ -347,7 +371,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v28** |
+| localStorage key | `halisaha-kadro` persist **v29** |
 | Snapshot | `PosterSnapshot` + `syncRevisions` |
 | Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, optional omit flags |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |

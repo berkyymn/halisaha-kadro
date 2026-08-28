@@ -22,22 +22,48 @@ export function isResourceExhaustedError(error: unknown): boolean {
   );
 }
 
+export function isRetryableFirestoreError(error: unknown): boolean {
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code: string }).code)
+      : "";
+  return [
+    "aborted",
+    "deadline-exceeded",
+    "internal",
+    "resource-exhausted",
+    "unavailable",
+  ].includes(code);
+}
+
+class FirestoreWriteCancelledError extends Error {
+  constructor() {
+    super("Firestore write cancelled after session reset");
+    this.name = "FirestoreWriteCancelledError";
+  }
+}
+
 /** Tüm Firestore yazılarını tek kuyrukta serileştirir; aralık, bütçe ve cooldown uygular */
 export class FirestoreWriteQueue {
   private chain: Promise<void> = Promise.resolve();
   private lastWriteFinishedAt = 0;
   private cooldownUntil = 0;
   private recentWriteTimestamps: number[] = [];
+  private generation = 0;
 
   enqueue<T>(
     fn: () => Promise<T>,
     options?: { priority?: boolean }
   ): Promise<T> {
     const priority = options?.priority ?? false;
+    const enqueueGeneration = this.generation;
     const run = async (): Promise<T> => {
       const minGap = priority ? PRIORITY_MIN_GAP_MS : MIN_GAP_MS;
 
       for (;;) {
+        if (enqueueGeneration !== this.generation) {
+          throw new FirestoreWriteCancelledError();
+        }
         const now = Date.now();
         const waitMs = Math.max(
           0,
@@ -52,6 +78,9 @@ export class FirestoreWriteQueue {
         break;
       }
 
+      if (enqueueGeneration !== this.generation) {
+        throw new FirestoreWriteCancelledError();
+      }
       try {
         const result = await fn();
         this.recordWriteCompleted();
@@ -82,6 +111,7 @@ export class FirestoreWriteQueue {
 
   /** Cooldown ve yazı bütçesini sıfırlar; devam eden promise zincirine dokunmaz */
   reset(): void {
+    this.generation += 1;
     this.cooldownUntil = 0;
     this.lastWriteFinishedAt = 0;
     this.recentWriteTimestamps.length = 0;

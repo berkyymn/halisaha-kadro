@@ -3,27 +3,13 @@
 import { Cloud, Loader2, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-function syncLabel(status: ReturnType<typeof useAuth>["syncStatus"]) {
-  switch (status) {
-    case "loading":
-      return "Yükleniyor...";
-    case "syncing":
-      return "Kaydediliyor...";
-    case "saved":
-      return "Bulutta";
-    case "error":
-      return "Senkron hatası";
-    default:
-      return "";
-  }
-}
-
 export function UserAuthButton() {
   const {
     configured,
     user,
     loading,
     syncStatus,
+    syncPhase,
     syncError,
     openAuthModal,
     signOut,
@@ -56,30 +42,40 @@ export function UserAuthButton() {
   }
 
   const email = user.email ?? "Hesap";
-  const statusText = syncLabel(syncStatus);
+  const syncTitle = syncError ??
+    (syncStatus === "loading"
+      ? "Bulut verisi yükleniyor"
+      : syncPhase === "cooldown"
+      ? "Bulut kaydı geçici olarak beklemede"
+      : syncPhase === "syncing"
+        ? "Buluta kaydediliyor"
+        : syncPhase === "pending"
+          ? "Buluta kaydedilmek üzere bekliyor"
+          : "Bulut kaydı güncel");
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
-      {statusText && (
-        <span
-          className={`hidden md:inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md ${
-            syncStatus === "error"
-              ? "text-red-400 bg-red-950/40 cursor-help"
-              : syncStatus === "syncing" || syncStatus === "loading"
-                ? "text-zinc-400 bg-zinc-800"
-                : syncError
-                  ? "text-amber-400 bg-amber-950/30 cursor-help"
-                  : "text-green-400 bg-green-950/30"
-          }`}
-          title={syncError ?? undefined}
-        >
-          {(syncStatus === "syncing" || syncStatus === "loading") && (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          )}
-          {syncStatus === "saved" && <Cloud className="w-3 h-3" />}
-          {statusText}
-        </span>
-      )}
+      <span
+        className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${
+          syncStatus === "error"
+            ? "text-red-400 bg-red-950/40 cursor-help"
+            : syncPhase === "cooldown"
+              ? "text-amber-400 bg-amber-950/30"
+              : syncStatus === "loading" ||
+                  syncPhase === "syncing" ||
+                  syncPhase === "pending"
+                ? "text-sky-400 bg-sky-950/30"
+                : "text-green-400 bg-green-950/30"
+        }`}
+        title={syncTitle}
+        aria-label={syncTitle}
+      >
+        {syncStatus === "loading" || syncPhase === "syncing" ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Cloud className="w-3.5 h-3.5" />
+        )}
+      </span>
       <span
         className="hidden lg:inline max-w-[140px] truncate text-[11px] text-zinc-400"
         title={email}

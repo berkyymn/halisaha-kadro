@@ -1,5 +1,4 @@
 import { buildPosterSnapshot, type PosterSnapshot } from "@/lib/posterSnapshot";
-import { fingerprintPosterSnapshot } from "@/lib/snapshotFingerprint";
 import {
   DEFAULT_SYNC_REVISIONS,
   hasUnsyncedRevisions,
@@ -21,13 +20,19 @@ const TAB_CHANNEL = "halisaha-poster-sync";
 const MIN_RETRY_MS = 3_000;
 const MAX_RETRY_MS = 60_000;
 
+function logSyncEvent(event: string, details?: Record<string, unknown>) {
+  console.info(`[SYNC] ${event}`, details ?? {});
+}
+
 export type CloudSyncPhase = "idle" | "pending" | "syncing" | "paused" | "cooldown";
 
 export type CloudSyncSaveResult = {
   ok: boolean;
   warning?: string | null;
   updatedAt?: string;
+  brandingUpdatedAt?: string;
   rateLimited?: boolean;
+  retryable?: boolean;
 };
 
 export type CloudSyncStatus = {
@@ -36,11 +41,13 @@ export type CloudSyncStatus = {
   hasPendingChanges: boolean;
 };
 
-type SaveHandler = (snapshot: PosterSnapshot) => Promise<CloudSyncSaveResult>;
+type SaveHandler = (
+  snapshot: PosterSnapshot,
+  options?: { includeBranding?: boolean }
+) => Promise<CloudSyncSaveResult>;
 type BrandingSaveHandler = () => Promise<CloudSyncSaveResult>;
 type StatusListener = (status: CloudSyncStatus) => void;
 type ForeignTabSyncHandler = (payload: {
-  fingerprint: string;
   updatedAt?: string;
   brandingUpdatedAt?: string;
 }) => void;
@@ -67,7 +74,6 @@ class CloudSyncManager {
   private dirty = false;
   private dirtySince: number | null = null;
   private retryAttempt = 0;
-  private lastSyncedFingerprint: string | null = null;
   private lastSyncedRevisions: SyncRevisions | null = null;
   private sessionKey: string | null = null;
   private sessionGeneration = 0;
@@ -180,7 +186,6 @@ class CloudSyncManager {
   }
 
   reset() {
-    this.lastSyncedFingerprint = null;
     this.lastSyncedRevisions = null;
     this.retryAttempt = 0;
     this.dirty = false;
@@ -190,8 +195,8 @@ class CloudSyncManager {
   }
 
   markSynced(snapshot: PosterSnapshot) {
+    void snapshot;
     const state = useAppStore.getState();
-    this.lastSyncedFingerprint = fingerprintPosterSnapshot(snapshot);
     this.lastSyncedRevisions = { ...state.syncRevisions };
     this.dirty = false;
     this.dirtySince = null;
@@ -201,6 +206,7 @@ class CloudSyncManager {
   }
 
   notifyDirty() {
+    if (!this.hasPendingSync()) return;
     this.markDirty();
   }
 
@@ -224,7 +230,7 @@ class CloudSyncManager {
   }
 
   private hasPendingSync(): boolean {
-    const revisions = useAppStore.getState().syncRevisions;
+    const revisions = { ...useAppStore.getState().syncRevisions };
     return hasUnsyncedRevisions(revisions, this.lastSyncedRevisions);
   }
 
@@ -334,6 +340,13 @@ class CloudSyncManager {
 
     this.inFlight = true;
     this.emitStatus();
+    logSyncEvent("flush:start", {
+      sessionKey: flushSession,
+      revisions,
+      brandingOnly,
+      brandingDirty,
+      dataDirty,
+    });
 
     let result: CloudSyncSaveResult = { ok: false };
     let savedBranding = false;
@@ -354,16 +367,13 @@ class CloudSyncManager {
 
       const snapshot = buildPosterSnapshot(useAppStore.getState());
       savedData = true;
-      const dataResult = await this.handler(snapshot);
-      if (!dataResult.ok || !brandingDirty || !this.brandingHandler) {
-        return dataResult;
-      }
-
-      const brandingResult = await this.brandingHandler();
-      if (brandingResult.ok) {
+      const dataResult = await this.handler(snapshot, {
+        includeBranding: brandingDirty,
+      });
+      if (dataResult.ok && dataResult.brandingUpdatedAt) {
         savedBranding = true;
       }
-      return brandingResult.ok ? brandingResult : dataResult;
+      return dataResult;
     };
 
     try {
@@ -401,36 +411,73 @@ class CloudSyncManager {
       }
 
       if (result.ok) {
-        const snapshot = buildPosterSnapshot(useAppStore.getState());
-        const fingerprint = fingerprintPosterSnapshot(snapshot);
-        const currentRevisions = useAppStore.getState().syncRevisions;
         const base = this.lastSyncedRevisions ?? { ...DEFAULT_SYNC_REVISIONS };
         this.lastSyncedRevisions = {
           branding: savedBranding
-            ? currentRevisions.branding
+            ? revisions.branding
             : base.branding,
-          roster: savedData ? currentRevisions.roster : base.roster,
-          layout: savedData ? currentRevisions.layout : base.layout,
-          media: savedData ? currentRevisions.media : base.media,
+          roster: savedData ? revisions.roster : base.roster,
+          layout: savedData ? revisions.layout : base.layout,
+          media: savedData ? revisions.media : base.media,
         };
-        this.lastSyncedFingerprint = fingerprint;
         this.retryAttempt = 0;
         this.dirty = this.hasPendingSync();
         if (!this.dirty) {
           this.dirtySince = null;
+        } else if (!this.dirtySince) {
+          this.dirtySince = Date.now();
         }
         this.tabChannel?.postMessage({
           type: "synced",
-          fingerprint,
           updatedAt: result.updatedAt,
+          brandingUpdatedAt: result.brandingUpdatedAt,
         });
       } else {
         this.retryAttempt += 1;
         this.dirty = true;
-        this.scheduleRetry(Boolean(result.rateLimited));
+        if (result.retryable !== false) {
+          this.scheduleRetry(Boolean(result.rateLimited));
+        }
       }
+      logSyncEvent("flush:result", {
+        ok: result.ok,
+        rateLimited: result.rateLimited ?? false,
+        retryable: result.retryable ?? true,
+        pendingAfterFlush: this.hasPendingSync(),
+      });
+    } catch (error) {
+      if (
+        flushGeneration !== this.sessionGeneration ||
+        flushSession !== this.sessionKey
+      ) {
+        return;
+      }
+      this.retryAttempt += 1;
+      this.dirty = true;
+      logSyncEvent("flush:exception", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      this.scheduleRetry();
     } finally {
       this.inFlight = false;
+      logSyncEvent("flush:finally", {
+        pending: this.hasPendingSync(),
+        retryAttempt: this.retryAttempt,
+      });
+      const sessionIsCurrent =
+        flushGeneration === this.sessionGeneration &&
+        flushSession === this.sessionKey;
+      const shouldRetry = result.retryable !== false;
+      if (
+        sessionIsCurrent &&
+        shouldRetry &&
+        this.dirty &&
+        this.hasPendingSync() &&
+        !this.retryTimer
+      ) {
+        this.scheduleDebounce();
+        this.scheduleMaxWait();
+      }
       this.emitStatus();
     }
   }
@@ -441,39 +488,17 @@ class CloudSyncManager {
     this.tabChannel.onmessage = (
       event: MessageEvent<{
         type?: string;
-        fingerprint?: string;
         updatedAt?: string;
         brandingUpdatedAt?: string;
       }>
     ) => {
-      if (event.data?.type !== "synced" || !event.data.fingerprint) return;
+      if (event.data?.type !== "synced") return;
 
-      const remoteFingerprint = event.data.fingerprint;
-      const localFingerprint = fingerprintPosterSnapshot(
-        buildPosterSnapshot(useAppStore.getState())
-      );
-
-      if (localFingerprint === remoteFingerprint) {
-        this.lastSyncedFingerprint = remoteFingerprint;
-        this.lastSyncedRevisions = {
-          ...useAppStore.getState().syncRevisions,
-        };
-        if (!this.hasPendingSync()) {
-          this.dirty = false;
-          this.dirtySince = null;
-          this.clearTimers();
-        }
-        this.emitStatus();
-        return;
-      }
-
-      if (localFingerprint === this.lastSyncedFingerprint) {
-        this.onForeignTabSync?.({
-          fingerprint: remoteFingerprint,
-          updatedAt: event.data.updatedAt,
-          brandingUpdatedAt: event.data.brandingUpdatedAt,
-        });
-      }
+      if (this.hasPendingSync()) return;
+      this.onForeignTabSync?.({
+        updatedAt: event.data.updatedAt,
+        brandingUpdatedAt: event.data.brandingUpdatedAt,
+      });
     };
   }
 

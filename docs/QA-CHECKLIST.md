@@ -192,6 +192,21 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 - [ ] Geçti
 
+## 13. Firebase veri akışı ve mobil hazırlığı
+
+**Dosyalar:** `src/lib/cloudPoster.ts`, `src/lib/mediaSync.ts`, `src/lib/cloudSyncManager.ts`, `firebase/firestore.rules`, `firebase/storage.rules`
+
+| Adım | Beklenen |
+|------|----------|
+| Uygulamayı mevcut cloud poster ile yeniden aç | Değişiklik yoksa gereksiz cloud write oluşmamalı |
+| Yeni veya değiştirilmiş oyuncu fotoğrafı ekle | Fotoğraf Storage’a, metadata ve Storage path Firestore’a yazılmalı |
+| Storage upload’ını geçici olarak başarısız yap | Poster metadata kaydı medya hatası nedeniyle kilitlenmemeli |
+| Eski dokümanda inline data URL + Storage path birlikte varsa | Sonraki sync sonrası Firestore’da yalnızca Storage path kalmalı |
+| Web ve gelecekte mobil istemci için path kontrolü | Aynı `users/{uid}/players/{id}` ve `users/{uid}/logos/{side}` sözleşmesi kullanılmalı |
+| Storage rules | Kullanıcı yalnızca kendi `users/{uid}/...` alanına erişebilmeli |
+
+- [ ] Geçti
+
 ---
 
 ## Otomatik kontroller (her değişiklikte)
@@ -212,6 +227,7 @@ npm run lint
 |-------|------------|----------------------|-------|
 | 2026-06-23 | Başlık modalı: sabit önizleme, renk paleti (Kırmızı/Mavi/Turkuaz/Gri), "Poster temasına uy" | #8 + build/lint | Kod + build/lint geçti |
 | 2026-06-23 | Stabilizasyon: `useModalBackdrop` tüm modallarda, cutout data URL persist, BenchPanel dynamic import, lint/build temiz | 1–10 + otomatik | Kod incelemesi + build/lint geçti; #3 manuel tarayıcı testi önerilir (ONNX model indirme) |
+| 2026-08-28 | Firebase Storage kurulumu, production rules, data map replace ve medya fail-soft akışı | §11 + §13 + build/lint | Storage rules deploy edildi; preflight HTTP 200; manuel uygulama testi bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

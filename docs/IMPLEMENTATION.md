@@ -49,7 +49,7 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
                             │ useAppStore()
 ┌───────────────────────────▼─────────────────────────────────┐
 │  State (src/store/useAppStore.ts)                             │
-│  All poster mutations; persist v28; syncRevisions           │
+│  All poster mutations; persist v29; syncRevisions           │
 └───────────────────────────┬─────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
@@ -94,7 +94,7 @@ AppShell
 ```
 
 **Hydration order:**
-1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v28)
+1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v29)
 2. `onRehydrateStorage` runs `finalizePosterSnapshot`
 3. If user signed in, `AuthContext.loadCloudPoster` fetches Firestore doc
 4. `hydrateFromSnapshot` merges cloud into local (LWW via `localUpdatedAt`)
@@ -363,7 +363,7 @@ All poster mutations go through wrapped `set()`:
 
 `hydrateFromSnapshot` uses `realSet` directly (no revision bump).
 
-### 7.2 Persist middleware (v28)
+### 7.2 Persist middleware (v29)
 
 | Hook | Responsibility |
 |------|----------------|
@@ -510,7 +510,30 @@ Then run affected sections in `docs/QA-CHECKLIST.md`.
 
 ---
 
-## 13. Quick decision tree
+## 13. Documentation contract
+
+This repository treats `docs/TODO.md`, `docs/IMPLEMENTATION.md`, and
+`docs/QA-CHECKLIST.md` as durable project memory, not optional notes.
+
+When a Firebase or persistence decision changes:
+
+1. Update `TODO.md` with completed work and explicit future work.
+2. Update `IMPLEMENTATION.md` with the current contract, schema, and boundaries.
+3. Add or update the affected manual QA scenario in `QA-CHECKLIST.md`.
+4. Do not mark an item complete until the implementation and verification exist.
+5. Preserve known limitations and rejected alternatives so future agents do not rediscover them.
+
+Current sync contract:
+
+- Firestore stores one poster document per user under `posters/{uid}`.
+- Product scope intentionally supports one poster per user; poster history and multi-poster collections are out of scope.
+- Firestore stores poster metadata and Storage paths; binary media belongs in Storage.
+- Local Zustand state is the editing source of truth and is persisted before cloud sync.
+- Cloud writes are debounced/coalesced and revision-aware, but currently last-writer-wins.
+- Storage and browser lifecycle failures must not prevent poster metadata from being saved.
+- This contract is shared-schema compatible with a future native mobile client; browser-only coordination is advisory.
+
+## 14. Quick decision tree
 
 ```
 Does the feature change what gets saved locally?
@@ -526,4 +549,4 @@ Does the feature change what gets saved locally?
 
 ---
 
-*Last aligned with persist v28 and cloud sync stabilization architecture.*
+*Last aligned with persist v29 and Firebase data-flow hardening.*

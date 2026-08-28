@@ -16,10 +16,12 @@ type UseCloudSyncOptions = {
   enabled: boolean;
   paused: boolean;
   sessionKey: string | null;
-  onSync: (snapshot: PosterSnapshot) => Promise<CloudSyncSaveResult>;
+  onSync: (
+    snapshot: PosterSnapshot,
+    options?: { includeBranding?: boolean }
+  ) => Promise<CloudSyncSaveResult>;
   onBrandingSync?: () => Promise<CloudSyncSaveResult>;
   onForeignTabSync?: (payload: {
-    fingerprint: string;
     updatedAt?: string;
     brandingUpdatedAt?: string;
   }) => void;

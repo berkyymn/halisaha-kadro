@@ -25,13 +25,15 @@ import {
   saveUserPoster,
 } from "@/lib/cloudPoster";
 import { mergeCloudBrandingIntoSnapshot } from "@/lib/brandingSnapshot";
-import { isResourceExhaustedError } from "@/lib/firestoreWriteQueue";
+import {
+  isResourceExhaustedError,
+  isRetryableFirestoreError,
+} from "@/lib/firestoreWriteQueue";
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import { countCustomTeamLogos } from "@/lib/teamLogoCloud";
 import {
   type PosterSnapshot,
 } from "@/lib/posterSnapshot";
-import { fingerprintPosterSnapshot } from "@/lib/snapshotFingerprint";
 import { useAppStore, hasAppStoreHydrated, onAppStoreHydrated } from "@/store/useAppStore";
 import {
   useCloudSync,
@@ -71,6 +73,18 @@ function countPhotos(snapshot: PosterSnapshot): number {
   return Object.values(snapshot.savedPlayers).filter((player) =>
     hasPlayerPhoto(player)
   ).length;
+}
+
+function hasStaleInlineMedia(snapshot: PosterSnapshot): boolean {
+  return Object.values(snapshot.savedPlayers).some(
+    (player) =>
+      (player.cutoutUrl?.startsWith("data:") && player.cutoutStoragePath) ||
+      (player.photoSource?.startsWith("data:") && player.photoSourceStoragePath)
+  );
+}
+
+function hasStaleInlineLogo(logo: Parameters<typeof countCustomTeamLogos>[0]): boolean {
+  return Boolean(logo?.imageUrl?.startsWith("data:") && logo.storagePath);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -178,9 +192,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSyncError(null);
       }
 
-      const mergedFingerprint = fingerprintPosterSnapshot(merged);
-      const cloudFingerprint = fingerprintPosterSnapshot(parsed);
-      if (mergedFingerprint === cloudFingerprint) {
+      const localIsNewer = Boolean(
+        localSnapshot.localUpdatedAt &&
+          row.updatedAt &&
+          localSnapshot.localUpdatedAt > row.updatedAt
+      );
+      const localMediaWasPreserved =
+        (localPhotos > countPhotos(parsed) &&
+          mergedPhotos > countPhotos(parsed)) ||
+        (localCustomLogos > cloudCustomLogos &&
+          mergedCustomLogos > cloudCustomLogos);
+      const cloudHasStaleMedia =
+        hasStaleInlineMedia(parsed) ||
+        hasStaleInlineLogo(cloudBranding?.home.logo) ||
+        hasStaleInlineLogo(cloudBranding?.away.logo);
+      const needsRepush = localIsNewer || localMediaWasPreserved || cloudHasStaleMedia;
+
+      if (!needsRepush) {
         markPosterSnapshotSynced(merged);
         pendingRepushRef.current = false;
       } else {
@@ -341,28 +369,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [configured]);
 
   const pushSnapshot = useCallback(
-    async (snapshot: PosterSnapshot) => {
+    async (
+      snapshot: PosterSnapshot,
+      options?: { includeBranding?: boolean }
+    ) => {
       const uid = user?.uid;
       if (!configured || !uid) return { ok: false };
 
       setSyncStatus("syncing");
       try {
-        const result = await saveUserPoster(uid, snapshot);
+        const result = await saveUserPoster(uid, snapshot, options);
         lastRemoteUpdatedAtRef.current = result.updatedAt;
+        if (result.brandingUpdatedAt) {
+          lastRemoteBrandingUpdatedAtRef.current = result.brandingUpdatedAt;
+        }
         setSyncStatus("saved");
         const warning = describeCloudSaveResult(result);
         setSyncError(warning);
-        return { ok: true, warning, updatedAt: result.updatedAt };
+        return {
+          ok: true,
+          warning,
+          updatedAt: result.updatedAt,
+          brandingUpdatedAt: result.brandingUpdatedAt,
+        };
       } catch (err) {
         if (isResourceExhaustedError(err)) {
           setSyncError(mapFirestoreError(err));
           setSyncStatus("error");
-          return { ok: false, rateLimited: true };
+          return { ok: false, rateLimited: true, retryable: true };
         }
         console.error("Bulut kayıt hatası:", err);
         setSyncError(mapFirestoreError(err));
         setSyncStatus("error");
-        return { ok: false };
+        return { ok: false, retryable: isRetryableFirestoreError(err) };
       }
     },
     [configured, user]
@@ -375,19 +414,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await saveUserBranding(uid, useAppStore.getState());
       lastRemoteUpdatedAtRef.current = result.updatedAt;
-      return { ok: true, updatedAt: result.updatedAt };
+      return {
+        ok: true,
+        updatedAt: result.updatedAt,
+        brandingUpdatedAt: result.updatedAt,
+      };
     } catch (err) {
       if (isResourceExhaustedError(err)) {
-        return { ok: false, rateLimited: true };
+        return { ok: false, rateLimited: true, retryable: true };
       }
       console.error("Branding bulut kayıt hatası:", err);
-      return { ok: false };
+      return { ok: false, retryable: isRetryableFirestoreError(err) };
     }
   }, [configured, user]);
 
   const handleForeignTabSync = useCallback(
     (payload: {
-      fingerprint: string;
       updatedAt?: string;
       brandingUpdatedAt?: string;
     }) => {

@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/app";
 import { firestoreWriteQueue } from "@/lib/firestoreWriteQueue";
 import { compressPlayerPhotos } from "@/lib/imageCompress";
@@ -49,6 +49,7 @@ export type CloudSaveResult = {
 
 export type CloudSaveResultWithMeta = CloudSaveResult & {
   updatedAt: string;
+  brandingUpdatedAt?: string;
 };
 
 const COLLECTION = "posters";
@@ -117,8 +118,12 @@ function slimPlayerForCloud(player: Player): Player {
   void avatarUrl;
   void photoUrl;
 
-  if (cutoutStoragePath) {
-    return { ...rest, cutoutStoragePath };
+  if (cutoutStoragePath || photoSourceStoragePath) {
+    return {
+      ...rest,
+      ...(cutoutStoragePath ? { cutoutStoragePath } : {}),
+      ...(photoSourceStoragePath ? { photoSourceStoragePath } : {}),
+    };
   }
   if (cutoutUrl) {
     void photoSource;
@@ -398,7 +403,8 @@ export async function saveUserBranding(
 
 export async function saveUserPoster(
   userId: string,
-  snapshot: PosterSnapshot
+  snapshot: PosterSnapshot,
+  options?: { includeBranding?: boolean }
 ): Promise<CloudSaveResultWithMeta> {
   console.log("[SYNC-DIAG] saveUserPoster called", JSON.stringify({ userId }));
   return firestoreWriteQueue.enqueue(async () => {
@@ -406,18 +412,48 @@ export async function saveUserPoster(
       await prepareSnapshotForCloud(snapshot, userId);
     const ref = doc(getFirebaseDb(), COLLECTION, userId);
     const updatedAt = new Date().toISOString();
+    let branding: TeamBrandingSnapshot | undefined;
+    if (options?.includeBranding) {
+      const built = buildBrandingSnapshot({
+        ...snapshot,
+        players: snapshot.savedPlayers,
+      });
+      const [homeLogo, awayLogo] = await Promise.all([
+        uploadLogoMediaForCloud(userId, "home", built.home.logo),
+        uploadLogoMediaForCloud(userId, "away", built.away.logo),
+      ]);
+      branding = slimBrandingForCloud({
+        ...built,
+        home: { ...built.home, logo: homeLogo },
+        away: { ...built.away, logo: awayLogo },
+      });
+    }
 
-    await setDoc(
-      ref,
-      stripUndefinedForFirestore({
-        data: cloudSnapshot,
-        updatedAt,
-        photosOmitted: result.photosOmitted > 0,
-        logosOmitted: result.logosOmitted > 0,
-      }),
-      { merge: true }
-    );
-    return { ...result, updatedAt };
+    const payload = stripUndefinedForFirestore({
+      data: cloudSnapshot,
+      updatedAt,
+      ...(branding
+        ? { branding, brandingUpdatedAt: updatedAt }
+        : {}),
+      photosOmitted: result.photosOmitted > 0,
+      logosOmitted: result.logosOmitted > 0,
+    });
+    try {
+      // Replace the whole data map so removed inline media cannot survive a deep merge.
+      await updateDoc(ref, payload);
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code: string }).code)
+          : "";
+      if (code !== "not-found") throw error;
+      await setDoc(ref, payload);
+    }
+    return {
+      ...result,
+      updatedAt,
+      ...(branding ? { brandingUpdatedAt: updatedAt } : {}),
+    };
   });
 }
 
