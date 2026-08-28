@@ -5,8 +5,10 @@ import {
   resolveStorageDownloadUrl,
   teamLogoStoragePath,
   uploadDataUrlToStorage,
+  deleteStorageObject,
 } from "@/lib/firebase/storage";
 import type { Player, TeamLogo } from "@/types";
+import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 class _MediaUploadCache {
   private _cache = new Map<string, string>();
@@ -160,4 +162,36 @@ export async function hydrateLogoFromStorage(logo: TeamLogo): Promise<TeamLogo> 
 
 export function clearMediaUploadCache() {
   _uploadCache.reset();
+}
+
+function storagePaths(snapshot: PosterSnapshot): Set<string> {
+  const paths = new Set<string>();
+  for (const player of Object.values(snapshot.savedPlayers)) {
+    if (player.cutoutStoragePath) paths.add(player.cutoutStoragePath);
+    if (player.photoSourceStoragePath) paths.add(player.photoSourceStoragePath);
+  }
+  for (const logo of [snapshot.homeTeam.logo, snapshot.awayTeam.logo]) {
+    if (logo.storagePath) paths.add(logo.storagePath);
+  }
+  return paths;
+}
+
+export async function cleanupOrphanedMedia(
+  previous: PosterSnapshot | null,
+  next: PosterSnapshot
+): Promise<void> {
+  if (!isFirebaseStorageConfigured() || !previous) return;
+  const nextPaths = storagePaths(next);
+  const orphaned = [...storagePaths(previous)].filter(
+    (path) => !nextPaths.has(path)
+  );
+  await Promise.all(
+    orphaned.map(async (path) => {
+      try {
+        await deleteStorageObject(path);
+      } catch (error) {
+        console.warn("Storage orphan cleanup failed:", path, error);
+      }
+    })
+  );
 }

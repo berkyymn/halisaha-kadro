@@ -1,4 +1,10 @@
-import { getDownloadURL, getStorage, ref, uploadString } from "firebase/storage";
+import {
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadString,
+} from "firebase/storage";
 import { getFirebaseApp } from "@/lib/firebase/client";
 
 let storage: ReturnType<typeof getStorage> | null = null;
@@ -26,6 +32,10 @@ export async function uploadDataUrlToStorage(
 
 export async function resolveStorageDownloadUrl(path: string): Promise<string> {
   return getDownloadURL(ref(getFirebaseStorage(), path));
+}
+
+export async function deleteStorageObject(path: string): Promise<void> {
+  await deleteObject(ref(getFirebaseStorage(), path));
 }
 
 export function playerCutoutStoragePath(

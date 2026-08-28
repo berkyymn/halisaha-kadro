@@ -3,7 +3,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /posters/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'data', 'branding', 'updatedAt', 'brandingUpdatedAt',
+          'photosOmitted', 'logosOmitted', 'revision'
+        ])
+        && request.resource.data.data is map
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() <= 40
+        && (!request.resource.data.keys().hasAny(['branding'])
+          || request.resource.data.branding is map)
+        && (!request.resource.data.keys().hasAny(['brandingUpdatedAt'])
+          || request.resource.data.brandingUpdatedAt is string)
+        && (!request.resource.data.keys().hasAny(['photosOmitted'])
+          || request.resource.data.photosOmitted is bool)
+        && (!request.resource.data.keys().hasAny(['logosOmitted'])
+          || request.resource.data.logosOmitted is bool)
+        && (!request.resource.data.keys().hasAny(['revision'])
+          || request.resource.data.revision is int);
     }
   }
 }

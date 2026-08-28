@@ -27,8 +27,11 @@ type UseCloudSyncOptions = {
   }) => void;
 };
 
-export function markPosterSnapshotSynced(snapshot: PosterSnapshot) {
-  cloudSyncManager.markSynced(snapshot);
+export function markPosterSnapshotSynced(
+  snapshot: PosterSnapshot,
+  options?: { clearOutbox?: boolean }
+) {
+  cloudSyncManager.markSynced(snapshot, options);
 }
 
 export function resetCloudSyncState() {

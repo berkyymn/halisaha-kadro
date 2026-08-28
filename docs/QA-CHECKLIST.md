@@ -207,6 +207,22 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 - [ ] Geçti
 
+## 14. Sync refactor PR
+
+**Kapsam:** Tek poster modeli korunur. Bu bölüm server revision, durable outbox, realtime cloud read, media cleanup ve rules hardening içindir.
+
+| Adım | Beklenen |
+|------|----------|
+| Aynı posteri iki cihazda aç, A cihazında değişiklik yap, B cihazında farklı değişiklik yap | Stale write reddedilmeli veya güvenli şekilde yeniden yüklenmeli; sessiz veri ezilmemeli |
+| İnterneti kes, değişiklik yap, tarayıcıyı kapat/aç, interneti geri getir | Bekleyen değişiklik durable outbox’tan otomatik gönderilmeli |
+| İki açık istemciden birinde değişiklik yap | Diğer istemci yeniden yükleme olmadan güncellenmeli |
+| Oyuncuyu sil veya fotoğrafı değiştir | Kullanılmayan eski Storage nesnesi temizlenmeli |
+| Başka kullanıcının Firestore/Storage path’ine erişmeyi dene | Rules erişimi reddetmeli |
+| Geçersiz Firestore alanı veya Storage dosya türü gönder | Rules erişimi reddetmeli |
+| Web sözleşmesini native istemciyle eşleştir | Auth UID, Firestore path ve Storage path aynı kalmalı |
+
+- [ ] Geçti
+
 ---
 
 ## Otomatik kontroller (her değişiklikte)
@@ -228,6 +244,7 @@ npm run lint
 | 2026-06-23 | Başlık modalı: sabit önizleme, renk paleti (Kırmızı/Mavi/Turkuaz/Gri), "Poster temasına uy" | #8 + build/lint | Kod + build/lint geçti |
 | 2026-06-23 | Stabilizasyon: `useModalBackdrop` tüm modallarda, cutout data URL persist, BenchPanel dynamic import, lint/build temiz | 1–10 + otomatik | Kod incelemesi + build/lint geçti; #3 manuel tarayıcı testi önerilir (ONNX model indirme) |
 | 2026-08-28 | Firebase Storage kurulumu, production rules, data map replace ve medya fail-soft akışı | §11 + §13 + build/lint | Storage rules deploy edildi; preflight HTTP 200; manuel uygulama testi bekliyor |
+| 2026-08-28 | Sync durability refactor: revision guard, durable outbox, `onSnapshot`, rules allowlist | §14 + build/lint | Rules deploy edildi; revision 10 mevcut dokümanda doğrulandı; iki istemci/offline manuel testi bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

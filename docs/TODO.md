@@ -343,15 +343,32 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ### Gelecek mimari kararlar
 
-- [ ] Firestore server-authoritative revision ve stale-write protection
-- [ ] Offline durable outbox; mobil background/terminate senaryosu
-- [ ] Firestore `onSnapshot` realtime listener; BroadcastChannel yalnızca optimizasyon
-- [ ] Storage path allowlist, orphan media cleanup ve hesap silme akışı
-- [ ] Firestore rules schema/type/size doğrulaması ve App Check değerlendirmesi
+- [x] Firestore transaction tabanlı server revision ve stale-write protection
+- [x] Offline durable outbox; local sync niyeti sonraki açılışa taşınır
+- [x] Firestore `onSnapshot` realtime listener; BroadcastChannel yalnızca optimizasyon
+- [x] Storage path allowlist ve görsel/5MB kısıtı
+- [x] Başarılı cloud write sonrası client-side orphan media cleanup
+- [ ] Hesap silme sırasında tüm medya için server-side cleanup
+- [x] Firestore üst-seviye schema/type doğrulaması
+- [ ] App Check ve kullanıcı başına quota değerlendirmesi
+- [x] İlk cloud hydrate hatasında sınırlı exponential read retry
 
 ### Kapsam kararı
 
 - [x] Tek kullanıcı için tek poster modeli korunacak; çoklu poster ve poster geçmişi yapılmayacak
+
+---
+
+## Phase 28 — Sync durability refactor
+
+- [x] Firestore transaction revision (`revision`) ile stale write reddetme
+- [x] Revision conflict sonrası güncel cloud snapshot’ını yeniden yükleme
+- [x] Durable browser outbox ile bekleyen sync niyetini sonraki açılışa taşıma
+- [x] Firestore `onSnapshot` ile uzak revision değişikliklerini dinleme
+- [x] Firestore üst-seviye field/type allowlist rules
+- [x] Storage player/logo path allowlist ve 5MB görsel sınırı
+- [x] Client-side orphan cleanup; server-side account cleanup hâlâ gerekli
+- [ ] Native auth ve background task; mobil istemci aşamasında uygulanacak
 
 ---
 
@@ -373,7 +390,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 |-------|--------|
 | localStorage key | `halisaha-kadro` persist **v29** |
 | Snapshot | `PosterSnapshot` + `syncRevisions` |
-| Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, optional omit flags |
+| Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, `revision`, optional omit flags |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |
 
 ---

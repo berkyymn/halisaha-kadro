@@ -162,6 +162,7 @@ Bumped in store `set()` wrapper via `syncRevisionBump.ts`. Cloud sync uses revis
   branding?: TeamBrandingSnapshot; // logo + jersey + teamLogoDisplaySize
   updatedAt: string;              // ISO — data write time
   brandingUpdatedAt?: string;      // ISO — branding write time
+  revision?: number;               // transaction revision / stale-write guard
   photosOmitted?: boolean;
   logosOmitted?: boolean;
 }
@@ -318,7 +319,13 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 - Data dirty → `saveUserPoster`; if branding also dirty, branding save follows
 - `resource-exhausted` → cooldown, coalesced retry
 
-**Multi-tab:** `BroadcastChannel` `halisaha-poster-sync`; foreign tab triggers `softReloadFromCloud` when `updatedAt` or `brandingUpdatedAt` is newer.
+**Durability and realtime:** `cloudSyncOutbox.ts` localStorage’da kullanıcı/revision sync niyetini tutar; `onSnapshot` uzak revision değişikliklerini bildirir. `BroadcastChannel` yalnızca aynı browser sekmeleri için optimizasyondur.
+
+**Server revision:** Data ve branding writes transaction içinde mevcut `revision` değerini kontrol edip bir artırır. Beklenen revision farklıysa stale write `failed-precondition` ile reddedilir ve istemci güncel cloud snapshot’ını yeniden okur.
+
+**Outbox:** Outbox yalnızca `userId`, revision’lar ve enqueue zamanını tutar; snapshot local persist’te bulunduğu için medya/base64 verisi ikinci kez saklanmaz. Native istemci aynı sözleşmeyi platformun kalıcı storage’ı ile uygulamalıdır.
+
+**Media cleanup:** Başarılı bir cloud write sonrasında önceki snapshot’ta olup yeni snapshot’ta referans edilmeyen Storage path’leri client-side silinir. Hesap silme ve client’in uzun süre çalışmadığı orphan senaryoları için ileride server-side cleanup gerekir.
 
 **Sync baseline:** `applyCloudRow` always calls `markPosterSnapshotSynced` after cloud load to set `lastSyncedRevisions`. Pending repush detection uses `localSnapshot.localUpdatedAt > row.updatedAt` (not fingerprint comparison, which fails against split-branding slim `data` snapshots without logo/jersey).
 
@@ -529,8 +536,10 @@ Current sync contract:
 - Product scope intentionally supports one poster per user; poster history and multi-poster collections are out of scope.
 - Firestore stores poster metadata and Storage paths; binary media belongs in Storage.
 - Local Zustand state is the editing source of truth and is persisted before cloud sync.
-- Cloud writes are debounced/coalesced and revision-aware, but currently last-writer-wins.
+- Cloud writes are debounced/coalesced and use a transaction revision guard; conflicts are rejected and reloaded instead of silently overwriting a newer revision.
+- Failed/pending sync intent is kept in the browser outbox; native clients must implement the same intent contract with platform storage.
 - Storage and browser lifecycle failures must not prevent poster metadata from being saved.
+- Initial retryable cloud read failures use bounded exponential retry; non-retryable errors remain visible to the user.
 - This contract is shared-schema compatible with a future native mobile client; browser-only coordination is advisory.
 
 ## 14. Quick decision tree

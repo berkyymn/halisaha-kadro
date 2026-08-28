@@ -10,6 +10,11 @@ import {
   isFirestoreWriteCooldown,
 } from "@/lib/firestoreWriteQueue";
 import { useAppStore } from "@/store/useAppStore";
+import {
+  clearQueuedCloudSync,
+  hasQueuedCloudSync,
+  queueCloudSync,
+} from "@/lib/cloudSyncOutbox";
 
 const DEBOUNCE_MS = 8_000;
 const MAX_WAIT_MS = 45_000;
@@ -31,6 +36,8 @@ export type CloudSyncSaveResult = {
   warning?: string | null;
   updatedAt?: string;
   brandingUpdatedAt?: string;
+  revision?: number;
+  conflict?: boolean;
   rateLimited?: boolean;
   retryable?: boolean;
 };
@@ -152,6 +159,10 @@ class CloudSyncManager {
       this.markDirty();
     });
 
+    if (this.sessionKey && hasQueuedCloudSync(this.sessionKey)) {
+      this.markDirty();
+    }
+
     this.emitStatus();
   }
 
@@ -194,13 +205,16 @@ class CloudSyncManager {
     this.emitStatus();
   }
 
-  markSynced(snapshot: PosterSnapshot) {
+  markSynced(snapshot: PosterSnapshot, options?: { clearOutbox?: boolean }) {
     void snapshot;
     const state = useAppStore.getState();
     this.lastSyncedRevisions = { ...state.syncRevisions };
     this.dirty = false;
     this.dirtySince = null;
     this.retryAttempt = 0;
+    if (options?.clearOutbox && this.sessionKey) {
+      clearQueuedCloudSync(this.sessionKey);
+    }
     this.clearTimers();
     this.emitStatus();
   }
@@ -240,6 +254,9 @@ class CloudSyncManager {
     }
 
     this.dirty = true;
+    if (this.sessionKey) {
+      queueCloudSync(this.sessionKey, useAppStore.getState().syncRevisions);
+    }
     if (!this.dirtySince) {
       this.dirtySince = Date.now();
     }
@@ -424,6 +441,7 @@ class CloudSyncManager {
         this.dirty = this.hasPendingSync();
         if (!this.dirty) {
           this.dirtySince = null;
+          if (this.sessionKey) clearQueuedCloudSync(this.sessionKey);
         } else if (!this.dirtySince) {
           this.dirtySince = Date.now();
         }

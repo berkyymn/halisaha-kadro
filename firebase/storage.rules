@@ -2,13 +2,24 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{userId}/{allPaths=**} {
+    match /users/{userId}/players/{playerId}/{mediaFile} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
+        && mediaFile in ['source.jpg', 'cutout.webp']
         && request.resource.contentType.matches('image/.*')
-        && request.resource.size < 10 * 1024 * 1024;
+        && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    match /users/{userId}/logos/{logoFile} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && logoFile in ['home.webp', 'away.webp']
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
     }
   }
 }

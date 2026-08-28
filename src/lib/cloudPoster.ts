@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, runTransaction, type Unsubscribe } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/app";
 import { firestoreWriteQueue } from "@/lib/firestoreWriteQueue";
 import { compressPlayerPhotos } from "@/lib/imageCompress";
@@ -14,8 +14,12 @@ import {
   slimTeamConfigForCloud,
   type TeamBrandingSnapshot,
 } from "@/lib/brandingSnapshot";
-import type { PosterSnapshot, PosterSnapshotSource } from "@/lib/posterSnapshot";
-import { parsePosterSnapshot } from "@/lib/posterSnapshot";
+import {
+  buildPosterSnapshot,
+  parsePosterSnapshot,
+  type PosterSnapshot,
+  type PosterSnapshotSource,
+} from "@/lib/posterSnapshot";
 import { fingerprintPosterSnapshot } from "@/lib/snapshotFingerprint";
 import {
   hydrateLogoFromStorage,
@@ -31,9 +35,15 @@ export type CloudPosterDoc = {
   updatedAt: string;
   branding?: TeamBrandingSnapshot;
   brandingUpdatedAt?: string;
+  revision?: number;
   photosOmitted?: boolean;
   logosOmitted?: boolean;
 };
+
+export type CloudPosterChange = Pick<
+  CloudPosterDoc,
+  "updatedAt" | "brandingUpdatedAt" | "revision"
+>;
 
 export type BrandingSaveResult = {
   updatedAt: string;
@@ -50,6 +60,7 @@ export type CloudSaveResult = {
 export type CloudSaveResultWithMeta = CloudSaveResult & {
   updatedAt: string;
   brandingUpdatedAt?: string;
+  revision: number;
 };
 
 const COLLECTION = "posters";
@@ -358,10 +369,37 @@ export async function fetchUserPoster(
       updatedAt: (raw.updatedAt as string) ?? "",
       branding,
       brandingUpdatedAt: (raw.brandingUpdatedAt as string) ?? undefined,
+      revision:
+        typeof raw.revision === "number" && Number.isInteger(raw.revision)
+          ? raw.revision
+          : 0,
       photosOmitted: Boolean(raw.photosOmitted),
       logosOmitted: Boolean(raw.logosOmitted),
     },
   };
+}
+
+export function subscribeUserPoster(
+  userId: string,
+  onChange: (change: CloudPosterChange) => void,
+  onError: (error: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    doc(getFirebaseDb(), COLLECTION, userId),
+    (snapshot) => {
+      if (!snapshot.exists()) return;
+      const raw = snapshot.data();
+      onChange({
+        updatedAt: (raw.updatedAt as string) ?? "",
+        brandingUpdatedAt: (raw.brandingUpdatedAt as string) ?? undefined,
+        revision:
+          typeof raw.revision === "number" && Number.isInteger(raw.revision)
+            ? raw.revision
+            : 0,
+      });
+    },
+    onError
+  );
 }
 
 export function buildBrandingFromPosterSource(
@@ -372,7 +410,8 @@ export function buildBrandingFromPosterSource(
 
 export async function saveUserBranding(
   userId: string,
-  source: PosterSnapshotSource
+  source: PosterSnapshotSource,
+  options?: { expectedRevision?: number }
 ): Promise<BrandingSaveResult> {
   return firestoreWriteQueue.enqueue(async () => {
     const built = buildBrandingFromPosterSource(source);
@@ -387,24 +426,36 @@ export async function saveUserBranding(
     });
     const brandingUpdatedAt = new Date().toISOString();
     const ref = doc(getFirebaseDb(), COLLECTION, userId);
+    const current = await getDoc(ref);
+    let createPayload: Record<string, unknown> | undefined;
+    if (!current.exists()) {
+      const prepared = await prepareSnapshotForCloud(
+        buildPosterSnapshot(source),
+        userId
+      );
+      createPayload = {
+        data: prepared.snapshot,
+        updatedAt: brandingUpdatedAt,
+        photosOmitted: prepared.result.photosOmitted > 0,
+        logosOmitted: prepared.result.logosOmitted > 0,
+      };
+    }
 
-    await setDoc(
+    const revision = await runVersionedWrite(
       ref,
-      stripUndefinedForFirestore({
-        branding,
-        brandingUpdatedAt,
-      }),
-      { merge: true }
+      { branding, brandingUpdatedAt },
+      options?.expectedRevision,
+      createPayload
     );
 
-    return { updatedAt: brandingUpdatedAt, revision: branding.revision };
+    return { updatedAt: brandingUpdatedAt, revision };
   }, { priority: true });
 }
 
 export async function saveUserPoster(
   userId: string,
   snapshot: PosterSnapshot,
-  options?: { includeBranding?: boolean }
+  options?: { includeBranding?: boolean; expectedRevision?: number }
 ): Promise<CloudSaveResultWithMeta> {
   console.log("[SYNC-DIAG] saveUserPoster called", JSON.stringify({ userId }));
   return firestoreWriteQueue.enqueue(async () => {
@@ -438,22 +489,54 @@ export async function saveUserPoster(
       photosOmitted: result.photosOmitted > 0,
       logosOmitted: result.logosOmitted > 0,
     });
-    try {
-      // Replace the whole data map so removed inline media cannot survive a deep merge.
-      await updateDoc(ref, payload);
-    } catch (error) {
-      const code =
-        error && typeof error === "object" && "code" in error
-          ? String((error as { code: string }).code)
-          : "";
-      if (code !== "not-found") throw error;
-      await setDoc(ref, payload);
-    }
+    const revision = await runVersionedWrite(
+      ref,
+      payload,
+      options?.expectedRevision
+    );
     return {
       ...result,
       updatedAt,
+      revision,
       ...(branding ? { brandingUpdatedAt: updatedAt } : {}),
     };
+  });
+}
+
+async function runVersionedWrite(
+  ref: ReturnType<typeof doc>,
+  payload: Record<string, unknown>,
+  expectedRevision?: number,
+  createPayload?: Record<string, unknown>
+): Promise<number> {
+  return runTransaction(getFirebaseDb(), async (transaction) => {
+    const current = await transaction.get(ref);
+    const currentRevision = current.exists()
+      ? Number(current.data().revision ?? 0)
+      : 0;
+    if (
+      expectedRevision !== undefined &&
+      currentRevision !== expectedRevision
+    ) {
+      const error = new Error(
+        `Poster revision conflict: expected ${expectedRevision}, got ${currentRevision}`
+      ) as Error & { code: string };
+      error.code = "failed-precondition";
+      throw error;
+    }
+    const revision = currentRevision + 1;
+    const next = stripUndefinedForFirestore({
+      ...(createPayload ?? {}),
+      ...payload,
+      revision,
+    });
+    if (current.exists()) {
+      // update replaces each top-level field, preventing stale nested media fields.
+      transaction.update(ref, next);
+    } else {
+      transaction.set(ref, next);
+    }
+    return revision;
   });
 }
 
