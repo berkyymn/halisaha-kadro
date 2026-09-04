@@ -207,6 +207,29 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 - [ ] Geçti
 
+## 15. Tek takım / iki takım modu
+
+**Dosyalar:** `src/components/PosterToolbar.tsx`, `src/components/MatchPoster.tsx`, `src/components/PitchPlayerLayer.tsx`, `src/components/BenchPanel.tsx`, `src/store/useAppStore.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| PosterToolbar’da `Tek takım` seç | Home kadro merkezde görünür, away kadro posterden ve düzenleme akışından gizlenir |
+| Tek takım modunda oyuncu/yedek düzenle | Oyuncu, kaptan, fotoğraf ve yedek işlemleri home kadro için çalışır |
+| Sayfayı yenile | Tek takım seçimi korunur |
+| Tek takımdan `İki takım` seç | Away kadro ve logo geri gelir; önceki away verisi kaybolmaz |
+| İki takım modunda mevcut akış | İki takım posteri, iki formasyon ve iki takım yedek atama akışı eskisi gibi çalışır |
+| Tek takımda kaleciyi ve bir oyuncuyu sürükle | Kaleci yerinde kalır ve sürükleme edit ekranı açmaz; saha oyuncusu tam saha içinde serbestçe konumlanır |
+| Tek takımda pozisyonları değiştir, iki takıma dön, tekrar tek takıma dön | Her modun pozisyonları bağımsız korunur |
+| Tek takım posterini aç | `derby-night` dikey görseli kullanılır, logo sol üstte görünür ve `DERBİ GECESİ` başlığı görünmez |
+| Tek takım kalecisini sürüklemeye çalışıp bırak | Kaleci hareket etmez ve edit ekranı yanlışlıkla açılmaz; tıklama edit ekranını açar |
+| Tek takımda iki oyuncuyu üst üste sürükle | Oyuncular doğru isim/forma ile tek seferde swap olur |
+| İki takımda oyuncuyu rakip yarı sahaya sürükle | Kart imleci takip eder; rakip oyuncuda swap işareti oluşur ve üstünde bırakınca cross-team swap olur |
+| İki takımda oyuncuyu boş rakip sahaya bırak | Kart rakip sahada kalmaz, geçerli kendi yarı sahasındaki konumuna döner |
+
+- [ ] Geçti
+
+**Manuel doğrulananlar:** İkili modda oyuncu taşıma, rakip sahada cross-team swap ve forma numarası conflict çözümleme çalışıyor. Tek takım özel senaryoları ayrıca tamamlanmalı.
+
 ## 14. Sync refactor PR
 
 **Kapsam:** Tek poster modeli korunur. Bu bölüm server revision, durable outbox, realtime cloud read, media cleanup ve rules hardening içindir.
@@ -245,6 +268,7 @@ npm run lint
 | 2026-06-23 | Stabilizasyon: `useModalBackdrop` tüm modallarda, cutout data URL persist, BenchPanel dynamic import, lint/build temiz | 1–10 + otomatik | Kod incelemesi + build/lint geçti; #3 manuel tarayıcı testi önerilir (ONNX model indirme) |
 | 2026-08-28 | Firebase Storage kurulumu, production rules, data map replace ve medya fail-soft akışı | §11 + §13 + build/lint | Storage rules deploy edildi; preflight HTTP 200; manuel uygulama testi bekliyor |
 | 2026-08-28 | Sync durability refactor: revision guard, durable outbox, `onSnapshot`, rules allowlist | §14 + build/lint | Rules deploy edildi; revision 10 mevcut dokümanda doğrulandı; iki istemci/offline manuel testi bekliyor |
+| 2026-09-04 | Tek takım dikey poster ve pitch interaction düzeltmeleri | §15 + build/lint | İkili mod taşıma/cross-team swap/forma conflict manuel doğrulandı; tekli QA devam ediyor |
 
 ### Smoke audit özeti (2026-06-23)
 
@@ -267,7 +291,7 @@ npm run lint
 
 | Adım | Beklenen |
 |------|----------|
-| Sayfayı yenile (store v29 migrate) | `didCompress: false` ile işaretlenir |
+| Sayfayı yenile (store v31 migrate) | `teamMode` ve mode-specific pozisyonlar korunur, eski kayıtlar `versus` olur ve `didCompress: false` ile işaretlenir |
 | App boşta beklerken idle callback | `compressAllSavedPlayers` eski fotoğrafları 400px'te yeniden sıkıştırır |
 | Yeni oyuncu fotoğrafı ekle | `photoSource` 400px max edge, JPEG Q85 olmalı (200px/75'ten iyileşme) |
 | Arka plan kaldır | `cutoutUrl` 400px max edge, WebP Q85 olmalı |

@@ -14,33 +14,44 @@ function TeamPosterBlock({
   team,
   side,
   onLogoClick,
+  centered = false,
+  singlePosition = false,
 }: {
   team: {
     logo: Parameters<typeof TeamLogoBadge>[0]["logo"];
     shortName: string;
   };
-  side: "left" | "right";
+  side: "left" | "right" | "center";
   onLogoClick?: (team: "home" | "away") => void;
+  centered?: boolean;
+  singlePosition?: boolean;
 }) {
   const isLeft = side === "left";
-  const teamKey = isLeft ? "home" : "away";
+  const isCentered = side === "center";
+  const teamKey = isLeft || isCentered ? "home" : "away";
   const teamLogoDisplaySize = useAppStore((s) => s.teamLogoDisplaySize);
 
   return (
     <div
       className={`absolute z-20 ${
-        isLeft ? "left-[-5%]" : "right-[-5%]"
+        singlePosition
+          ? "left-[2%]"
+          : isCentered
+            ? "left-1/2 -translate-x-1/2"
+            : isLeft
+              ? "left-[-5%]"
+              : "right-[-5%]"
       }`}
       style={{
-        top: "6%",
-        width: "22%",
+        top: singlePosition ? "-18%" : centered ? "-18%" : "6%",
+        width: singlePosition ? "25%" : centered ? "34%" : "22%",
         maxWidth: Math.max(140, teamLogoDisplaySize + 28),
       }}
     >
       <div
         className="absolute -inset-[30%] -z-10 blur-xl pointer-events-none"
-        style={{
-          background: isLeft
+           style={{
+             background: isLeft || centered
             ? "radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)"
             : "radial-gradient(circle, rgba(220,38,38,0.25) 0%, transparent 70%)",
         }}
@@ -49,7 +60,13 @@ function TeamPosterBlock({
         type="button"
         onClick={() => onLogoClick?.(teamKey)}
         className={`group relative flex w-full flex-col gap-1.5 pointer-events-auto cursor-pointer rounded-lg transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/80 ${
-          isLeft ? "items-start" : "items-end"
+            singlePosition
+              ? "items-start"
+              : isCentered
+                ? "items-center"
+                : isLeft
+                  ? "items-start"
+                  : "items-end"
         }`}
         title="Takım görünümünü düzenle"
       >
@@ -60,10 +77,18 @@ function TeamPosterBlock({
         />
         <span
           className="text-white font-black italic uppercase leading-none truncate w-full pointer-events-none transition-transform duration-200 ease-out group-hover:translate-y-[-1px]"
-          style={{
-            fontSize: "clamp(0.85rem, 1.8vw, 1.35rem)",
+           style={{
+            fontSize: centered
+              ? "clamp(0.8rem, 2.4vw, 1.35rem)"
+              : "clamp(0.85rem, 1.8vw, 1.35rem)",
             letterSpacing: "0.06em",
-            textAlign: isLeft ? "left" : "right",
+            textAlign: singlePosition
+              ? "left"
+              : isCentered
+                ? "center"
+                : isLeft
+                  ? "left"
+                  : "right",
             textShadow:
               "0 2px 16px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.8)",
           }}
@@ -199,29 +224,39 @@ export function MatchPoster({
   const setMatchInfo = useAppStore((s) => s.setMatchInfo);
   const homeTeam = useAppStore((s) => s.homeTeam);
   const awayTeam = useAppStore((s) => s.awayTeam);
+  const teamMode = useAppStore((s) => s.teamMode);
+  const isSingle = teamMode === "single";
 
   return (
     <div
       id="match-poster"
       className="relative h-full max-h-full w-auto overflow-hidden"
-      style={{ aspectRatio: "16/10" }}
+      style={{ aspectRatio: isSingle ? "4/5" : "16/10" }}
     >
       <StaticPosterBackground />
 
       <div className="relative z-10 h-full">
-        <PosterTitleDisplay />
+        {!isSingle && <PosterTitleDisplay />}
 
         <div
           className="absolute"
           style={{
-            top: "14.5%",
-            left: "7%",
-            width: "86%",
-            height: "63%",
+             top: isSingle ? "25%" : "14.5%",
+             left: isSingle ? "5%" : "7%",
+             width: isSingle ? "90%" : "86%",
+             height: isSingle ? "61%" : "63%",
           }}
         >
-          <TeamPosterBlock team={homeTeam} side="left" onLogoClick={onLogoClick} />
-          <TeamPosterBlock team={awayTeam} side="right" onLogoClick={onLogoClick} />
+          <TeamPosterBlock
+            team={homeTeam}
+            side={teamMode === "single" ? "center" : "left"}
+            onLogoClick={onLogoClick}
+            centered={false}
+            singlePosition={isSingle}
+          />
+          {teamMode === "versus" && (
+            <TeamPosterBlock team={awayTeam} side="right" onLogoClick={onLogoClick} />
+          )}
 
           <div className="absolute inset-0 overflow-hidden">
             <PitchPlayerLayer onEditPlayer={onEditPlayer} />

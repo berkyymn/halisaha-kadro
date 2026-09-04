@@ -49,7 +49,7 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
                             │ useAppStore()
 ┌───────────────────────────▼─────────────────────────────────┐
 │  State (src/store/useAppStore.ts)                             │
-│  All poster mutations; persist v29; syncRevisions           │
+│  All poster mutations; persist v31; syncRevisions           │
 └───────────────────────────┬─────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
@@ -94,7 +94,7 @@ AppShell
 ```
 
 **Hydration order:**
-1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v29)
+1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v31)
 2. `onRehydrateStorage` runs `finalizePosterSnapshot`
 3. If user signed in, `AuthContext.loadCloudPoster` fetches Firestore doc
 4. `hydrateFromSnapshot` merges cloud into local (LWW via `localUpdatedAt`)
@@ -120,6 +120,7 @@ AppShell
 **Persisted poster fields** (via `partialize` → `buildPosterSnapshot` + `syncRevisions`):
 
 - `mode`, `matchInfo`, `squadSize`, `homeTeam`, `awayTeam`
+- `teamMode` (`single` | `versus`)
 - `savedPlayers`, `benchPlayerIds`, `homeFormationId`, `awayFormationId`
 - `pitchPlayers`, `playerCardSize`, `photoScalePercent`, `teamLogoDisplaySize`, `posterTheme`
 - `localUpdatedAt`, `syncRevisions`
@@ -357,6 +358,12 @@ One-time migration-style compression of legacy large data URLs in localStorage. 
 
 Store version 28 → 29 migration marks all `savedPlayers`/`players` with `didCompress: false`. `AppBootstrapGate` idle callback re-compresses at new quality. Firebase Storage upload uses new tier parameters. localStorage footprint ~1.5MB for 18 players (within 5-10MB limit).
 
+### F14 — Single-team roster mode
+
+`teamMode` is persisted as `single` or `versus` (store v31). `singlePitchPlayers` stores single-mode positions separately from versus `pitchPlayers`. Existing users migrate to `versus`; fresh state defaults to `single`. In `single` mode, `homeTeam` is the user's roster, the poster uses a 4:5 composition, `derby-night` uses `/posters/vertical/derby_night_vertical.jpeg` while other themes temporarily use the rotated legacy background, the team logo is placed upper-left, the default `DERBİ GECESİ` title is hidden, and away lineup/branding controls are hidden. The existing `awayTeam` data and versus positions are retained so switching back to `versus` is lossless. This is a presentation/editing mode, not a second team data model.
+
+Pitch movement is centralized in `src/lib/pitchInteraction.ts`. The component receives a movement policy instead of branching on team mode. Single mode allows full-pitch movement for outfield players while keeping the goalkeeper locked; versus mode lets a card travel across the pitch for cross-team swap while allowing a final drop only in its own half. Position actions upsert missing positions so a fresh single-mode lineup can be dragged immediately.
+
 ---
 
 ## 7. Store conventions
@@ -370,7 +377,7 @@ All poster mutations go through wrapped `set()`:
 
 `hydrateFromSnapshot` uses `realSet` directly (no revision bump).
 
-### 7.2 Persist middleware (v29)
+### 7.2 Persist middleware (v31)
 
 | Hook | Responsibility |
 |------|----------------|
@@ -558,4 +565,4 @@ Does the feature change what gets saved locally?
 
 ---
 
-*Last aligned with persist v29 and Firebase data-flow hardening.*
+*Last aligned with persist v31, Firebase data-flow hardening, and single-team mode.*

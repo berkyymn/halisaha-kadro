@@ -20,6 +20,8 @@ const LAYOUT_STORE_KEYS = new Set([
   "playerCardSize",
   "photoScalePercent",
   "posterTheme",
+  "teamMode",
+  "singlePitchPlayers",
 ]);
 
 const ROSTER_STORE_KEYS = new Set([

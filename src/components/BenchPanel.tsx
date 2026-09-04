@@ -130,6 +130,7 @@ export function BenchPanel({
   const [editingBenchId, setEditingBenchId] = useState<string | null>(null);
 
   const squadSize = useAppStore((s) => s.squadSize);
+  const teamMode = useAppStore((s) => s.teamMode);
   const benchPlayerIds = useAppStore((s) => s.benchPlayerIds);
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);
@@ -163,12 +164,9 @@ export function BenchPanel({
     players,
     savedPlayers
   );
-  const awayLineupSlots = buildLineupSlotOptions(
-    awayTeam.playerIds,
-    squadSize,
-    players,
-    savedPlayers
-  );
+  const awayLineupSlots = teamMode === "versus"
+    ? buildLineupSlotOptions(awayTeam.playerIds, squadSize, players, savedPlayers)
+    : [];
 
   const handleDelete = (playerId: string, playerName: string) => {
     const label = playerName.trim() || "Bu yedek";
@@ -290,6 +288,7 @@ export function BenchPanel({
         awayLabel={awayTeam.shortName}
         homeSlots={homeLineupSlots}
         awaySlots={awayLineupSlots}
+        singleTeam={teamMode === "single"}
         onComplete={(team, slotIndex) => {
           if (lineupBenchId) {
             assignBenchToSlot(team, slotIndex, lineupBenchId);

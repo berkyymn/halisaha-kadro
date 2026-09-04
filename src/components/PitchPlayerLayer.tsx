@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getFormationById } from "@/lib/formations";
 import {
   computeFormationLayout,
+  computeSingleFormationLayout,
   getFormationSlotCount,
   maxPlayersInRow,
 } from "@/lib/formationEngine";
@@ -11,6 +12,7 @@ import { getEffectiveCardSize } from "@/lib/posterLayout";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { useAppStore } from "@/store/useAppStore";
 import { PlayerOnPitch, type SlotPosition } from "./PlayerOnPitch";
+import { getPitchMovementPolicy } from "@/lib/pitchInteraction";
 
 export function PitchPlayerLayer({
   onEditPlayer,
@@ -19,6 +21,7 @@ export function PitchPlayerLayer({
 }) {
   const pitchRef = useRef<HTMLDivElement>(null);
   const homeFormationId = useAppStore((s) => s.homeFormationId);
+  const teamMode = useAppStore((s) => s.teamMode);
   const awayFormationId = useAppStore((s) => s.awayFormationId);
   const homePlayerIds = useAppStore((s) => s.homeTeam.playerIds);
   const awayPlayerIds = useAppStore((s) => s.awayTeam.playerIds);
@@ -28,6 +31,7 @@ export function PitchPlayerLayer({
   const awayJersey = useAppStore((s) => s.awayTeam.jersey);
   const players = useAppStore((s) => s.players);
   const pitchPlayers = useAppStore((s) => s.pitchPlayers);
+  const singlePitchPlayers = useAppStore((s) => s.singlePitchPlayers);
   const playerCardSize = useAppStore((s) => s.playerCardSize);
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
   const activeDrag = useAppStore((s) => s.activeDrag);
@@ -43,10 +47,9 @@ export function PitchPlayerLayer({
   const homeFormation = getFormationById(homeFormationId);
   const awayFormation = getFormationById(awayFormationId);
 
-  const maxInRow = Math.max(
-    maxPlayersInRow(homeFormation),
-    maxPlayersInRow(awayFormation)
-  );
+  const maxInRow = teamMode === "single"
+    ? maxPlayersInRow(homeFormation)
+    : Math.max(maxPlayersInRow(homeFormation), maxPlayersInRow(awayFormation));
   const effectiveCardSize = getEffectiveCardSize(
     metrics,
     maxInRow,
@@ -56,9 +59,11 @@ export function PitchPlayerLayer({
   const homeLayout = useMemo(
     () =>
       homeFormation
-        ? computeFormationLayout(homeFormation, "home", metrics, effectiveCardSize)
+        ? teamMode === "single"
+          ? computeSingleFormationLayout(homeFormation, metrics, effectiveCardSize)
+          : computeFormationLayout(homeFormation, "home", metrics, effectiveCardSize)
         : [],
-    [homeFormation, metrics, effectiveCardSize]
+    [homeFormation, metrics, effectiveCardSize, teamMode]
   );
 
   const awayLayout = useMemo(
@@ -73,17 +78,20 @@ export function PitchPlayerLayer({
     const positions: SlotPosition[] = [];
 
     homeLayout.forEach((slot, i) => {
-      const pp = pitchPlayers.find((p) => p.team === "home" && p.slotIndex === i);
-      positions.push({
-        team: "home",
-        slotIndex: i,
-        x: pp?.x ?? slot.x,
-        y: pp?.y ?? slot.y,
-      });
+       const activePositions = teamMode === "single" ? singlePitchPlayers : pitchPlayers;
+       const pp = activePositions.find((p) => p.team === "home" && p.slotIndex === i);
+       positions.push({
+         team: "home",
+         slotIndex: i,
+         x: pp?.x ?? slot.x,
+         y: pp?.y ?? slot.y,
+       });
     });
 
-    awayLayout.forEach((slot, i) => {
-      const pp = pitchPlayers.find((p) => p.team === "away" && p.slotIndex === i);
+     if (teamMode === "single") return positions;
+
+     awayLayout.forEach((slot, i) => {
+       const pp = pitchPlayers.find((p) => p.team === "away" && p.slotIndex === i);
       positions.push({
         team: "away",
         slotIndex: i,
@@ -93,7 +101,7 @@ export function PitchPlayerLayer({
     });
 
     return positions;
-  }, [homeLayout, awayLayout, pitchPlayers]);
+  }, [homeLayout, awayLayout, pitchPlayers, singlePitchPlayers, teamMode]);
 
   useEffect(() => {
     applyFormations();
@@ -106,8 +114,9 @@ export function PitchPlayerLayer({
     (team: "home" | "away", i: number, layoutSlot: (typeof homeLayout)[number] | undefined) => {
       const playerIds = team === "home" ? homePlayerIds : awayPlayerIds;
       const slotPlayerId = playerIds[i] ?? "";
-      const pp = pitchPlayers.find((p) => p.team === team && p.slotIndex === i);
-      const resolvedPlayerId = pp?.playerId || slotPlayerId;
+       const activePositions = teamMode === "single" ? singlePitchPlayers : pitchPlayers;
+       const pp = activePositions.find((p) => p.team === team && p.slotIndex === i);
+       const resolvedPlayerId = slotPlayerId;
       const player = resolvedPlayerId ? players[resolvedPlayerId] : undefined;
       const jersey = team === "home" ? homeJersey : awayJersey;
       const captainId = team === "home" ? homeCaptainId : awayCaptainId;
@@ -116,8 +125,13 @@ export function PitchPlayerLayer({
       const dName = player?.name?.trim() || `Oyuncu ${i + 1}`;
       const isGk = layoutSlot?.isGoalkeeper ?? false;
       const hasCustom = !isGk && pp?.x != null && pp?.y != null;
-      const posX = isGk ? (layoutSlot?.x ?? 50) : (pp?.x ?? layoutSlot?.x ?? 50);
-      const posY = isGk ? (layoutSlot?.y ?? 50) : (pp?.y ?? layoutSlot?.y ?? 50);
+       const rawX = pp?.x ?? layoutSlot?.x ?? 50;
+       const posX = isGk
+         ? teamMode === "single" ? rawX : (layoutSlot?.x ?? 50)
+         : rawX;
+       const posY = isGk
+         ? teamMode === "single" ? (pp?.y ?? layoutSlot?.y ?? 50) : (layoutSlot?.y ?? 50)
+         : (pp?.y ?? layoutSlot?.y ?? 50);
 
       const isDraggingThisCard = activeDrag?.team === team && activeDrag?.slotIndex === i;
 
@@ -151,7 +165,8 @@ export function PitchPlayerLayer({
           setActiveDrag={setActiveDrag}
           setActiveSwapTarget={setActiveSwapTarget}
           swapPlayers={swapPlayers}
-          photoScalePercent={photoScalePercent}
+           photoScalePercent={photoScalePercent}
+           movementPolicy={getPitchMovementPolicy(teamMode, team)}
         />
       );
     },
@@ -159,7 +174,8 @@ export function PitchPlayerLayer({
       homePlayerIds,
       awayPlayerIds,
       players,
-      pitchPlayers,
+       pitchPlayers,
+       singlePitchPlayers,
       homeJersey,
       awayJersey,
       homeCaptainId,
@@ -173,7 +189,8 @@ export function PitchPlayerLayer({
       setActiveDrag,
       setActiveSwapTarget,
       swapPlayers,
-      photoScalePercent,
+       photoScalePercent,
+       teamMode,
     ]
   );
 
@@ -182,9 +199,10 @@ export function PitchPlayerLayer({
       {Array.from({ length: homeSlotCount }, (_, i) => (
         renderCard("home", i, homeLayout[i])
       ))}
-      {Array.from({ length: awaySlotCount }, (_, i) => (
-        renderCard("away", i, awayLayout[i])
-      ))}
+      {teamMode === "versus" &&
+        Array.from({ length: awaySlotCount }, (_, i) => (
+          renderCard("away", i, awayLayout[i])
+        ))}
     </div>
   );
 }

@@ -218,6 +218,22 @@ export function computeFormationLayout(
   }));
 }
 
+/** Tek takım posterinde formasyon derinliğini dikey saha eksenine çevirir. */
+export function computeSingleFormationLayout(
+  formation: Formation,
+  posterMetrics: PosterMetrics,
+  cardSizePx: number
+): ResolvedFormationSlot[] {
+  const base = computeFormationLayout(formation, "home", posterMetrics, cardSizePx);
+  const depth = Math.max(1, OUTFIELD_X_MAX - GK_X);
+
+  return base.map((slot) => ({
+    ...slot,
+    x: 50 + (slot.y - 50) * 0.82,
+    y: 90 - ((slot.x - GK_X) / depth) * 70,
+  }));
+}
+
 export function getFormationSlotCount(formation: Formation): number {
   return formation.slots.length;
 }

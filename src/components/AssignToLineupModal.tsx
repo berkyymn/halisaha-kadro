@@ -13,6 +13,7 @@ type AssignToLineupModalProps = {
   awayLabel: string;
   homeSlots: LineupSlotOption[];
   awaySlots: LineupSlotOption[];
+  singleTeam?: boolean;
   onComplete: (team: "home" | "away", slotIndex: number) => void;
   onClose: () => void;
 };
@@ -32,11 +33,12 @@ function AssignToLineupModalBody({
   awayLabel,
   homeSlots,
   awaySlots,
+  singleTeam = false,
   onComplete,
   onClose,
 }: Omit<AssignToLineupModalProps, "open">) {
-  const [step, setStep] = useState<"team" | "slot">("team");
-  const [team, setTeam] = useState<"home" | "away" | null>(null);
+  const [step, setStep] = useState<"team" | "slot">(singleTeam ? "slot" : "team");
+  const [team, setTeam] = useState<"home" | "away" | null>(singleTeam ? "home" : null);
   const { backdropProps, panelProps } = useModalBackdrop({
     open: true,
     onClose,
@@ -100,14 +102,16 @@ function AssignToLineupModalBody({
           </div>
         ) : (
           <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setStep("team")}
-              className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-white"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Takım değiştir
-            </button>
+            {!singleTeam && (
+              <button
+                type="button"
+                onClick={() => setStep("team")}
+                className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-white"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Takım değiştir
+              </button>
+            )}
             <p className="text-[11px] text-zinc-500">
               {teamLabel} — kimin yerine? (forma numarası)
             </p>

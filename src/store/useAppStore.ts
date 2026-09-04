@@ -102,6 +102,7 @@ function autoAssignLineup(
 }
 
 interface AppStore {
+  teamMode: "single" | "versus";
   mode: AppMode;
   matchInfo: MatchInfo;
   squadSize: SquadSize;
@@ -113,6 +114,7 @@ interface AppStore {
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
+  singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
   photoScalePercent: number;
   teamLogoDisplaySize: number;
@@ -126,6 +128,7 @@ interface AppStore {
   getPosterSnapshot: () => PosterSnapshot;
   hydrateFromSnapshot: (snapshot: PosterSnapshot, updatedAt?: string) => void;
   setMode: (mode: AppMode) => void;
+  setTeamMode: (mode: "single" | "versus") => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
   setSquadSize: (size: SquadSize) => void;
   setHomeFormation: (id: string) => void;
@@ -243,10 +246,12 @@ export const useAppStore = create<AppStore>()(
           "homeFormationId",
           "awayFormationId",
           "pitchPlayers",
+          "singlePitchPlayers",
           "playerCardSize",
           "photoScalePercent",
           "teamLogoDisplaySize",
           "posterTheme",
+          "teamMode",
         ];
 
         const hasPosterChanges =
@@ -278,6 +283,7 @@ export const useAppStore = create<AppStore>()(
       };
 
       return {
+        teamMode: "single",
         mode: "guest",
         matchInfo: createDefaultMatchInfo(),
         squadSize: 7,
@@ -289,6 +295,7 @@ export const useAppStore = create<AppStore>()(
         homeFormationId: initialFormations[0]?.id ?? "7-1-3-2",
         awayFormationId: initialFormations[0]?.id ?? "7-1-3-2",
         pitchPlayers: [],
+        singlePitchPlayers: [],
         playerCardSize: 100,
         photoScalePercent: 100,
         teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
@@ -320,6 +327,7 @@ export const useAppStore = create<AppStore>()(
         );
         realSet(
           {
+            teamMode: finalized.teamMode,
             mode: finalized.mode,
             matchInfo: finalized.matchInfo,
             squadSize: finalized.squadSize,
@@ -331,6 +339,7 @@ export const useAppStore = create<AppStore>()(
             homeFormationId: finalized.homeFormationId,
             awayFormationId: finalized.awayFormationId,
             pitchPlayers: finalized.pitchPlayers,
+            singlePitchPlayers: finalized.singlePitchPlayers,
             playerCardSize: finalized.playerCardSize,
             photoScalePercent: finalized.photoScalePercent,
             teamLogoDisplaySize: finalized.teamLogoDisplaySize,
@@ -354,6 +363,8 @@ export const useAppStore = create<AppStore>()(
           ),
         }));
       },
+
+      setTeamMode: (teamMode) => set({ teamMode }),
 
       setMatchInfo: (info) =>
         set((s) => ({
@@ -554,31 +565,54 @@ export const useAppStore = create<AppStore>()(
         set({ players, savedPlayers }),
 
       movePitchPlayer: (team, slotIndex, x, y) =>
-        set((s) => ({
-          pitchPlayers: s.pitchPlayers.map((pp) =>
-            pp.team === team && pp.slotIndex === slotIndex
-              ? { ...pp, x, y }
-              : pp
-          ),
-        })),
+        set((s) => {
+          const key = s.teamMode === "single" ? "singlePitchPlayers" : "pitchPlayers";
+          const current = s[key];
+          const found = current.some(
+            (pp) => pp.team === team && pp.slotIndex === slotIndex
+          );
+          const positions = found
+            ? current.map((pp) =>
+                pp.team === team && pp.slotIndex === slotIndex
+                  ? { ...pp, x, y }
+                  : pp
+              )
+            : [
+                ...current,
+                {
+                  team,
+                  slotIndex,
+                  playerId: s[team === "home" ? "homeTeam" : "awayTeam"].playerIds[
+                    slotIndex
+                  ] ?? "",
+                  x,
+                  y,
+                },
+              ];
+          return { [key]: positions };
+        }),
 
       clearPitchPlayerPosition: (team, slotIndex) =>
-        set((s) => ({
-          pitchPlayers: s.pitchPlayers.map((pp) =>
+        set((s) => {
+          const key = s.teamMode === "single" ? "singlePitchPlayers" : "pitchPlayers";
+          const positions = s[key].map((pp) =>
             pp.team === team && pp.slotIndex === slotIndex
               ? { ...pp, x: undefined, y: undefined }
               : pp
-          ),
-        })),
+          );
+          return { [key]: positions };
+        }),
 
       resetPitchPositions: (team) =>
-        set((s) => ({
-          pitchPlayers: s.pitchPlayers.map((pp) => {
+        set((s) => {
+          const key = s.teamMode === "single" ? "singlePitchPlayers" : "pitchPlayers";
+          const positions = s[key].map((pp) => {
             if (team && pp.team !== team) return pp;
             const { x: _, y: __, ...rest } = pp;
             return rest;
-          }),
-        })),
+          });
+          return { [key]: positions };
+        }),
 
       applyFormations: (options) => {
         const s = get();
@@ -1006,7 +1040,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 29,
+       version: 31,
       migrate: (persisted, version) => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -1301,6 +1335,18 @@ export const useAppStore = create<AppStore>()(
             players: updatedPlayers,
           };
         }
+        if (version < 30) {
+          state = {
+            ...state,
+            teamMode: state.teamMode === "single" ? "single" : "versus",
+          };
+        }
+        if (version < 31) {
+          state = {
+            ...state,
+            singlePitchPlayers: [],
+          };
+        }
         return state;
       },
       merge: (persisted, current) => {
@@ -1321,6 +1367,7 @@ export const useAppStore = create<AppStore>()(
         markAppStoreHydrated();
         if (error || !state) return;
         const finalized = finalizePosterSnapshot({
+          teamMode: state.teamMode ?? "versus",
           mode: state.mode,
           players: state.players,
           savedPlayers: state.savedPlayers ?? {},
@@ -1332,6 +1379,7 @@ export const useAppStore = create<AppStore>()(
           homeFormationId: state.homeFormationId,
           awayFormationId: state.awayFormationId,
           pitchPlayers: state.pitchPlayers ?? [],
+          singlePitchPlayers: state.singlePitchPlayers ?? [],
           playerCardSize: state.playerCardSize,
           photoScalePercent: state.photoScalePercent,
           teamLogoDisplaySize: state.teamLogoDisplaySize,

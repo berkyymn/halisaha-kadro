@@ -171,7 +171,7 @@ function storagePaths(snapshot: PosterSnapshot): Set<string> {
     if (player.photoSourceStoragePath) paths.add(player.photoSourceStoragePath);
   }
   for (const logo of [snapshot.homeTeam.logo, snapshot.awayTeam.logo]) {
-    if (logo.storagePath) paths.add(logo.storagePath);
+    if (logo?.storagePath) paths.add(logo.storagePath);
   }
   return paths;
 }

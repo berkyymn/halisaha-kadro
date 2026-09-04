@@ -4,6 +4,7 @@ import { memo, useCallback, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import type { JerseyConfig, PitchPlayer, Player } from "@/types";
+import type { PitchMovementPolicy } from "@/lib/pitchInteraction";
 import { PlayerAvatar } from "./PlayerAvatar";
 
 function clamp(value: number, min: number, max: number) {
@@ -44,6 +45,7 @@ interface PlayerOnPitchProps {
   setActiveSwapTarget: (target: { team: "home" | "away"; slotIndex: number } | null) => void;
   swapPlayers: (team1: "home" | "away", slotIndex1: number, team2: "home" | "away", slotIndex2: number) => void;
   photoScalePercent: number;
+  movementPolicy: PitchMovementPolicy;
 }
 
 export const PlayerOnPitch = memo(function PlayerOnPitch({
@@ -70,6 +72,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   setActiveSwapTarget,
   swapPlayers,
   photoScalePercent,
+  movementPolicy,
 }: PlayerOnPitchProps) {
   const [dragging, setDragging] = useState(false);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
@@ -77,22 +80,31 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   const pointerStart = useRef({ x: 0, y: 0 });
   const startPosition = useRef({ x: 0, y: 0, hasCustom: false });
   const moved = useRef(false);
+  const goalkeeperMoved = useRef(false);
   const pendingSwapTarget = useRef<{ team: "home" | "away"; slotIndex: number } | null>(null);
 
   const effectiveX = dragging ? dragPos.x : positionX;
   const effectiveY = dragging ? dragPos.y : positionY;
 
   const handleClick = useCallback(() => {
+    if (isGoalkeeper && goalkeeperMoved.current) {
+      goalkeeperMoved.current = false;
+      return;
+    }
     onEdit(team, slotIndex);
-  }, [onEdit, team, slotIndex]);
+  }, [onEdit, team, slotIndex, isGoalkeeper]);
 
   const shouldShowSwapIndicator = isSwapTarget || isDraggedWithTarget;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    if (isGoalkeeper) {
+      goalkeeperMoved.current = false;
+      return;
+    }
     e.preventDefault();
     moved.current = false;
-    pointerStart.current = { x: e.clientX, y: e.clientY };
     startPosition.current = { x: effectiveX, y: effectiveY, hasCustom: hasCustomPosition };
     setDragPos({ x: effectiveX, y: effectiveY });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -104,9 +116,18 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
     dragOffset.current = { x: pointerX - effectiveX, y: pointerY - effectiveY };
     setActiveDrag({ team, slotIndex, x: effectiveX, y: effectiveY });
-  }, [pitchRef, team, slotIndex, effectiveX, effectiveY, hasCustomPosition, setActiveDrag]);
+  }, [pitchRef, team, slotIndex, effectiveX, effectiveY, hasCustomPosition, isGoalkeeper, setActiveDrag]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (isGoalkeeper) {
+      if (
+        Math.abs(e.clientX - pointerStart.current.x) > DRAG_THRESHOLD ||
+        Math.abs(e.clientY - pointerStart.current.y) > DRAG_THRESHOLD
+      ) {
+        goalkeeperMoved.current = true;
+      }
+      return;
+    }
     if (!dragging) return;
     const dx = e.clientX - pointerStart.current.x;
     const dy = e.clientY - pointerStart.current.y;
@@ -122,8 +143,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
     let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
 
-    newX = clamp(newX, 4, 96);
-    newY = clamp(newY, 6, 94);
+    newX = clamp(newX, movementPolicy.dragXMin, movementPolicy.dragXMax);
+    newY = clamp(newY, movementPolicy.dragYMin, movementPolicy.dragYMax);
 
     setDragPos({ x: newX, y: newY });
     setActiveDrag({ team, slotIndex, x: newX, y: newY });
@@ -132,8 +153,9 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     let minDistance = Infinity;
     const thresholdPx = cardSize * 0.70;
 
-    for (const slot of allSlotPositions) {
-      if (slot.team === team && slot.slotIndex === slotIndex) continue;
+      for (const slot of allSlotPositions) {
+        if (slot.team === team && slot.slotIndex === slotIndex) continue;
+        if (!movementPolicy.allowedSwapTeams.includes(slot.team)) continue;
 
       const slotCenterX = rect.left + (slot.x / 100) * rect.width;
       const slotCenterY = rect.top + (slot.y / 100) * rect.height;
@@ -148,9 +170,32 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 
     pendingSwapTarget.current = closestTarget;
     setActiveSwapTarget(closestTarget);
-  }, [pitchRef, dragging, cardSize, allSlotPositions, team, slotIndex, setActiveDrag, setActiveSwapTarget]);
+  }, [
+    pitchRef,
+    dragging,
+    cardSize,
+    allSlotPositions,
+    team,
+    slotIndex,
+    movementPolicy.dragXMin,
+    movementPolicy.dragXMax,
+    movementPolicy.dragYMin,
+    movementPolicy.dragYMax,
+    movementPolicy.allowedSwapTeams,
+    isGoalkeeper,
+    setActiveDrag,
+    setActiveSwapTarget,
+  ]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragging) {
+      if (isGoalkeeper && goalkeeperMoved.current) {
+        setTimeout(() => {
+          goalkeeperMoved.current = false;
+        }, 0);
+      }
+      return;
+    }
     const swapTarget = pendingSwapTarget.current;
     pendingSwapTarget.current = null;
 
@@ -175,24 +220,31 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       const finalX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
       const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
 
-      const isOpponentHalf =
-        (team === "home" && finalX >= 48) || (team === "away" && finalX <= 52);
-
-      if (isGoalkeeper || isOpponentHalf) {
+      if (!movementPolicy.canMoveGoalkeeper && isGoalkeeper) {
         return;
       }
 
-      movePitchPlayer(team, slotIndex, clamp(finalX, 4, 96), clamp(finalY, 6, 94));
+      if (
+        finalX < movementPolicy.dropXMin ||
+        finalX > movementPolicy.dropXMax ||
+        finalY < movementPolicy.dropYMin ||
+        finalY > movementPolicy.dropYMax
+      ) {
+        return;
+      }
+
+      movePitchPlayer(team, slotIndex, finalX, finalY);
     }
-  }, [pitchRef, team, slotIndex, isGoalkeeper, swapPlayers, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
+  }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    if (!dragging) return;
     pendingSwapTarget.current = null;
     setDragging(false);
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     setActiveDrag(null);
     setActiveSwapTarget(null);
-  }, [setActiveDrag, setActiveSwapTarget]);
+  }, [dragging, setActiveDrag, setActiveSwapTarget]);
 
   if (!layoutSlot) return null;
 

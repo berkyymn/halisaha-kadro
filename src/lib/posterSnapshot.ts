@@ -21,8 +21,11 @@ import type {
 
 export const POSTER_SNAPSHOT_VERSION = 1;
 
+export type TeamMode = "single" | "versus";
+
 export type PosterSnapshot = {
   schemaVersion: number;
+  teamMode: TeamMode;
   mode: AppMode;
   savedPlayers: Record<string, Player>;
   benchPlayerIds: string[];
@@ -33,6 +36,7 @@ export type PosterSnapshot = {
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
+  singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
   photoScalePercent: number;
   teamLogoDisplaySize: number;
@@ -78,6 +82,7 @@ function withLogo(team: TeamConfig): TeamConfig {
 }
 
 export type PosterSnapshotSource = {
+  teamMode: TeamMode;
   mode: AppMode;
   players: Record<string, Player>;
   savedPlayers: Record<string, Player>;
@@ -89,6 +94,7 @@ export type PosterSnapshotSource = {
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
+  singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
   photoScalePercent: number;
   teamLogoDisplaySize: number;
@@ -99,6 +105,7 @@ export type PosterSnapshotSource = {
 export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapshot {
   return {
     schemaVersion: POSTER_SNAPSHOT_VERSION,
+    teamMode: source.teamMode,
     mode: source.mode,
     savedPlayers: buildPersistedPlayerRegistry(
       source.players,
@@ -116,6 +123,7 @@ export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapsho
     homeFormationId: source.homeFormationId,
     awayFormationId: source.awayFormationId,
     pitchPlayers: source.pitchPlayers,
+    singlePitchPlayers: source.singlePitchPlayers,
     playerCardSize: source.playerCardSize,
     photoScalePercent: source.photoScalePercent,
     teamLogoDisplaySize: source.teamLogoDisplaySize,
@@ -266,6 +274,7 @@ export function parsePosterSnapshot(raw: unknown): PosterSnapshot | null {
   if (!data.homeTeam || !data.awayTeam) return null;
   return {
     schemaVersion: data.schemaVersion ?? POSTER_SNAPSHOT_VERSION,
+    teamMode: data.teamMode === "single" ? "single" : "versus",
     mode: data.mode ?? "guest",
     savedPlayers: data.savedPlayers ?? {},
     benchPlayerIds: data.benchPlayerIds ?? [],
@@ -276,6 +285,7 @@ export function parsePosterSnapshot(raw: unknown): PosterSnapshot | null {
     homeFormationId: data.homeFormationId ?? "7-1-3-2",
     awayFormationId: data.awayFormationId ?? "7-1-3-2",
     pitchPlayers: data.pitchPlayers ?? [],
+    singlePitchPlayers: data.singlePitchPlayers ?? [],
     playerCardSize: data.playerCardSize ?? 100,
     photoScalePercent: data.photoScalePercent ?? 100,
     teamLogoDisplaySize: data.teamLogoDisplaySize ?? DEFAULT_LOGO_DISPLAY_SIZE,

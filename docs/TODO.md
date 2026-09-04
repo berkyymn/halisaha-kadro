@@ -27,7 +27,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `hasAppStoreHydrated()` / `onAppStoreHydrated()` for bootstrap gating
 - [x] Poster snapshot module (`src/lib/posterSnapshot.ts`): build, parse, merge, finalize, normalize
 - [x] Player pool helpers (`src/lib/playerPool.ts`): lineup IDs, bench sanitize, active registry rebuild
-- [x] Persist version **v29** with `syncRevisions` and `didCompress` fields
+- [x] Persist version **v31** with `syncRevisions`, `didCompress`, `teamMode` and mode-specific positions
 
 ---
 
@@ -372,6 +372,38 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 29 — Tek takım kadrosu
+
+- [x] `teamMode`: `single` veya `versus` olarak persist edilir (store v31)
+- [x] Mevcut kullanıcılar migration ile `versus` modunda korunur
+- [x] Poster üzerinde tek takım kadrosu merkezlenir; rakip takım gizlenir
+- [x] Tek takım modunda yalnızca home kadro/formasyon/yedek akışı gösterilir
+- [x] İki takım modu ve mevcut away verisi korunur; geçişte veri silinmez
+- [x] PosterToolbar’a tek takım/iki takım seçim kontrolü eklendi
+- [x] Tek takım için bağımsız `singlePitchPlayers` pozisyon alanı ve dikey formasyon dönüşümü eklendi
+- [x] Tek takım modunda oyuncuların tam saha serbest hareketi eklendi; kaleci kilidi korundu
+- [x] İlk deneme olarak `derby-night` için `public/posters/vertical/derby_night_vertical.jpeg` bağlandı
+- [x] Tek takım posterinde takım logosu sol üstte konumlandı
+- [x] Tek takım posterinde varsayılan `DERBİ GECESİ` başlığı gizlendi
+- [ ] Beğenilen tasarım sonrası diğer temalar için dikey görseller üretilecek
+
+---
+
+## Phase 30 — Pitch interaction architecture
+
+- [x] `pitchInteraction.ts` ile single/versus hareket policy’leri ayrıştırıldı
+- [x] Tek takım pozisyonları için boş array’e güvenli position upsert eklendi
+- [x] Tek takımda saha oyuncusu tam saha, kaleci kilidi policy üzerinden yönetiliyor
+- [x] İki takım yarı saha ve kaleci kısıtları ortak PlayerOnPitch kodundan ayrıldı
+- [x] Kaleci drag girişiminde edit click çakışması ve pointer capture hatası giderildi
+- [x] Swap render kimliği güncel takım slotundan türetiliyor; eski `PitchPlayer.playerId` kullanılmıyor
+- [x] İkili modda cross-team swap korunuyor; drag sınırı ile geçerli bırakma sınırı ayrıştırıldı
+- [x] Rakip sahada boş alana bırakılan kart geri döner; rakip oyuncu üstünde bırakılan kart swap olur
+- [x] Orphan cleanup eski/eksik logo snapshot’larına karşı null-safe yapıldı
+- [x] Manuel doğrulama: ikili modda oyuncu taşıma, cross-team swap ve forma numarası çözümleme sorunsuz
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud
@@ -388,8 +420,8 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v29** |
-| Snapshot | `PosterSnapshot` + `syncRevisions` |
+| localStorage key | `halisaha-kadro` persist **v31** |
+| Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`) + `syncRevisions` |
 | Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, `revision`, optional omit flags |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |
 
