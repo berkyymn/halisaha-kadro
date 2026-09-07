@@ -418,7 +418,34 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] Yedek kartları büyütüldü, sol üstte `GripVertical` sürükleme tutamacı eklendi
 - [x] Sürüklenen saha ve yedek oyuncuları için `react-dom/createPortal` klonu eklendi; kartlar saha/poster sınırları dışına çıkabiliyor
 - [x] Sürükleme sonrası `dragging` / `activeDrag` / `activeSwapTarget` durumları temizleniyor; art arda swap'lerde kilitlenme/kart kalması çözüldü
-- [x] Tek takım modundaki siyah kenar boşlukları tema uyumlu radial gradient ile dolduruldu
+- [x] Tek takım modundaki siyah kenar boşlukları home takım atmosfer rengiyle çok hafif radial gradient ile dolduruldu
+- [x] İki takım modundaki siyah kenar boşlukları home/away atmosfer renkleriyle çok hafif gradient ile dolduruldu
+- [x] Yedek kartları `PlayerAvatar` ile sahada kullanılan kart görünümüne yakınlaştırıldı
+- [x] Saha oyuncusu yedek kartının üzerine sürüklenince yedek kartında yeşil "DEĞİŞTİR" swap işareti yanmaya başladı
+
+---
+
+## Phase 33 — Sürükle-bırak görsel eşitliği ve kaleci swap'i
+
+- [x] Swap anında hem hedef hem sürüklenen kart yeşil "DEĞİŞTİR" işaretiyle yanıyor
+- [x] Yedekten sahaya oyuncu sokarken giren yeşil `GİREN` ↑, çıkan kırmızı `ÇIKAN` ↓ okuyla gösteriliyor
+- [x] Sahadan yedeğe oyuncu gönderirken de aynı ok sembolojisi çalışıyor; sürüklenen klon kırmızı `ÇIKAN`, hedef yedek yeşil `GİREN`
+- [x] `PlayerDropOverlay.tsx` eklendi; swap/sub-in/sub-out overlay’leri tek bileşende toplandı
+- [x] `BenchPanel`’de yedek kartına `setPointerCapture` eklendi; bırakma anı yedek kart tarafından yönetiliyor, saha kartları yanlış edit açmıyor
+- [x] Oyuncu kartına sadece tıklama (edit) yapıldığında kart titremesi giderildi; sürükleme eşik aşılınca başlıyor
+- [x] Kaleci artık sürüklenip bir yedek kartıyla swap edilebiliyor; yedek oyuncu kaleci slotuna geçiyor
+- [x] Kaleci hâlâ saha içinde serbest konum değiştiremiyor ve boş yedeğe atılamıyor
+- [x] Store’a geçici drag state’leri için `activeSubTarget` ve `activeBenchDropSource` eklendi (runtime, persist edilmiyor)
+
+---
+
+## Phase 34 — Drag & drop refactor (planlanıyor)
+
+- [ ] Store’daki 5 ayrı geçici drag state tek `dragIntent` discriminated union modeline indirgenecek
+- [ ] `PlayerOnPitch` ve `BenchPanel` için ortak `usePlayerDrag` hook’u çıkarılacak
+- [ ] Hedef tespiti `document.elementsFromPoint` yerine geometri/rect hesabına dönecek
+- [ ] Kaleci özel durumları `isGoalkeeper` dallanması yerine açık `SlotRules` politikasına taşınacak
+- [ ] Overlay kararları tek bir `getOverlayFor` yardımcısından yönetilecek
 
 ---
 

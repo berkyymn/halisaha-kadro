@@ -99,6 +99,9 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Tek takım modunda yedek sürükleme | Sadece home takım slotları hedef olur, away oyuncuları görünmez |
 | İki takım modunda yedek sürükleme | Home ve away slotlar hedef olabilir |
 | Tek takım modunda saha oyuncusunu yedeğe sürükle | Kart poster sınırını aşıp yedekler paneline ulaşabiliyor; bırakınca yedeğe gönderilir |
+| Saha oyuncusunu başka bir saha oyuncusunun üzerine sürükle | Hem hedef kart hem sürüklenen kart yeşil "DEĞİŞTİR" swap işaretiyle yanar |
+| Saha oyuncusunu yedek kartının üzerine sürükle | Yedek kartı yeşil "DEĞİŞTİR" swap işaretiyle yanar; hangi oyuncuyla swap olacağı net |
+| Yedek oyuncuyu sahadaki bir oyuncunun üzerine sürükle | Giren yedek kart yeşil "GİREN" yukarı ok, çıkan saha kartı kırmızı "ÇIKAN" aşağı ok işaretiyle yanar |
 | Ard arda 5+ yedek swap | Hiçbir kart üst üste kalmıyor, yeniden sürükleme tetiklenmiyor, UI kilitlenmiyor |
 
 - [ ] Geçti
@@ -234,6 +237,8 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Tek takımda iki oyuncuyu üst üste sürükle | Oyuncular doğru isim/forma ile tek seferde swap olur |
 | İki takımda oyuncuyu rakip yarı sahaya sürükle | Kart imleci takip eder; rakip oyuncuda swap işareti oluşur ve üstünde bırakınca cross-team swap olur |
 | İki takımda oyuncuyu boş rakip sahaya bırak | Kart rakip sahada kalmaz, geçerli kendi yarı sahasındaki konumuna döner |
+| Tek takım modunda posterin sağı/solundaki boşluklar | Takım atmosfer rengine göre çok hafif renkli gradient ile doldurulur; simsiyah kalmaz |
+| İki takım modunda posterin sağı/solundaki boşluklar | Home renk solda, away renk sağda çok hafif gradient ile doldurulur |
 
 - [ ] Geçti
 
@@ -278,6 +283,7 @@ npm run lint
 | 2026-08-28 | Firebase Storage kurulumu, production rules, data map replace ve medya fail-soft akışı | §11 + §13 + build/lint | Storage rules deploy edildi; preflight HTTP 200; manuel uygulama testi bekliyor |
 | 2026-08-28 | Sync durability refactor: revision guard, durable outbox, `onSnapshot`, rules allowlist | §14 + build/lint | Rules deploy edildi; revision 10 mevcut dokümanda doğrulandı; iki istemci/offline manuel testi bekliyor |
 | 2026-09-04 | Tek takım dikey poster ve pitch interaction düzeltmeleri | §15 + build/lint | İkili mod taşıma/cross-team swap/forma conflict manuel doğrulandı; tekli QA devam ediyor |
+| 2026-09-07 | Sürükleme görselleri: swap'te iki kart da yeşil, yedek değişiminde giren/çıkan ok işaretleri, tekli mod yan boşluk renklendirmesi | #6 + #15 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

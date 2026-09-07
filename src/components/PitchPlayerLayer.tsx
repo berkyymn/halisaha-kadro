@@ -36,11 +36,15 @@ export function PitchPlayerLayer({
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
   const activeDrag = useAppStore((s) => s.activeDrag);
   const activeSwapTarget = useAppStore((s) => s.activeSwapTarget);
+  const activeSubTarget = useAppStore((s) => s.activeSubTarget);
   const applyFormations = useAppStore((s) => s.applyFormations);
 
   const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
   const setActiveDrag = useAppStore((s) => s.setActiveDrag);
   const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
+  const setActiveBenchSwapTarget = useAppStore(
+    (s) => s.setActiveBenchSwapTarget
+  );
   const swapPlayers = useAppStore((s) => s.swapPlayers);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
   const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);
@@ -136,6 +140,8 @@ export function PitchPlayerLayer({
          : (pp?.y ?? layoutSlot?.y ?? 50);
 
       const isDraggingThisCard = activeDrag?.team === team && activeDrag?.slotIndex === i;
+      const isSubTarget =
+        activeSubTarget?.team === team && activeSubTarget?.slotIndex === i;
 
       return (
         <PlayerOnPitch
@@ -161,11 +167,13 @@ export function PitchPlayerLayer({
             activeSwapTarget?.team === team &&
             activeSwapTarget?.slotIndex === i
           }
+          isSubTarget={isSubTarget}
           isDraggedWithTarget={isDraggingThisCard && activeSwapTarget !== null}
           allSlotPositions={allSlotPositions}
            movePitchPlayer={movePitchPlayer}
            setActiveDrag={setActiveDrag}
            setActiveSwapTarget={setActiveSwapTarget}
+           setActiveBenchSwapTarget={setActiveBenchSwapTarget}
            swapPlayers={swapPlayers}
            assignBenchToSlot={assignBenchToSlot}
            moveSlotToBench={moveSlotToBench}
@@ -188,10 +196,12 @@ export function PitchPlayerLayer({
       onEditPlayer,
       activeDrag,
       activeSwapTarget,
+      activeSubTarget,
       allSlotPositions,
       movePitchPlayer,
       setActiveDrag,
       setActiveSwapTarget,
+      setActiveBenchSwapTarget,
       swapPlayers,
       assignBenchToSlot,
       moveSlotToBench,

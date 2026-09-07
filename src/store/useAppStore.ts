@@ -199,12 +199,22 @@ interface AppStore {
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
   activeDrag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null;
   activeSwapTarget: { team: "home" | "away"; slotIndex: number } | null;
+  activeSubTarget: { team: "home" | "away"; slotIndex: number } | null;
+  activeBenchDropSource: { team: "home" | "away"; slotIndex: number } | null;
+  activeBenchSwapTarget: string | null;
   setActiveDrag: (
     drag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null
   ) => void;
   setActiveSwapTarget: (
     target: { team: "home" | "away"; slotIndex: number } | null
   ) => void;
+  setActiveSubTarget: (
+    target: { team: "home" | "away"; slotIndex: number } | null
+  ) => void;
+  setActiveBenchDropSource: (
+    source: { team: "home" | "away"; slotIndex: number } | null
+  ) => void;
+  setActiveBenchSwapTarget: (playerId: string | null) => void;
   swapPlayers: (
     team1: "home" | "away",
     slotIndex1: number,
@@ -306,6 +316,9 @@ export const useAppStore = create<AppStore>()(
         remoteHydrating: false,
         activeDrag: null,
         activeSwapTarget: null,
+        activeSubTarget: null,
+        activeBenchDropSource: null,
+        activeBenchSwapTarget: null,
         localUpdatedAt: undefined,
         syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
 
@@ -915,6 +928,14 @@ export const useAppStore = create<AppStore>()(
 
       setActiveSwapTarget: (target) => set({ activeSwapTarget: target }),
 
+      setActiveSubTarget: (target) => set({ activeSubTarget: target }),
+
+      setActiveBenchDropSource: (source) =>
+        set({ activeBenchDropSource: source }),
+
+      setActiveBenchSwapTarget: (playerId) =>
+        set({ activeBenchSwapTarget: playerId }),
+
       swapPlayers: (team1, slotIndex1, team2, slotIndex2) => {
         set((state) => {
           if (team1 === team2 && slotIndex1 === slotIndex2) return {};
@@ -1045,6 +1066,9 @@ export const useAppStore = create<AppStore>()(
             savedPlayers: savedPlayersRegistry,
             activeDrag: null,
             activeSwapTarget: null,
+            activeSubTarget: null,
+            activeBenchDropSource: null,
+            activeBenchSwapTarget: null,
           };
         });
 

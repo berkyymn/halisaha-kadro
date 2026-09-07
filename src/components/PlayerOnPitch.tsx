@@ -2,11 +2,12 @@
 
 import { memo, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { RefreshCw } from "lucide-react";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import type { JerseyConfig, PitchPlayer, Player } from "@/types";
 import type { PitchMovementPolicy } from "@/lib/pitchInteraction";
+import { useAppStore } from "@/store/useAppStore";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { PlayerDropOverlay } from "./PlayerDropOverlay";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -63,6 +64,7 @@ interface PlayerOnPitchProps {
   isGoalkeeper: boolean;
   pitchPlayer: PitchPlayer | undefined;
   isSwapTarget: boolean;
+  isSubTarget: boolean;
   isDraggedWithTarget: boolean;
   allSlotPositions: SlotPosition[];
   movePitchPlayer: (team: "home" | "away", slotIndex: number, x: number, y: number) => void;
@@ -71,6 +73,7 @@ interface PlayerOnPitchProps {
   swapPlayers: (team1: "home" | "away", slotIndex1: number, team2: "home" | "away", slotIndex2: number) => void;
   assignBenchToSlot: (team: "home" | "away", slotIndex: number, benchPlayerId: string) => void;
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
+  setActiveBenchSwapTarget: (playerId: string | null) => void;
   photoScalePercent: number;
   movementPolicy: PitchMovementPolicy;
 }
@@ -92,6 +95,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   positionY,
   isGoalkeeper,
   isSwapTarget,
+  isSubTarget,
   isDraggedWithTarget,
   allSlotPositions,
   movePitchPlayer,
@@ -100,6 +104,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   swapPlayers,
   assignBenchToSlot,
   moveSlotToBench,
+  setActiveBenchSwapTarget,
   photoScalePercent,
   movementPolicy,
 }: PlayerOnPitchProps) {
@@ -107,65 +112,56 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const [dragClientPos, setDragClientPos] = useState({ x: 0, y: 0 });
   const [dragClientOffset, setDragClientOffset] = useState({ x: 0, y: 0 });
+  const activeBenchDropSource = useAppStore((s) => s.activeBenchDropSource);
+  const setActiveBenchDropSource = useAppStore((s) => s.setActiveBenchDropSource);
   const dragOffset = useRef({ x: 0, y: 0 });
   const pointerStart = useRef({ x: 0, y: 0 });
   const startPosition = useRef({ x: 0, y: 0, hasCustom: false });
+  const pointerDown = useRef(false);
   const moved = useRef(false);
-  const goalkeeperMoved = useRef(false);
   const pendingSwapTarget = useRef<{ team: "home" | "away"; slotIndex: number } | null>(null);
 
   const effectiveX = dragging ? dragPos.x : positionX;
   const effectiveY = dragging ? dragPos.y : positionY;
 
   const handleClick = useCallback(() => {
-    if (isGoalkeeper && goalkeeperMoved.current) {
-      goalkeeperMoved.current = false;
-      return;
-    }
     onEdit(team, slotIndex);
-  }, [onEdit, team, slotIndex, isGoalkeeper]);
+  }, [onEdit, team, slotIndex]);
 
-  const shouldShowSwapIndicator = isSwapTarget || isDraggedWithTarget;
+  const showSwapOnClone = isDraggedWithTarget;
+  const isBenchDropSource =
+    activeBenchDropSource?.team === team &&
+    activeBenchDropSource?.slotIndex === slotIndex;
+  const showSubOutOnClone = isBenchDropSource;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    pointerDown.current = true;
     pointerStart.current = { x: e.clientX, y: e.clientY };
-    if (isGoalkeeper) {
-      goalkeeperMoved.current = false;
-      return;
-    }
     e.preventDefault();
     moved.current = false;
     startPosition.current = { x: effectiveX, y: effectiveY, hasCustom: hasCustomPosition };
     setDragPos({ x: effectiveX, y: effectiveY });
     const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    // Sürüklenen klon imlecin tam ortasında görünsün, hedef tespiti daha kolay olsun.
     setDragClientOffset({
-      x: e.clientX - cardRect.left,
-      y: e.clientY - cardRect.top,
+      x: cardRect.width / 2,
+      y: cardRect.height / 2,
     });
     setDragClientPos({ x: e.clientX, y: e.clientY });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDragging(true);
+    // Sürüklemeyi hemen başlatmıyoruz; eşik aşılınca başlıyor.
+    // Böylece sadece tıklama (edit) yapıldığında kart titremiyor.
     const pitch = pitchRef.current;
     if (!pitch) return;
     const rect = pitch.getBoundingClientRect();
     const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
     const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
     dragOffset.current = { x: pointerX - effectiveX, y: pointerY - effectiveY };
-    setActiveDrag({ team, slotIndex, x: effectiveX, y: effectiveY });
-  }, [pitchRef, team, slotIndex, effectiveX, effectiveY, hasCustomPosition, isGoalkeeper, setActiveDrag]);
+  }, [pitchRef, effectiveX, effectiveY, hasCustomPosition]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (isGoalkeeper) {
-      if (
-        Math.abs(e.clientX - pointerStart.current.x) > DRAG_THRESHOLD ||
-        Math.abs(e.clientY - pointerStart.current.y) > DRAG_THRESHOLD
-      ) {
-        goalkeeperMoved.current = true;
-      }
-      return;
-    }
-    if (!dragging) return;
+    if (!pointerDown.current) return;
     const dx = e.clientX - pointerStart.current.x;
     const dy = e.clientY - pointerStart.current.y;
     if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
@@ -175,25 +171,40 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 
     const pitch = pitchRef.current;
     if (!pitch) return;
-
     const rect = pitch.getBoundingClientRect();
-    let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
-    let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
 
-    newX = clamp(newX, movementPolicy.dragXMin, movementPolicy.dragXMax);
-    newY = clamp(newY, movementPolicy.dragYMin, movementPolicy.dragYMax);
+    if (!dragging) {
+      // Eşik aşıldı, sürüklemeyi resmen başlat.
+      setDragging(true);
+      setActiveDrag({ team, slotIndex, x: effectiveX, y: effectiveY });
+    }
 
-    setDragPos({ x: newX, y: newY });
+    if (!isGoalkeeper) {
+      let newX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
+      let newY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
+
+      newX = clamp(newX, movementPolicy.dragXMin, movementPolicy.dragXMax);
+      newY = clamp(newY, movementPolicy.dragYMin, movementPolicy.dragYMax);
+
+      setDragPos({ x: newX, y: newY });
+      setActiveDrag({ team, slotIndex, x: newX, y: newY });
+    }
+
     setDragClientPos({ x: e.clientX, y: e.clientY });
-    setActiveDrag({ team, slotIndex, x: newX, y: newY });
+
+    const benchTarget = findBenchDropTarget(e.clientX, e.clientY);
+    setActiveBenchSwapTarget(
+      benchTarget?.type === "bench-card" ? benchTarget.benchPlayerId : null
+    );
+    setActiveBenchDropSource(benchTarget ? { team, slotIndex } : null);
 
     let closestTarget: { team: "home" | "away"; slotIndex: number } | null = null;
     let minDistance = Infinity;
     const thresholdPx = cardSize * 0.70;
 
-      for (const slot of allSlotPositions) {
-        if (slot.team === team && slot.slotIndex === slotIndex) continue;
-        if (!movementPolicy.allowedSwapTeams.includes(slot.team)) continue;
+    for (const slot of allSlotPositions) {
+      if (slot.team === team && slot.slotIndex === slotIndex) continue;
+      if (!movementPolicy.allowedSwapTeams.includes(slot.team)) continue;
 
       const slotCenterX = rect.left + (slot.x / 100) * rect.width;
       const slotCenterY = rect.top + (slot.y / 100) * rect.height;
@@ -211,6 +222,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   }, [
     pitchRef,
     dragging,
+    effectiveX,
+    effectiveY,
     cardSize,
     allSlotPositions,
     team,
@@ -223,31 +236,33 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     isGoalkeeper,
     setActiveDrag,
     setActiveSwapTarget,
+    setActiveBenchSwapTarget,
+    setActiveBenchDropSource,
   ]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragging) {
-      if (isGoalkeeper && goalkeeperMoved.current) {
-        setTimeout(() => {
-          goalkeeperMoved.current = false;
-        }, 0);
-      }
-      return;
-    }
     const swapTarget = pendingSwapTarget.current;
     pendingSwapTarget.current = null;
 
-    setDragging(false);
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    setActiveDrag(null);
-    setActiveSwapTarget(null);
-
     const endDrag = () => {
+      pointerDown.current = false;
+      moved.current = false;
       setDragging(false);
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       setActiveDrag(null);
       setActiveSwapTarget(null);
+      setActiveBenchSwapTarget(null);
+      setActiveBenchDropSource(null);
     };
+
+    if (!dragging) {
+      // Sürükleme başlamadıysa bu bir tıklamadır.
+      pointerDown.current = false;
+      moved.current = false;
+      handleClick();
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      return;
+    }
 
     if (!moved.current) {
       handleClick();
@@ -262,10 +277,10 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     }
 
     const benchTarget = findBenchDropTarget(e.clientX, e.clientY);
-    if (benchTarget && !isGoalkeeper) {
+    if (benchTarget) {
       if (benchTarget.type === "bench-card") {
         assignBenchToSlot(team, slotIndex, benchTarget.benchPlayerId);
-      } else {
+      } else if (!isGoalkeeper) {
         moveSlotToBench(team, slotIndex);
       }
       endDrag();
@@ -273,15 +288,10 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     }
 
     const pitch = pitchRef.current;
-    if (pitch) {
+    if (pitch && !isGoalkeeper) {
       const rect = pitch.getBoundingClientRect();
       const finalX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
       const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
-
-      if (!movementPolicy.canMoveGoalkeeper && isGoalkeeper) {
-        endDrag();
-        return;
-      }
 
       if (
         finalX < movementPolicy.dropXMin ||
@@ -296,16 +306,20 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       movePitchPlayer(team, slotIndex, finalX, finalY);
     }
     endDrag();
-  }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, assignBenchToSlot, moveSlotToBench, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
+  }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, assignBenchToSlot, moveSlotToBench, setActiveBenchSwapTarget, setActiveBenchDropSource, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    pointerDown.current = false;
+    moved.current = false;
     if (!dragging) return;
     pendingSwapTarget.current = null;
     setDragging(false);
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     setActiveDrag(null);
     setActiveSwapTarget(null);
-  }, [dragging, setActiveDrag, setActiveSwapTarget]);
+    setActiveBenchSwapTarget(null);
+    setActiveBenchDropSource(null);
+  }, [dragging, setActiveDrag, setActiveSwapTarget, setActiveBenchSwapTarget, setActiveBenchDropSource]);
 
   if (!layoutSlot) return null;
 
@@ -326,6 +340,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       style={{
         left: `${effectiveX}%`,
         top: `${effectiveY}%`,
+        width: cardSize,
+        height: Math.round(cardSize * 1.48),
         opacity: dragging ? 0 : undefined,
         willChange: dragging ? "transform, left, top" : undefined,
       }}
@@ -333,7 +349,6 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
-      onClick={isGoalkeeper ? handleClick : undefined}
     >
       <div
         className={`relative transition-transform duration-150 ${
@@ -359,16 +374,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
           variant={team === "home" ? "light" : "dark"}
         />
 
-        {shouldShowSwapIndicator && (
-          <div className="absolute inset-0 rounded-[18%] overflow-hidden bg-green-500/30 border-2 border-green-400 flex flex-col items-center justify-center animate-pulse z-30 shadow-[0_0_15px_rgba(34,197,94,0.6)]">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-green-600 shadow-md transform rotate-180 transition-transform duration-300">
-              <RefreshCw className="w-5 h-5 animate-spin-slow" />
-            </div>
-            <span className="mt-1.5 text-[9px] font-black tracking-wider text-white bg-green-600 px-1.5 py-0.5 rounded shadow">
-              DEĞİŞTİR
-            </span>
-          </div>
-        )}
+        {isSubTarget && <PlayerDropOverlay variant="sub-out" />}
+        {isSwapTarget && <PlayerDropOverlay variant="swap" />}
       </div>
     </div>
   );
@@ -384,10 +391,11 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
           style={{
             left: dragClientPos.x - dragClientOffset.x,
             top: dragClientPos.y - dragClientOffset.y,
-            width: Math.round(cardSize * 1.35),
+            width: cardSize,
+            opacity: 0.9,
           }}
         >
-          <div className="rounded-lg border border-green-500/70 bg-zinc-800/95 p-1.5 shadow-2xl scale-[1.02]">
+          <div className="relative">
             <PlayerAvatar
               player={player}
               jersey={jersey}
@@ -399,6 +407,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
               showName
               variant={team === "home" ? "light" : "dark"}
             />
+            {showSwapOnClone && <PlayerDropOverlay variant="swap" />}
+            {showSubOutOnClone && <PlayerDropOverlay variant="sub-out" />}
           </div>
         </div>,
         document.body

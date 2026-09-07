@@ -29,22 +29,44 @@ export function AppShell() {
   const setLogoDesignerTeam = useAppStore((s) => s.setLogoDesignerTeam);
   const updateHomeTeam = useAppStore((s) => s.updateHomeTeam);
   const updateAwayTeam = useAppStore((s) => s.updateAwayTeam);
-  const posterTheme = useAppStore((s) => s.posterTheme);
+  const teamMode = useAppStore((s) => s.teamMode);
 
   const mainBg = useMemo(() => {
-    switch (posterTheme) {
-      case "derby-night":
-        return "radial-gradient(circle at center, rgba(30,58,138,0.22) 0%, #050505 70%)";
-      case "champions-night":
-        return "radial-gradient(circle at center, rgba(76,29,149,0.22) 0%, #050505 70%)";
-      case "dark-arena":
-        return "radial-gradient(circle at center, rgba(63,63,70,0.22) 0%, #050505 70%)";
-      case "summer-cup":
-        return "radial-gradient(circle at center, rgba(180,83,9,0.16) 0%, #050505 70%)";
-      default:
-        return "#050505";
+    const hexToRgba = (hex: string, alpha: number) => {
+      const sanitized = hex.replace("#", "");
+      const bigint = parseInt(sanitized, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    if (teamMode === "single") {
+      return `
+        radial-gradient(ellipse 70% 100% at 0% 50%, ${hexToRgba(
+          homeTeam.atmosphereColor,
+          0.2
+        )} 0%, transparent 45%),
+        radial-gradient(ellipse 70% 100% at 100% 50%, ${hexToRgba(
+          homeTeam.atmosphereColor,
+          0.2
+        )} 0%, transparent 45%),
+        #050505
+      `;
     }
-  }, [posterTheme]);
+
+    return `
+      radial-gradient(ellipse 70% 100% at 0% 50%, ${hexToRgba(
+        homeTeam.atmosphereColor,
+        0.18
+      )} 0%, transparent 45%),
+      radial-gradient(ellipse 70% 100% at 100% 50%, ${hexToRgba(
+        awayTeam.atmosphereColor,
+        0.18
+      )} 0%, transparent 45%),
+      #050505
+    `;
+  }, [teamMode, homeTeam.atmosphereColor, awayTeam.atmosphereColor]);
 
   const [exporting, setExporting] = useState(false);
   const [editing, setEditing] = useState<{

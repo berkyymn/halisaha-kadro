@@ -128,7 +128,8 @@ AppShell
 **Runtime-only** (not in snapshot):
 
 - `players` — active registry rebuilt from lineup + bench
-- `logoDesignerTeam`, `remoteHydrating`, `activeDrag`, `activeSwapTarget`
+- `logoDesignerTeam`, `remoteHydrating`
+- Drag preview states: `activeDrag`, `activeSwapTarget`, `activeSubTarget`, `activeBenchDropSource`, `activeBenchSwapTarget`
 
 ### 5.3 PosterSnapshot (`src/lib/posterSnapshot.ts`)
 
@@ -257,11 +258,20 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 ### F5 — Drag, drop & swap on pitch
 
 | | |
-|---|---|
-| **UI** | `PlayerOnPitch.tsx` |
-| **Store** | `setActiveDrag`, `setActiveSwapTarget`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
-| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts` |
-| **QA** | §1, §9 (implicit) |
+|---|---|---|
+| **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
+| **Store** | `setActiveDrag`, `setActiveSwapTarget`, `activeSubTarget`, `activeBenchDropSource`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
+| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy from `pitchInteraction.ts` |
+| **QA** | §1, §6, §9 |
+
+A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`:
+- `swap` — green "DEĞİŞTİR" on both the dragged clone and the target card.
+- `sub-out` — red "ÇIKAN" on the dragged clone when moving to bench.
+- `sub-in` — green "GİREN" on the bench target card.
+
+Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by checking `isGoalkeeper` inside `PlayerOnPitch`.
+
+**Planned refactor:** collapse the five transient drag states into a single `dragIntent` model, extract a shared `usePlayerDrag` hook, replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
 
 ### F6 — Team branding (logo & jersey)
 
@@ -288,21 +298,28 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 ### F8 — Bench / substitutes
 
 | | |
-|---|---|
-| **UI** | `BenchPanel.tsx`, `PlayerOnPitch.tsx` |
+|---|---|---|
+| **UI** | `BenchPanel.tsx`, `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
 | **Store** | `addPlayerToBench`, `updateBenchPlayer`, `removeFromBench`, `assignBenchToSlot`, `moveSlotToBench` |
 | **Lib** | `playerPool.ts` (`sanitizeBenchIds`, `rebuildActivePlayers`) |
 | **QA** | §5, §6 |
 
 Substitutions are **drag-and-drop only**:
 - Drag a bench player from `BenchPanel` onto a pitch player to swap them (`assignBenchToSlot`).
-- Drag a pitch player onto the bench panel (or onto a bench card) to send them to the bench (`moveSlotToBench` / swap).
+- Drag a pitch player onto the bench panel (or onto a bench card) to swap/send them to the bench (`moveSlotToBench` / `assignBenchToSlot`).
 - Both directions use `document.elementsFromPoint` and shared `data-*` attributes to locate the drop target.
 - Dragged cards render a portal-based floating clone (`createPortal`) so they can leave the pitch container and reach the bench panel in both single-team and versus modes.
-- Bench cards show a `GripVertical` drag handle and are larger than before.
+- Bench cards are rendered with `PlayerAvatar` to match the pitch player cards, with a `GripVertical` drag handle.
+- Overlay semantics mirror football substitution boards:
+  - `sub-in` (green ↑ `GİREN`) on the incoming bench card or dragged bench clone.
+  - `sub-out` (red ↓ `ÇIKAN`) on the outgoing pitch slot or dragged pitch clone.
+  - `swap` (green `DEĞİŞTİR`) when two on-field players swap.
+- `BenchPanel` captures the pointer on the bench card so release is handled by the bench card, preventing the underlying pitch slot from opening edit.
 - Drag state is always cleared after a drop/swap/move to avoid stuck cards.
 
 `AssignToLineupModal` and the "Yedekle değiştir" / "Yedeğe gönder" buttons in `PlayerEditModal` were removed.
+
+**Planned refactor:** share a `usePlayerDrag` hook with `PlayerOnPitch`, replace DOM hit-testing with geometry, and centralize overlay decisions through a single helper.
 
 ### F9 — PNG export
 
@@ -384,6 +401,8 @@ Store version 28 → 29 migration marks all `savedPlayers`/`players` with `didCo
 Pitch movement is centralized in `src/lib/pitchInteraction.ts`. The component receives a movement policy instead of branching on team mode. Single mode allows full-pitch movement for outfield players while keeping the goalkeeper locked; versus mode lets a card travel across the pitch for cross-team swap while allowing a final drop only in its own half. Position actions upsert missing positions so a fresh single-mode lineup can be dragged immediately.
 
 `applyFormations()` writes to `singlePitchPlayers` in single mode and to `pitchPlayers` in versus mode, preserving custom drag positions unless a reset is requested. Formation changes reset only the affected team's positions.
+
+The black side margins outside the 4:5 poster are filled with a very subtle radial gradient using the active team's `atmosphereColor` so the editing canvas does not look like a disabled area. In versus mode the gradient uses both home and away colors.
 
 ---
 
@@ -584,4 +603,4 @@ Does the feature change what gets saved locally?
 
 ---
 
-*Last aligned with persist v32, Firebase data-flow hardening, single-team mode, and revised formations.*
+*Last aligned with persist v32, drag-and-drop visual parity, goalkeeper bench swap, and planned drag refactor.*

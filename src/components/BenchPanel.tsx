@@ -10,9 +10,10 @@ import {
   Pencil,
   Plus,
   Trash2,
-  UserRound,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { PlayerAvatar } from "./PlayerAvatar";
+import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import type { Player } from "@/types";
 
 const PlayerEditModal = dynamic(
@@ -21,6 +22,10 @@ const PlayerEditModal = dynamic(
 );
 
 const DRAG_THRESHOLD = 6;
+
+function clampCardSize(size: number): number {
+  return Math.max(58, Math.min(110, size));
+}
 
 type PitchTarget = { team: "home" | "away"; slotIndex: number };
 
@@ -41,77 +46,76 @@ function findPitchTarget(clientX: number, clientY: number): PitchTarget | null {
   return null;
 }
 
-function BenchCardContent({ player }: { player: Player }) {
-  const photo = player.cutoutUrl || player.photoSource || player.photoUrl;
-  return (
-    <div className="flex items-center gap-2 min-w-0">
-      <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center shrink-0 overflow-hidden">
-        {photo ? (
-          <img src={photo} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <UserRound className="w-4 h-4 text-zinc-400" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold text-white truncate">
-          {player.name || "İsimsiz"}
-        </p>
-        <p className="text-[10px] text-zinc-500">#{player.number}</p>
-      </div>
-    </div>
-  );
-}
-
 function BenchPlayerCard({
   player,
   dragging,
+  isSwapTarget,
+  isIncomingSub,
+  cardSize,
   onEdit,
   onDelete,
   onPointerDown,
 }: {
   player: Player;
   dragging: boolean;
+  isSwapTarget: boolean;
+  isIncomingSub: boolean;
+  cardSize: number;
   onEdit: () => void;
   onDelete: () => void;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
 }) {
+  const homeJersey = useAppStore((s) => s.homeTeam.jersey);
+
   return (
     <div
       data-bench-player-id={player.id}
       onPointerDown={onPointerDown}
-      className={`relative rounded-lg border border-zinc-700/80 bg-zinc-800/50 hover:border-zinc-600 p-2 pr-1 transition-colors select-none ${
-        dragging ? "opacity-0" : ""
+      className={`relative rounded-xl border bg-zinc-800/60 hover:border-zinc-600 p-2 transition-colors select-none ${
+        dragging ? "opacity-0 border-zinc-800/60" : "border-zinc-700/80"
       }`}
       style={{ touchAction: "none" }}
     >
-      <div className="flex items-start gap-1.5 min-w-0">
-        <div className="shrink-0 pt-0.5 text-zinc-500">
-          <GripVertical className="w-4 h-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <BenchCardContent player={player} />
-        </div>
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onEdit}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80"
-            title="Düzenle"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onDelete}
-            className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
-            title="Yedekten sil"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      <div className="absolute top-1.5 left-1.5 z-10 text-zinc-500">
+        <GripVertical className="w-4 h-4" />
       </div>
+      <div className="absolute top-1.5 right-1.5 z-10 flex flex-col gap-0.5">
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onEdit}
+          className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80"
+          title="Düzenle"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onDelete}
+          className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
+          title="Yedekten sil"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <div className="flex flex-col items-center pt-4">
+        <PlayerAvatar
+          player={player}
+          jersey={homeJersey}
+          number={player.number}
+          name={player.name || "İsimsiz"}
+          size={cardSize}
+          photoScale={100}
+          isCaptain={false}
+          showName
+          variant="dark"
+        />
+      </div>
+
+      {isIncomingSub && <PlayerDropOverlay variant="sub-in" />}
+      {!isIncomingSub && isSwapTarget && <PlayerDropOverlay variant="swap" />}
     </div>
   );
 }
@@ -123,6 +127,7 @@ export function BenchPanel() {
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragCardSize, setDragCardSize] = useState({ width: 0, height: 0 });
   const pointerStart = useRef({ x: 0, y: 0 });
   const moved = useRef(false);
 
@@ -130,11 +135,18 @@ export function BenchPanel() {
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);
   const homeTeam = useAppStore((s) => s.homeTeam);
+  const playerCardSize = useAppStore((s) => s.playerCardSize);
+  const activeBenchSwapTarget = useAppStore((s) => s.activeBenchSwapTarget);
+  const activeBenchDropSource = useAppStore((s) => s.activeBenchDropSource);
+  const activeSubTarget = useAppStore((s) => s.activeSubTarget);
   const addPlayerToBench = useAppStore((s) => s.addPlayerToBench);
   const updateBenchPlayer = useAppStore((s) => s.updateBenchPlayer);
   const removeFromBench = useAppStore((s) => s.removeFromBench);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
   const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
+  const setActiveSubTarget = useAppStore((s) => s.setActiveSubTarget);
+
+  const benchCardSize = clampCardSize(Math.round(playerCardSize * 0.88));
 
   const benchEntries = benchPlayerIds.map((benchId) => ({
     benchId,
@@ -167,11 +179,14 @@ export function BenchPanel() {
     if (e.button !== 0) return;
     e.preventDefault();
     const card = e.currentTarget;
+    card.setPointerCapture(e.pointerId);
     const rect = card.getBoundingClientRect();
+    // Sürüklenen klon imlecin tam ortasında görünsün.
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: rect.width / 2,
+      y: rect.height / 2,
     });
+    setDragCardSize({ width: rect.width, height: rect.height });
     pointerStart.current = { x: e.clientX, y: e.clientY };
     moved.current = false;
     setDragPos({ x: e.clientX, y: e.clientY });
@@ -187,23 +202,28 @@ export function BenchPanel() {
 
       setDragPos({ x: ev.clientX, y: ev.clientY });
       const target = findPitchTarget(ev.clientX, ev.clientY);
-      setActiveSwapTarget(target);
+      setActiveSubTarget(target);
     };
 
     const handleEnd = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleEnd);
       window.removeEventListener("pointercancel", handleEnd);
-
-      if (!moved.current) {
-        setEditingBenchId(benchId);
-      } else {
-        const target = findPitchTarget(ev.clientX, ev.clientY);
-        if (target) {
-          assignBenchToSlot(target.team, target.slotIndex, benchId);
-        }
+      try {
+        card.releasePointerCapture(ev.pointerId);
+      } catch {
+        // Capture zaten bırakılmış olabilir.
       }
+
+      const target = findPitchTarget(ev.clientX, ev.clientY);
+      if (target) {
+        assignBenchToSlot(target.team, target.slotIndex, benchId);
+      } else if (!moved.current) {
+        setEditingBenchId(benchId);
+      }
+      moved.current = false;
       setActiveSwapTarget(null);
+      setActiveSubTarget(null);
       setDraggingBenchId(null);
     };
 
@@ -235,7 +255,11 @@ export function BenchPanel() {
     <>
       <aside
         data-bench-drop="true"
-        className="shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0"
+        className={`shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0 transition-colors ${
+          activeBenchDropSource && !activeBenchSwapTarget
+            ? "ring-2 ring-inset ring-green-500/40 bg-zinc-800/90"
+            : ""
+        }`}
       >
         <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-zinc-800">
           <div>
@@ -272,6 +296,12 @@ export function BenchPanel() {
                   }
                 }
                 dragging={draggingBenchId === benchId}
+                isSwapTarget={activeBenchSwapTarget === benchId}
+                isIncomingSub={
+                  activeBenchDropSource !== null &&
+                  activeBenchSwapTarget === benchId
+                }
+                cardSize={benchCardSize}
                 onEdit={() => setEditingBenchId(benchId)}
                 onDelete={() =>
                   handleDelete(benchId, player?.name ?? "Bu yedek")
@@ -300,18 +330,28 @@ export function BenchPanel() {
       {draggingPlayer &&
         createPortal(
           <div
-            className="fixed z-[60] pointer-events-none"
+            className="fixed z-[60] pointer-events-none flex items-center justify-center"
             style={{
               left: dragPos.x - dragOffset.x,
               top: dragPos.y - dragOffset.y,
-              width: 260,
+              width: dragCardSize.width,
+              height: dragCardSize.height,
+              opacity: 0.9,
             }}
           >
-            <div className="rounded-lg border border-green-500/70 bg-zinc-800/95 p-2 shadow-2xl scale-[1.02]">
-              <div className="flex items-center gap-2">
-                <GripVertical className="w-4 h-4 text-zinc-500 shrink-0" />
-                <BenchCardContent player={draggingPlayer} />
-              </div>
+            <div className="relative">
+              <PlayerAvatar
+                player={draggingPlayer}
+                jersey={homeTeam.jersey}
+                number={draggingPlayer.number}
+                name={draggingPlayer.name || "İsimsiz"}
+                size={benchCardSize}
+                photoScale={100}
+                isCaptain={false}
+                showName
+                variant="dark"
+              />
+              {activeSubTarget && <PlayerDropOverlay variant="sub-in" />}
             </div>
           </div>,
           document.body
