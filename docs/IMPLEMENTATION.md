@@ -298,7 +298,9 @@ Substitutions are **drag-and-drop only**:
 - Drag a bench player from `BenchPanel` onto a pitch player to swap them (`assignBenchToSlot`).
 - Drag a pitch player onto the bench panel (or onto a bench card) to send them to the bench (`moveSlotToBench` / swap).
 - Both directions use `document.elementsFromPoint` and shared `data-*` attributes to locate the drop target.
-- Bench cards render a portal-based floating clone while dragging and reuse the same `activeSwapTarget` highlight that `PlayerOnPitch` uses for in-pitch swaps.
+- Dragged cards render a portal-based floating clone (`createPortal`) so they can leave the pitch container and reach the bench panel in both single-team and versus modes.
+- Bench cards show a `GripVertical` drag handle and are larger than before.
+- Drag state is always cleared after a drop/swap/move to avoid stuck cards.
 
 `AssignToLineupModal` and the "Yedekle değiştir" / "Yedeğe gönder" buttons in `PlayerEditModal` were removed.
 

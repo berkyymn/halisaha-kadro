@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
 import { toPng } from "html-to-image";
@@ -29,6 +29,22 @@ export function AppShell() {
   const setLogoDesignerTeam = useAppStore((s) => s.setLogoDesignerTeam);
   const updateHomeTeam = useAppStore((s) => s.updateHomeTeam);
   const updateAwayTeam = useAppStore((s) => s.updateAwayTeam);
+  const posterTheme = useAppStore((s) => s.posterTheme);
+
+  const mainBg = useMemo(() => {
+    switch (posterTheme) {
+      case "derby-night":
+        return "radial-gradient(circle at center, rgba(30,58,138,0.22) 0%, #050505 70%)";
+      case "champions-night":
+        return "radial-gradient(circle at center, rgba(76,29,149,0.22) 0%, #050505 70%)";
+      case "dark-arena":
+        return "radial-gradient(circle at center, rgba(63,63,70,0.22) 0%, #050505 70%)";
+      case "summer-cup":
+        return "radial-gradient(circle at center, rgba(180,83,9,0.16) 0%, #050505 70%)";
+      default:
+        return "#050505";
+    }
+  }, [posterTheme]);
 
   const [exporting, setExporting] = useState(false);
   const [editing, setEditing] = useState<{
@@ -113,7 +129,10 @@ export function AppShell() {
 
       <PosterToolbar />
 
-      <main className="flex-1 flex min-h-0 min-w-0 bg-black">
+      <main
+        className="flex-1 flex min-h-0 min-w-0"
+        style={{ background: mainBg }}
+      >
         <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0">
           <MatchPoster
             onEditPlayer={handleEditPlayer}

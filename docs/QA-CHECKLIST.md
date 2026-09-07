@@ -98,6 +98,8 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Oyuncu değişimi sonrası formasyon | Oyuncular doğru pozisyonlarda kalır, kaptanlık ve forma numarası çakışması çözülür |
 | Tek takım modunda yedek sürükleme | Sadece home takım slotları hedef olur, away oyuncuları görünmez |
 | İki takım modunda yedek sürükleme | Home ve away slotlar hedef olabilir |
+| Tek takım modunda saha oyuncusunu yedeğe sürükle | Kart poster sınırını aşıp yedekler paneline ulaşabiliyor; bırakınca yedeğe gönderilir |
+| Ard arda 5+ yedek swap | Hiçbir kart üst üste kalmıyor, yeniden sürükleme tetiklenmiyor, UI kilitlenmiyor |
 
 - [ ] Geçti
 

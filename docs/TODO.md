@@ -415,6 +415,10 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `BenchPanel`de "Oyuna al" butonu ve `AssignToLineupModal` kaldırıldı
 - [x] `PlayerEditModal` ve `AppShell` üzerindeki "Yedekle değiştir" / "Yedeğe gönder" butonları kaldırıldı
 - [x] Yedek oyuncu düzenleme ve silme işlemleri korundu
+- [x] Yedek kartları büyütüldü, sol üstte `GripVertical` sürükleme tutamacı eklendi
+- [x] Sürüklenen saha ve yedek oyuncuları için `react-dom/createPortal` klonu eklendi; kartlar saha/poster sınırları dışına çıkabiliyor
+- [x] Sürükleme sonrası `dragging` / `activeDrag` / `activeSwapTarget` durumları temizleniyor; art arda swap'lerde kilitlenme/kart kalması çözüldü
+- [x] Tek takım modundaki siyah kenar boşlukları tema uyumlu radial gradient ile dolduruldu
 
 ---
 

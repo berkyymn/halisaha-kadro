@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { RefreshCw } from "lucide-react";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import type { JerseyConfig, PitchPlayer, Player } from "@/types";
@@ -104,6 +105,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 }: PlayerOnPitchProps) {
   const [dragging, setDragging] = useState(false);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [dragClientPos, setDragClientPos] = useState({ x: 0, y: 0 });
+  const [dragClientOffset, setDragClientOffset] = useState({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const pointerStart = useRef({ x: 0, y: 0 });
   const startPosition = useRef({ x: 0, y: 0, hasCustom: false });
@@ -135,6 +138,12 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     moved.current = false;
     startPosition.current = { x: effectiveX, y: effectiveY, hasCustom: hasCustomPosition };
     setDragPos({ x: effectiveX, y: effectiveY });
+    const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragClientOffset({
+      x: e.clientX - cardRect.left,
+      y: e.clientY - cardRect.top,
+    });
+    setDragClientPos({ x: e.clientX, y: e.clientY });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragging(true);
     const pitch = pitchRef.current;
@@ -175,6 +184,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     newY = clamp(newY, movementPolicy.dragYMin, movementPolicy.dragYMax);
 
     setDragPos({ x: newX, y: newY });
+    setDragClientPos({ x: e.clientX, y: e.clientY });
     setActiveDrag({ team, slotIndex, x: newX, y: newY });
 
     let closestTarget: { team: "home" | "away"; slotIndex: number } | null = null;
@@ -232,13 +242,22 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     setActiveDrag(null);
     setActiveSwapTarget(null);
 
+    const endDrag = () => {
+      setDragging(false);
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      setActiveDrag(null);
+      setActiveSwapTarget(null);
+    };
+
     if (!moved.current) {
       handleClick();
+      endDrag();
       return;
     }
 
     if (swapTarget) {
       swapPlayers(team, slotIndex, swapTarget.team, swapTarget.slotIndex);
+      endDrag();
       return;
     }
 
@@ -249,6 +268,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       } else {
         moveSlotToBench(team, slotIndex);
       }
+      endDrag();
       return;
     }
 
@@ -259,6 +279,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       const finalY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
 
       if (!movementPolicy.canMoveGoalkeeper && isGoalkeeper) {
+        endDrag();
         return;
       }
 
@@ -268,11 +289,13 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         finalY < movementPolicy.dropYMin ||
         finalY > movementPolicy.dropYMax
       ) {
+        endDrag();
         return;
       }
 
       movePitchPlayer(team, slotIndex, finalX, finalY);
     }
+    endDrag();
   }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, assignBenchToSlot, moveSlotToBench, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
@@ -286,7 +309,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 
   if (!layoutSlot) return null;
 
-  return (
+  const card = (
     <div
       data-player-card="true"
       data-team={team}
@@ -303,6 +326,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       style={{
         left: `${effectiveX}%`,
         top: `${effectiveY}%`,
+        opacity: dragging ? 0 : undefined,
         willChange: dragging ? "transform, left, top" : undefined,
       }}
       onPointerDown={handlePointerDown}
@@ -347,5 +371,38 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         )}
       </div>
     </div>
+  );
+
+  if (!dragging) return card;
+
+  return (
+    <>
+      {card}
+      {createPortal(
+        <div
+          className="fixed z-[60] pointer-events-none"
+          style={{
+            left: dragClientPos.x - dragClientOffset.x,
+            top: dragClientPos.y - dragClientOffset.y,
+            width: Math.round(cardSize * 1.35),
+          }}
+        >
+          <div className="rounded-lg border border-green-500/70 bg-zinc-800/95 p-1.5 shadow-2xl scale-[1.02]">
+            <PlayerAvatar
+              player={player}
+              jersey={jersey}
+              number={number}
+              name={displayName}
+              size={cardSize}
+              photoScale={photoScalePercent}
+              isCaptain={isCaptain}
+              showName
+              variant={team === "home" ? "light" : "dark"}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 });

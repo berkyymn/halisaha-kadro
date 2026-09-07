@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   ChevronRight,
+  GripVertical,
   Pencil,
   Plus,
   Trash2,
@@ -44,7 +45,7 @@ function BenchCardContent({ player }: { player: Player }) {
   const photo = player.cutoutUrl || player.photoSource || player.photoUrl;
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center shrink-0 overflow-hidden">
         {photo ? (
           <img src={photo} alt="" className="w-full h-full object-cover" />
         ) : (
@@ -52,7 +53,7 @@ function BenchCardContent({ player }: { player: Player }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold text-white truncate">
+        <p className="text-xs font-bold text-white truncate">
           {player.name || "İsimsiz"}
         </p>
         <p className="text-[10px] text-zinc-500">#{player.number}</p>
@@ -67,51 +68,49 @@ function BenchPlayerCard({
   onEdit,
   onDelete,
   onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerCancel,
 }: {
   player: Player;
   dragging: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
 }) {
   return (
     <div
       data-bench-player-id={player.id}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
-      className={`rounded-lg border border-zinc-700/80 bg-zinc-800/50 hover:border-zinc-600 p-2 transition-colors select-none ${
+      className={`relative rounded-lg border border-zinc-700/80 bg-zinc-800/50 hover:border-zinc-600 p-2 pr-1 transition-colors select-none ${
         dragging ? "opacity-0" : ""
       }`}
       style={{ touchAction: "none" }}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        <BenchCardContent player={player} />
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onEdit}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/80 shrink-0"
-          title="Düzenle"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onDelete}
-          className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/40 shrink-0"
-          title="Yedekten sil"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex items-start gap-1.5 min-w-0">
+        <div className="shrink-0 pt-0.5 text-zinc-500">
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <BenchCardContent player={player} />
+        </div>
+        <div className="flex flex-col gap-0.5 shrink-0">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onEdit}
+            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80"
+            title="Düzenle"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onDelete}
+            className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
+            title="Yedekten sil"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -177,47 +176,40 @@ export function BenchPanel() {
     moved.current = false;
     setDragPos({ x: e.clientX, y: e.clientY });
     setDraggingBenchId(benchId);
-    card.setPointerCapture(e.pointerId);
-  };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!draggingBenchId) return;
-    const dx = e.clientX - pointerStart.current.x;
-    const dy = e.clientY - pointerStart.current.y;
-    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-      moved.current = true;
-    }
-    if (!moved.current) return;
+    const handleMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - pointerStart.current.x;
+      const dy = ev.clientY - pointerStart.current.y;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+        moved.current = true;
+      }
+      if (!moved.current) return;
 
-    setDragPos({ x: e.clientX, y: e.clientY });
-    const target = findPitchTarget(e.clientX, e.clientY);
-    setActiveSwapTarget(target);
-  };
+      setDragPos({ x: ev.clientX, y: ev.clientY });
+      const target = findPitchTarget(ev.clientX, ev.clientY);
+      setActiveSwapTarget(target);
+    };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const benchId = draggingBenchId;
-    if (!benchId) return;
+    const handleEnd = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleEnd);
+      window.removeEventListener("pointercancel", handleEnd);
 
-    e.currentTarget.releasePointerCapture(e.pointerId);
-
-    if (!moved.current) {
-      setEditingBenchId(benchId);
-    } else {
-      const target = findPitchTarget(e.clientX, e.clientY);
-      if (target) {
-        assignBenchToSlot(target.team, target.slotIndex, benchId);
+      if (!moved.current) {
+        setEditingBenchId(benchId);
+      } else {
+        const target = findPitchTarget(ev.clientX, ev.clientY);
+        if (target) {
+          assignBenchToSlot(target.team, target.slotIndex, benchId);
+        }
       }
       setActiveSwapTarget(null);
-    }
+      setDraggingBenchId(null);
+    };
 
-    setDraggingBenchId(null);
-  };
-
-  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!draggingBenchId) return;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    setActiveSwapTarget(null);
-    setDraggingBenchId(null);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleEnd);
+    window.addEventListener("pointercancel", handleEnd);
   };
 
   if (collapsed) {
@@ -243,7 +235,7 @@ export function BenchPanel() {
     <>
       <aside
         data-bench-drop="true"
-        className="shrink-0 w-56 sm:w-64 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0"
+        className="shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0"
       >
         <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-zinc-800">
           <div>
@@ -285,9 +277,6 @@ export function BenchPanel() {
                   handleDelete(benchId, player?.name ?? "Bu yedek")
                 }
                 onPointerDown={(e) => handlePointerDown(e, benchId)}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerCancel}
               />
             ))
           )}
@@ -315,11 +304,14 @@ export function BenchPanel() {
             style={{
               left: dragPos.x - dragOffset.x,
               top: dragPos.y - dragOffset.y,
-              width: 220,
+              width: 260,
             }}
           >
             <div className="rounded-lg border border-green-500/70 bg-zinc-800/95 p-2 shadow-2xl scale-[1.02]">
-              <BenchCardContent player={draggingPlayer} />
+              <div className="flex items-center gap-2">
+                <GripVertical className="w-4 h-4 text-zinc-500 shrink-0" />
+                <BenchCardContent player={draggingPlayer} />
+              </div>
             </div>
           </div>,
           document.body
