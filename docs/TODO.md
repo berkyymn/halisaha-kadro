@@ -450,9 +450,15 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `PlayerOnPitch` sürükleme sırasında `dragIntent`’i güncelliyor; bırakma/iptal sonrası `{ kind: "idle" }` yapıyor
 - [x] `BenchPanel` sürükleme sırasında `dragIntent`’i güncelliyor; yedek klon ve hedef slot overlay’leri `dragIntent` üzerinden türetiliyor
 
-### Faz 2–5 (planlanıyor)
+### Faz 2: Ortak `usePlayerDrag` hook’u ✅
 
-- [ ] `PlayerOnPitch` ve `BenchPanel` için ortak `usePlayerDrag` hook’u çıkarılacak
+- [x] `src/hooks/usePlayerDrag.ts` oluşturuldu; pointer capture, eşik kontrolü, portal offset ve bırakma/iptal yönetimi tek yerde toplandı
+- [x] `PlayerOnPitch` kendi içindeki `dragging`/`pointerDown`/`moved` state ve window listener mantığını kaldırıp `usePlayerDrag` kullanmaya başladı
+- [x] `BenchPanel` benzer şekilde `usePlayerDrag` kullanmaya başladı; her yedek kart `onPointerDown`/`Move`/`Up`/`Cancel` handler’larını alıyor
+- [x] `PlayerOnPitch` ~420 satırdan ~360 satıra, `BenchPanel` sürükleme kodu önemli ölçüde sadeleşti
+
+### Faz 3–5 (planlanıyor)
+
 - [ ] Hedef tespiti `document.elementsFromPoint` yerine geometri/rect hesabına dönecek
 - [ ] Kaleci özel durumları `isGoalkeeper` dallanması yerine açık `SlotRules` politikasına taşınacak
 

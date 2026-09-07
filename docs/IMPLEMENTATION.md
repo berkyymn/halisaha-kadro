@@ -262,6 +262,7 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 | **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
 | **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
 | **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy from `pitchInteraction.ts` |
+| **Hook** | `usePlayerDrag.ts` — shared pointer capture, threshold, portal offset, and release handling |
 | **QA** | §1, §6, §9 |
 
 A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`:
@@ -271,9 +272,9 @@ A pitch player card can be dragged to reposition, to swap with another pitch pla
 
 Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by checking `isGoalkeeper` inside `PlayerOnPitch`.
 
-**Refactor status:** Phase 1 complete — transient drag states collapsed into a single `dragIntent` model in `src/lib/dragIntent.ts`.
+**Refactor status:** Phases 1 & 2 complete — transient drag states collapsed into `dragIntent`, and drag interaction is handled by the shared `usePlayerDrag` hook.
 
-**Remaining refactor:** extract a shared `usePlayerDrag` hook, replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
+**Remaining refactor:** replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
 
 ### F6 — Team branding (logo & jersey)
 
@@ -304,6 +305,7 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 | **UI** | `BenchPanel.tsx`, `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
 | **Store** | `addPlayerToBench`, `updateBenchPlayer`, `removeFromBench`, `assignBenchToSlot`, `moveSlotToBench` |
 | **Lib** | `playerPool.ts` (`sanitizeBenchIds`, `rebuildActivePlayers`) |
+| **Hook** | `usePlayerDrag.ts` shared between pitch and bench cards |
 | **QA** | §5, §6 |
 
 Substitutions are **drag-and-drop only**:
@@ -551,6 +553,7 @@ Follow this order:
 | `useCloudSync.ts` | Wires cloudSyncManager to AuthContext |
 | `useModalBackdrop.ts` | Modal dismiss + file picker guards |
 | `usePosterMetrics.ts` | Poster container dimensions for layout |
+| `usePlayerDrag.ts` | Shared drag interaction hook for pitch/bench cards |
 | `useAppStore.ts` | Central Zustand store |
 
 ---

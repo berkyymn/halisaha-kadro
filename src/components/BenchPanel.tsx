@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import type { Player } from "@/types";
@@ -25,8 +26,6 @@ const PlayerEditModal = dynamic(
   () => import("./PlayerEditModal").then((module) => module.PlayerEditModal),
   { ssr: false }
 );
-
-const DRAG_THRESHOLD = 6;
 
 function clampCardSize(size: number): number {
   return Math.max(58, Math.min(110, size));
@@ -59,6 +58,9 @@ function BenchPlayerCard({
   onEdit,
   onDelete,
   onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
 }: {
   player: Player;
   dragging: boolean;
@@ -67,6 +69,9 @@ function BenchPlayerCard({
   onEdit: () => void;
   onDelete: () => void;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
 }) {
   const homeJersey = useAppStore((s) => s.homeTeam.jersey);
 
@@ -74,6 +79,9 @@ function BenchPlayerCard({
     <div
       data-bench-player-id={player.id}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       className={`relative rounded-xl border bg-zinc-800/60 hover:border-zinc-600 p-2 transition-colors select-none ${
         dragging ? "opacity-0 border-zinc-800/60" : "border-zinc-700/80"
       }`}
@@ -127,11 +135,9 @@ export function BenchPanel() {
   const [editingBenchId, setEditingBenchId] = useState<string | null>(null);
 
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragCardSize, setDragCardSize] = useState({ width: 0, height: 0 });
-  const pointerStart = useRef({ x: 0, y: 0 });
-  const moved = useRef(false);
+  const currentBenchId = useRef<string | null>(null);
 
   const benchPlayerIds = useAppStore((s) => s.benchPlayerIds);
   const players = useAppStore((s) => s.players);
@@ -171,68 +177,54 @@ export function BenchPanel() {
     if (editingBenchId === playerId) setEditingBenchId(null);
   };
 
-  const handlePointerDown = (
+  const { dragClientPos, handlePointerDown, handlePointerMove, handlePointerUp, handlePointerCancel } = usePlayerDrag({
+    onStart: () => {
+      const benchId = currentBenchId.current;
+      if (benchId) setDraggingBenchId(benchId);
+    },
+    onMove: (clientX, clientY) => {
+      const benchId = currentBenchId.current;
+      if (!benchId) return;
+      const target = findPitchTarget(clientX, clientY);
+      setDragIntent({
+        kind: "active",
+        source: { type: "bench", playerId: benchId },
+        pointer: { x: clientX, y: clientY },
+        target: target ? { type: "pitch", ...target } : null,
+      });
+    },
+    onEnd: (clientX, clientY, moved) => {
+      const benchId = currentBenchId.current;
+      currentBenchId.current = null;
+      setDraggingBenchId(null);
+      if (!benchId) {
+        setDragIntent({ kind: "idle" });
+        return;
+      }
+      const target = findPitchTarget(clientX, clientY);
+      if (target) {
+        assignBenchToSlot(target.team, target.slotIndex, benchId);
+      } else if (!moved) {
+        setEditingBenchId(benchId);
+      }
+      setDragIntent({ kind: "idle" });
+    },
+  });
+
+  const handleBenchPointerDown = (
     e: React.PointerEvent<HTMLDivElement>,
     benchId: string
   ) => {
     if (e.button !== 0) return;
-    e.preventDefault();
+    currentBenchId.current = benchId;
     const card = e.currentTarget;
-    card.setPointerCapture(e.pointerId);
     const rect = card.getBoundingClientRect();
-    // Sürüklenen klon imlecin tam ortasında görünsün.
     setDragOffset({
       x: rect.width / 2,
       y: rect.height / 2,
     });
     setDragCardSize({ width: rect.width, height: rect.height });
-    pointerStart.current = { x: e.clientX, y: e.clientY };
-    moved.current = false;
-    setDragPos({ x: e.clientX, y: e.clientY });
-    setDraggingBenchId(benchId);
-
-    const handleMove = (ev: PointerEvent) => {
-      const dx = ev.clientX - pointerStart.current.x;
-      const dy = ev.clientY - pointerStart.current.y;
-      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-        moved.current = true;
-      }
-      if (!moved.current) return;
-
-      setDragPos({ x: ev.clientX, y: ev.clientY });
-      const target = findPitchTarget(ev.clientX, ev.clientY);
-      setDragIntent({
-        kind: "active",
-        source: { type: "bench", playerId: benchId },
-        pointer: { x: ev.clientX, y: ev.clientY },
-        target: target ? { type: "pitch", ...target } : null,
-      });
-    };
-
-    const handleEnd = (ev: PointerEvent) => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleEnd);
-      window.removeEventListener("pointercancel", handleEnd);
-      try {
-        card.releasePointerCapture(ev.pointerId);
-      } catch {
-        // Capture zaten bırakılmış olabilir.
-      }
-
-      const target = findPitchTarget(ev.clientX, ev.clientY);
-      if (target) {
-        assignBenchToSlot(target.team, target.slotIndex, benchId);
-      } else if (!moved.current) {
-        setEditingBenchId(benchId);
-      }
-      moved.current = false;
-      setDragIntent({ kind: "idle" });
-      setDraggingBenchId(null);
-    };
-
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleEnd);
-    window.addEventListener("pointercancel", handleEnd);
+    handlePointerDown(e, (r) => ({ x: r.width / 2, y: r.height / 2 }));
   };
 
   if (collapsed) {
@@ -305,7 +297,10 @@ export function BenchPanel() {
                 onDelete={() =>
                   handleDelete(benchId, player?.name ?? "Bu yedek")
                 }
-                onPointerDown={(e) => handlePointerDown(e, benchId)}
+                onPointerDown={(e) => handleBenchPointerDown(e, benchId)}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
               />
             ))
           )}
@@ -331,8 +326,8 @@ export function BenchPanel() {
           <div
             className="fixed z-[60] pointer-events-none flex items-center justify-center"
             style={{
-              left: dragPos.x - dragOffset.x,
-              top: dragPos.y - dragOffset.y,
+              left: dragClientPos.x - dragOffset.x,
+              top: dragClientPos.y - dragOffset.y,
               width: dragCardSize.width,
               height: dragCardSize.height,
               opacity: 0.9,
