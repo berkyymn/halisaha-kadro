@@ -272,9 +272,9 @@ A pitch player card can be dragged to reposition, to swap with another pitch pla
 
 Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by checking `isGoalkeeper` inside `PlayerOnPitch`.
 
-**Refactor status:** Phases 1 & 2 complete — transient drag states collapsed into `dragIntent`, and drag interaction is handled by the shared `usePlayerDrag` hook.
+**Refactor status:** Phases 1–3 complete — transient drag states collapsed into `dragIntent`, drag interaction handled by `usePlayerDrag`, and drop-target detection is geometry-based via `src/lib/dropTargets.ts`.
 
-**Remaining refactor:** replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
+**Remaining refactor:** move goalkeeper special cases into an explicit `SlotRules` policy.
 
 ### F6 — Team branding (logo & jersey)
 
@@ -543,6 +543,7 @@ Follow this order:
 | Poster visual | `posterThemes.ts`, `posterTitleStyles.ts`, `posterLayout.ts` |
 | Media | `backgroundRemoval.ts`, `imageCompress.ts`, `fileToDataUrl.ts`, `photoCrop.ts` |
 | Firebase | `firebase/client.ts`, `firebase/app.ts`, `firebase/storage.ts` |
+| Drag/drop | `dragIntent.ts`, `dropTargets.ts`, `pitchInteraction.ts` |
 | Utils | `defaults.ts`, `matchDate.ts` |
 
 ### `src/contexts/` / `src/hooks/` / `src/store/`

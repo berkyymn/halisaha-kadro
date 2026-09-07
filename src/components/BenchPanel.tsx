@@ -16,6 +16,7 @@ import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import type { Player } from "@/types";
+import { findPitchSlotTarget } from "@/lib/dropTargets";
 import {
   isIncomingBenchSub,
   isBenchAreaTarget,
@@ -29,25 +30,6 @@ const PlayerEditModal = dynamic(
 
 function clampCardSize(size: number): number {
   return Math.max(58, Math.min(110, size));
-}
-
-type PitchTarget = { team: "home" | "away"; slotIndex: number };
-
-function findPitchTarget(clientX: number, clientY: number): PitchTarget | null {
-  const elements = document.elementsFromPoint(clientX, clientY);
-  for (const el of elements) {
-    const card = (el as HTMLElement).closest?.('[data-player-card="true"]') as
-      | HTMLElement
-      | null;
-    if (card) {
-      const team = card.dataset.team as "home" | "away" | undefined;
-      const slotIndex = card.dataset.slotIndex;
-      if (team && slotIndex !== undefined) {
-        return { team, slotIndex: Number(slotIndex) };
-      }
-    }
-  }
-  return null;
 }
 
 function BenchPlayerCard({
@@ -185,7 +167,7 @@ export function BenchPanel() {
     onMove: (clientX, clientY) => {
       const benchId = currentBenchId.current;
       if (!benchId) return;
-      const target = findPitchTarget(clientX, clientY);
+      const target = findPitchSlotTarget(clientX, clientY);
       setDragIntent({
         kind: "active",
         source: { type: "bench", playerId: benchId },
@@ -201,7 +183,7 @@ export function BenchPanel() {
         setDragIntent({ kind: "idle" });
         return;
       }
-      const target = findPitchTarget(clientX, clientY);
+      const target = findPitchSlotTarget(clientX, clientY);
       if (target) {
         assignBenchToSlot(target.team, target.slotIndex, benchId);
       } else if (!moved) {

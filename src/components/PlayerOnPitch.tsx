@@ -11,34 +11,12 @@ import {
   isSubOutClone,
 } from "@/lib/dragIntent";
 import { usePlayerDrag } from "@/hooks/usePlayerDrag";
+import { findBenchDropTarget } from "@/lib/dropTargets";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
-}
-
-type BenchDropTarget =
-  | { type: "bench-card"; benchPlayerId: string }
-  | { type: "bench-area" };
-
-function findBenchDropTarget(
-  clientX: number,
-  clientY: number
-): BenchDropTarget | null {
-  const elements = document.elementsFromPoint(clientX, clientY);
-  for (const el of elements) {
-    const htmlEl = el as HTMLElement;
-    if (htmlEl.closest?.('[data-player-card="true"]')) continue;
-    const benchCard = htmlEl.closest?.("[data-bench-player-id]") as HTMLElement | null;
-    if (benchCard?.dataset.benchPlayerId) {
-      return { type: "bench-card", benchPlayerId: benchCard.dataset.benchPlayerId };
-    }
-    if (htmlEl.closest?.('[data-bench-drop="true"]')) {
-      return { type: "bench-area" };
-    }
-  }
-  return null;
 }
 
 export interface SlotPosition {

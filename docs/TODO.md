@@ -457,9 +457,15 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `BenchPanel` benzer şekilde `usePlayerDrag` kullanmaya başladı; her yedek kart `onPointerDown`/`Move`/`Up`/`Cancel` handler’larını alıyor
 - [x] `PlayerOnPitch` ~420 satırdan ~360 satıra, `BenchPanel` sürükleme kodu önemli ölçüde sadeleşti
 
-### Faz 3–5 (planlanıyor)
+### Faz 3: Hedef tespiti geometriye geçiş ✅
 
-- [ ] Hedef tespiti `document.elementsFromPoint` yerine geometri/rect hesabına dönecek
+- [x] `src/lib/dropTargets.ts` oluşturuldu; `findPitchSlotTarget` ve `findBenchDropTarget` artık `getBoundingClientRect` ile çalışıyor
+- [x] `document.elementsFromPoint` kullanımı `PlayerOnPitch.tsx` ve `BenchPanel.tsx`’den kaldırıldı
+- [x] Hedef kartlar üst üste bindiğinde pointer’ın içinde olduğu ve merkezine en yakın olan seçiliyor
+- [x] Portal/overlay elemanlarının `pointer-events` veya z-index’inin hedef tespitini bozması engellendi
+
+### Faz 4–5 (planlanıyor)
+
 - [ ] Kaleci özel durumları `isGoalkeeper` dallanması yerine açık `SlotRules` politikasına taşınacak
 
 ---
