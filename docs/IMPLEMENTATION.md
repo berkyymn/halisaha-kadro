@@ -261,8 +261,9 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 |---|---|---|
 | **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
 | **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
-| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy from `pitchInteraction.ts` |
+| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy and `SlotRules` from `pitchInteraction.ts`; geometry-based drop targets from `dropTargets.ts` |
 | **Hook** | `usePlayerDrag.ts` — shared pointer capture, threshold, portal offset, and release handling |
+| **Preview** | `PlayerDragPreview.tsx` — shared pitch + bench drag ghost |
 | **QA** | §1, §6, §9 |
 
 A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`:
@@ -270,11 +271,11 @@ A pitch player card can be dragged to reposition, to swap with another pitch pla
 - `sub-out` — red "ÇIKAN" on the dragged clone when moving to bench.
 - `sub-in` — green "GİREN" on the bench target card.
 
-Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by checking `isGoalkeeper` inside `PlayerOnPitch`.
+Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by `SlotRules` from `pitchInteraction.ts` rather than ad-hoc `isGoalkeeper` branches.
 
-**Refactor status:** Phases 1–3 complete — transient drag states collapsed into `dragIntent`, drag interaction handled by `usePlayerDrag`, and drop-target detection is geometry-based via `src/lib/dropTargets.ts`.
+**Refactor status:** Phases 1–5 complete — transient drag states collapsed into `dragIntent`, drag interaction handled by `usePlayerDrag`, drop-target detection is geometry-based, goalkeeper restrictions are expressed through `SlotRules`, and drag preview rendering is centralized in `PlayerDragPreview`.
 
-**Remaining refactor:** move goalkeeper special cases into an explicit `SlotRules` policy.
+**Remaining refactor:** none currently planned for the drag-and-drop subsystem.
 
 ### F6 — Team branding (logo & jersey)
 
@@ -306,12 +307,13 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 | **Store** | `addPlayerToBench`, `updateBenchPlayer`, `removeFromBench`, `assignBenchToSlot`, `moveSlotToBench` |
 | **Lib** | `playerPool.ts` (`sanitizeBenchIds`, `rebuildActivePlayers`) |
 | **Hook** | `usePlayerDrag.ts` shared between pitch and bench cards |
+| **Preview** | `PlayerDragPreview.tsx` — shared drag ghost |
 | **QA** | §5, §6 |
 
 Substitutions are **drag-and-drop only**:
 - Drag a bench player from `BenchPanel` onto a pitch player to swap them (`assignBenchToSlot`).
 - Drag a pitch player onto the bench panel (or onto a bench card) to swap/send them to the bench (`moveSlotToBench` / `assignBenchToSlot`).
-- Both directions use `document.elementsFromPoint` and shared `data-*` attributes to locate the drop target.
+- Both directions use geometry-based target detection (`src/lib/dropTargets.ts`) over shared `data-*` attributes to locate the drop target.
 - Dragged cards render a portal-based floating clone (`createPortal`) so they can leave the pitch container and reach the bench panel in both single-team and versus modes.
 - Bench cards are rendered with `PlayerAvatar` to match the pitch player cards, with a `GripVertical` drag handle.
 - Overlay semantics mirror football substitution boards:
@@ -323,9 +325,9 @@ Substitutions are **drag-and-drop only**:
 
 `AssignToLineupModal` and the "Yedekle değiştir" / "Yedeğe gönder" buttons in `PlayerEditModal` were removed.
 
-**Refactor status:** Phase 1 complete — overlay decisions now derive from the shared `dragIntent` model in `src/lib/dragIntent.ts`.
+**Refactor status:** Phases 1–5 complete — `dragIntent` model, shared `usePlayerDrag` hook, geometry-based `dropTargets.ts`, explicit `SlotRules` policy, and centralized `PlayerDragPreview` rendering.
 
-**Remaining refactor:** share a `usePlayerDrag` hook with `PlayerOnPitch`, replace DOM hit-testing with geometry, and centralize overlay decisions through a single helper.
+**Remaining refactor:** none currently planned for the drag-and-drop subsystem.
 
 ### F9 — PNG export
 
@@ -528,6 +530,7 @@ Follow this order:
 | `StaticPosterBackground.tsx` | Theme background image |
 | `TeamLogoBadge.tsx` | Renders team logo (preset/generated/upload) |
 | `PlayerAvatar.tsx` | Player photo/cutout display |
+| `PlayerDragPreview.tsx` | Shared drag ghost/preview (pitch + bench) |
 | `AuthModal.tsx` | Login/register UI |
 | `UserAuthButton.tsx` | Header auth control |
 
@@ -543,7 +546,7 @@ Follow this order:
 | Poster visual | `posterThemes.ts`, `posterTitleStyles.ts`, `posterLayout.ts` |
 | Media | `backgroundRemoval.ts`, `imageCompress.ts`, `fileToDataUrl.ts`, `photoCrop.ts` |
 | Firebase | `firebase/client.ts`, `firebase/app.ts`, `firebase/storage.ts` |
-| Drag/drop | `dragIntent.ts`, `dropTargets.ts`, `pitchInteraction.ts` |
+| Drag/drop | `dragIntent.ts`, `dropTargets.ts`, `pitchInteraction.ts` (`SlotRules`) |
 | Utils | `defaults.ts`, `matchDate.ts` |
 
 ### `src/contexts/` / `src/hooks/` / `src/store/`

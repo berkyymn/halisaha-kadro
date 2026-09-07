@@ -464,12 +464,21 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] Hedef kartlar üst üste bindiğinde pointer’ın içinde olduğu ve merkezine en yakın olan seçiliyor
 - [x] Portal/overlay elemanlarının `pointer-events` veya z-index’inin hedef tespitini bozması engellendi
 
-### Faz 4–5 (planlanıyor)
+### Faz 4: Açık `SlotRules` politikası ✅
 
-- [ ] Kaleci özel durumları `isGoalkeeper` dallanması yerine açık `SlotRules` politikasına taşınacak
+- [x] `src/lib/pitchInteraction.ts`’e `SlotRules` tipi ve `getSlotRules()` eklendi
+- [x] Kaleciye özel hareket/yedek durumları artık `isGoalkeeper` dallanması yerine `slotRules.canDrag`, `canMoveOnPitch`, `canDropToBench`, `canBeSwapped` üzerinden yönetiliyor
+- [x] `PlayerOnPitch.tsx`’te `!isGoalkeeper` kontrolleri kaldırıldı; cursor ve hover davranışları da `SlotRules`’dan geliyor
+- [x] Kaleci hâlâ sürüklenebilir; başka bir oyuncu veya yedek kartla swap/sub yapabilir (`canDrag: true`, `canBeSwapped: true`)
+- [x] Kaleci sadece serbest saha içi hareket ve boş yedek alanına atılamaz (`canMoveOnPitch: false`, `canDropToBench: false`)
 
----
+### Faz 5: Merkezi drag preview helper’ı ✅
 
+- [x] `src/components/PlayerDragPreview.tsx` oluşturuldu
+- [x] `PlayerOnPitch.tsx` ve `BenchPanel.tsx` içindeki portal `PlayerAvatar` + `PlayerDropOverlay` tekrarı kaldırıldı
+- [x] Sürüklenen kartın ghost görüntüsü ve overlay’i tek bileşende toplandı; gelecekteki görsel değişiklikler tek yerden yönetilecek
+
+### Sürükle-bırak sağlamlık maddeleri ✅
 
 - [x] `pitchInteraction.ts` ile single/versus hareket policy’leri ayrıştırıldı
 - [x] Tek takım pozisyonları için boş array’e güvenli position upsert eklendi
