@@ -15,6 +15,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
+import { PlayerDragPreview } from "./PlayerDragPreview";
 import type { Player } from "@/types";
 import { findPitchSlotTarget } from "@/lib/dropTargets";
 import {
@@ -315,20 +316,13 @@ export function BenchPanel() {
               opacity: 0.9,
             }}
           >
-            <div className="relative">
-              <PlayerAvatar
-                player={draggingPlayer}
-                jersey={homeTeam.jersey}
-                number={draggingPlayer.number}
-                name={draggingPlayer.name || "İsimsiz"}
-                size={benchCardSize}
-                photoScale={100}
-                isCaptain={false}
-                showName
-                variant="dark"
-              />
-              {isBenchCloneSubIn(dragIntent) && <PlayerDropOverlay variant="sub-in" />}
-            </div>
+            <PlayerDragPreview
+              player={draggingPlayer}
+              jersey={homeTeam.jersey}
+              size={benchCardSize}
+              variant="dark"
+              overlay={isBenchCloneSubIn(dragIntent) ? "sub-in" : null}
+            />
           </div>,
           document.body
         )}

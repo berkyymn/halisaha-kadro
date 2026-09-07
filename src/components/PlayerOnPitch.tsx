@@ -4,7 +4,8 @@ import { memo, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import type { JerseyConfig, PitchPlayer, Player } from "@/types";
-import type { PitchMovementPolicy } from "@/lib/pitchInteraction";
+import type { PitchMovementPolicy, SlotRules } from "@/lib/pitchInteraction";
+import { getSlotRules } from "@/lib/pitchInteraction";
 import type { DragIntent, DropTarget } from "@/lib/dragIntent";
 import {
   isSwapSourceClone,
@@ -14,6 +15,7 @@ import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { findBenchDropTarget } from "@/lib/dropTargets";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
+import { PlayerDragPreview } from "./PlayerDragPreview";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -93,6 +95,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   const effectiveX = isDragging ? dragPos.x : positionX;
   const effectiveY = isDragging ? dragPos.y : positionY;
 
+  const slotRules: SlotRules = getSlotRules(movementPolicy, isGoalkeeper);
+
   const handleClick = useCallback(() => {
     onEdit(team, slotIndex);
   }, [onEdit, team, slotIndex]);
@@ -153,7 +157,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       let pointerX = effectiveX;
       let pointerY = effectiveY;
 
-      if (!isGoalkeeper) {
+      if (slotRules.canMoveOnPitch) {
         let newX = ((clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
         let newY = ((clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
         newX = clamp(newX, movementPolicy.dragXMin, movementPolicy.dragXMax);
@@ -199,7 +203,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       if (benchTarget) {
         if (benchTarget.type === "bench-card") {
           assignBenchToSlot(team, slotIndex, benchTarget.benchPlayerId);
-        } else if (!isGoalkeeper) {
+        } else if (slotRules.canDropToBench) {
           moveSlotToBench(team, slotIndex);
         }
         setDragIntent({ kind: "idle" });
@@ -207,7 +211,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       }
 
       const pitch = pitchRef.current;
-      if (pitch && !isGoalkeeper) {
+      if (pitch && slotRules.canMoveOnPitch) {
         const rect = pitch.getBoundingClientRect();
         const finalX = ((clientX - rect.left) / rect.width) * 100 - dragOffset.current.x;
         const finalY = ((clientY - rect.top) / rect.height) * 100 - dragOffset.current.y;
@@ -254,11 +258,11 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         isDragging
           ? "z-50 cursor-grabbing"
           : isGoalkeeper
-            ? "z-[25] cursor-pointer"
+            ? "z-[25]"
             : hasCustomPosition
-              ? "z-30 cursor-grab"
-              : "z-20 cursor-grab"
-      }`}
+              ? "z-30"
+              : "z-20"
+      } ${isDragging ? "cursor-grabbing" : `cursor-${slotRules.cursor}`}`}
       style={{
         left: `${effectiveX}%`,
         top: `${effectiveY}%`,
@@ -274,7 +278,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     >
       <div
         className={`relative transition-transform duration-150 ${
-          dragging ? "scale-[1.06] z-40" : isGoalkeeper ? "" : "hover:scale-[1.03]"
+          dragging ? "scale-[1.06] z-40" : slotRules.hoverScale ? "hover:scale-[1.03]" : ""
         }`}
         style={
           dragging
@@ -300,6 +304,12 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
     </div>
   );
 
+  const cloneOverlay = showSwapOnClone
+    ? "swap"
+    : showSubOutOnClone
+      ? "sub-out"
+      : null;
+
   if (!dragging) return card;
 
   return (
@@ -315,21 +325,18 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
             opacity: 0.9,
           }}
         >
-          <div className="relative">
-            <PlayerAvatar
-              player={player}
-              jersey={jersey}
-              number={number}
-              name={displayName}
-              size={cardSize}
-              photoScale={photoScalePercent}
-              isCaptain={isCaptain}
-              showName
-              variant={team === "home" ? "light" : "dark"}
-            />
-            {showSwapOnClone && <PlayerDropOverlay variant="swap" />}
-            {showSubOutOnClone && <PlayerDropOverlay variant="sub-out" />}
-          </div>
+          <PlayerDragPreview
+            player={player}
+            jersey={jersey}
+            number={number}
+            name={displayName}
+            size={cardSize}
+            photoScale={photoScalePercent}
+            isCaptain={isCaptain}
+            showName
+            variant={team === "home" ? "light" : "dark"}
+            overlay={cloneOverlay}
+          />
         </div>,
         document.body
       )}

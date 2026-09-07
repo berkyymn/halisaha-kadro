@@ -13,6 +13,37 @@ export type PitchMovementPolicy = {
   allowedSwapTeams: ("home" | "away")[];
 };
 
+/**
+ * SlotRules makes goalkeeper (and future slot-specific) restrictions explicit.
+ * Instead of scattering `isGoalkeeper` branches around PlayerOnPitch, the
+ * component asks this policy what the slot is allowed to do.
+ */
+export type SlotRules = {
+  canDrag: boolean;
+  canMoveOnPitch: boolean;
+  canDropToBench: boolean;
+  canBeSwapped: boolean;
+  cursor: "grab" | "pointer";
+  hoverScale: boolean;
+};
+
+export function getSlotRules(
+  policy: PitchMovementPolicy,
+  isGoalkeeper: boolean
+): SlotRules {
+  const movable = policy.canMoveGoalkeeper || !isGoalkeeper;
+  return {
+    // Kaleci hâlâ sürüklenip başka bir oyuncu/yedek ile swap/sub yapabilir,
+    // ama serbest şekilde saha içinde konum değiştiremez ve boş yedek alanına atılamaz.
+    canDrag: true,
+    canMoveOnPitch: movable,
+    canDropToBench: movable,
+    canBeSwapped: true,
+    cursor: "grab",
+    hoverScale: true,
+  };
+}
+
 const FULL_PITCH_POLICY: PitchMovementPolicy = {
   // Geniş drag sınırları: oyuncu kartını saha dışındaki yedekler paneline kadar sürüklenebilir.
   dragXMin: -20,
