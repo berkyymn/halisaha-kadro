@@ -42,6 +42,8 @@ export function PitchPlayerLayer({
   const setActiveDrag = useAppStore((s) => s.setActiveDrag);
   const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
   const swapPlayers = useAppStore((s) => s.swapPlayers);
+  const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
+  const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);
 
   const metrics = usePosterMetrics();
   const homeFormation = getFormationById(homeFormationId);
@@ -161,12 +163,14 @@ export function PitchPlayerLayer({
           }
           isDraggedWithTarget={isDraggingThisCard && activeSwapTarget !== null}
           allSlotPositions={allSlotPositions}
-          movePitchPlayer={movePitchPlayer}
-          setActiveDrag={setActiveDrag}
-          setActiveSwapTarget={setActiveSwapTarget}
-          swapPlayers={swapPlayers}
-           photoScalePercent={photoScalePercent}
-           movementPolicy={getPitchMovementPolicy(teamMode, team)}
+           movePitchPlayer={movePitchPlayer}
+           setActiveDrag={setActiveDrag}
+           setActiveSwapTarget={setActiveSwapTarget}
+           swapPlayers={swapPlayers}
+           assignBenchToSlot={assignBenchToSlot}
+           moveSlotToBench={moveSlotToBench}
+            photoScalePercent={photoScalePercent}
+            movementPolicy={getPitchMovementPolicy(teamMode, team)}
         />
       );
     },
@@ -189,6 +193,8 @@ export function PitchPlayerLayer({
       setActiveDrag,
       setActiveSwapTarget,
       swapPlayers,
+      assignBenchToSlot,
+      moveSlotToBench,
        photoScalePercent,
        teamMode,
     ]

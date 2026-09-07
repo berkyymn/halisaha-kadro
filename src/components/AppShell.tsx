@@ -29,13 +29,8 @@ export function AppShell() {
   const setLogoDesignerTeam = useAppStore((s) => s.setLogoDesignerTeam);
   const updateHomeTeam = useAppStore((s) => s.updateHomeTeam);
   const updateAwayTeam = useAppStore((s) => s.updateAwayTeam);
-  const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);
 
   const [exporting, setExporting] = useState(false);
-  const [substituteTarget, setSubstituteTarget] = useState<{
-    team: "home" | "away";
-    slotIndex: number;
-  } | null>(null);
   const [editing, setEditing] = useState<{
     team: "home" | "away";
     slotIndex: number;
@@ -81,7 +76,6 @@ export function AppShell() {
   const editPlayer = editCtx?.playerId
     ? players[editCtx.playerId] ?? savedPlayers[editCtx.playerId]
     : undefined;
-  const hasLineupSlot = Boolean(editCtx?.playerId);
   const isCaptain =
     Boolean(editCtx?.playerId) &&
     editCtx?.teamConfig.captainId === editCtx?.playerId;
@@ -126,11 +120,7 @@ export function AppShell() {
             onLogoClick={handleLogoClick}
           />
         </div>
-        <BenchPanel
-          substituteTarget={substituteTarget}
-          onSubstituteComplete={() => setSubstituteTarget(null)}
-          onClearSubstituteTarget={() => setSubstituteTarget(null)}
-        />
+        <BenchPanel />
       </main>
 
       {editing && editCtx && (
@@ -148,20 +138,6 @@ export function AppShell() {
           onSave={(data) => {
             setSlotPlayer(editing.team, editing.slotIndex, data);
           }}
-          onMoveToBench={
-            hasLineupSlot
-              ? () => moveSlotToBench(editing.team, editing.slotIndex)
-              : undefined
-          }
-          onStartSubstitute={
-            hasLineupSlot
-              ? () =>
-                  setSubstituteTarget({
-                    team: editing.team,
-                    slotIndex: editing.slotIndex,
-                  })
-              : undefined
-          }
           variant={editing.team === "home" ? "light" : "dark"}
         />
       )}

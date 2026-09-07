@@ -14,10 +14,11 @@ export type PitchMovementPolicy = {
 };
 
 const FULL_PITCH_POLICY: PitchMovementPolicy = {
-  dragXMin: 4,
-  dragXMax: 96,
-  dragYMin: 6,
-  dragYMax: 94,
+  // Geniş drag sınırları: oyuncu kartını saha dışındaki yedekler paneline kadar sürüklenebilir.
+  dragXMin: -20,
+  dragXMax: 120,
+  dragYMin: -10,
+  dragYMax: 110,
   dropXMin: 4,
   dropXMax: 96,
   dropYMin: 6,

@@ -13,6 +13,30 @@ function clamp(value: number, min: number, max: number) {
 
 const DRAG_THRESHOLD = 6;
 
+type BenchDropTarget =
+  | { type: "bench-card"; benchPlayerId: string }
+  | { type: "bench-area" };
+
+function findBenchDropTarget(
+  clientX: number,
+  clientY: number
+): BenchDropTarget | null {
+  const elements = document.elementsFromPoint(clientX, clientY);
+  for (const el of elements) {
+    const htmlEl = el as HTMLElement;
+    // Sürüklenen saha kartının kendisi veya başka bir saha kartı değil, yedek alan arıyoruz.
+    if (htmlEl.closest?.('[data-player-card="true"]')) continue;
+    const benchCard = htmlEl.closest?.("[data-bench-player-id]") as HTMLElement | null;
+    if (benchCard?.dataset.benchPlayerId) {
+      return { type: "bench-card", benchPlayerId: benchCard.dataset.benchPlayerId };
+    }
+    if (htmlEl.closest?.("[data-bench-drop=\"true\"]")) {
+      return { type: "bench-area" };
+    }
+  }
+  return null;
+}
+
 export interface SlotPosition {
   team: "home" | "away";
   slotIndex: number;
@@ -44,6 +68,8 @@ interface PlayerOnPitchProps {
   setActiveDrag: (drag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null) => void;
   setActiveSwapTarget: (target: { team: "home" | "away"; slotIndex: number } | null) => void;
   swapPlayers: (team1: "home" | "away", slotIndex1: number, team2: "home" | "away", slotIndex2: number) => void;
+  assignBenchToSlot: (team: "home" | "away", slotIndex: number, benchPlayerId: string) => void;
+  moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
   photoScalePercent: number;
   movementPolicy: PitchMovementPolicy;
 }
@@ -71,6 +97,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   setActiveDrag,
   setActiveSwapTarget,
   swapPlayers,
+  assignBenchToSlot,
+  moveSlotToBench,
   photoScalePercent,
   movementPolicy,
 }: PlayerOnPitchProps) {
@@ -214,6 +242,16 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       return;
     }
 
+    const benchTarget = findBenchDropTarget(e.clientX, e.clientY);
+    if (benchTarget && !isGoalkeeper) {
+      if (benchTarget.type === "bench-card") {
+        assignBenchToSlot(team, slotIndex, benchTarget.benchPlayerId);
+      } else {
+        moveSlotToBench(team, slotIndex);
+      }
+      return;
+    }
+
     const pitch = pitchRef.current;
     if (pitch) {
       const rect = pitch.getBoundingClientRect();
@@ -235,7 +273,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 
       movePitchPlayer(team, slotIndex, finalX, finalY);
     }
-  }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
+  }, [pitchRef, team, slotIndex, dragging, isGoalkeeper, movementPolicy, swapPlayers, assignBenchToSlot, moveSlotToBench, movePitchPlayer, setActiveDrag, setActiveSwapTarget, handleClick]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
     if (!dragging) return;

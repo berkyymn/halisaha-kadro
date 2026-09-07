@@ -2,14 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 import {
-  ArrowLeftRight,
   Camera,
   Crown,
   Loader2,
   RotateCcw,
   Scissors,
   Trash2,
-  Users,
   X,
   ZoomIn,
   ZoomOut,
@@ -47,8 +45,6 @@ interface PlayerEditModalProps {
   onToggleCaptain: () => void;
   variant?: "light" | "dark";
   showCaptainToggle?: boolean;
-  onMoveToBench?: () => void;
-  onStartSubstitute?: () => void;
   onRemoveFromBench?: () => void;
   defaultPlayerName?: string;
 }
@@ -73,8 +69,6 @@ function PlayerEditModalBody({
   onToggleCaptain,
   variant = "dark",
   showCaptainToggle = true,
-  onMoveToBench,
-  onStartSubstitute,
   onRemoveFromBench,
   defaultPlayerName,
 }: Omit<PlayerEditModalProps, "open">) {
@@ -443,46 +437,18 @@ function PlayerEditModalBody({
             </div>
           )}
 
-          {(onMoveToBench || onStartSubstitute || onRemoveFromBench) && (
+          {onRemoveFromBench && (
             <div className="flex flex-col gap-1.5 pt-1 border-t border-zinc-800/80">
-              {onStartSubstitute && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onStartSubstitute();
-                    onClose();
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800/80 text-xs font-semibold text-green-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80"
-                >
-                  <ArrowLeftRight className="w-3.5 h-3.5" />
-                  Yedekle değiştir
-                </button>
-              )}
-              {onMoveToBench && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onMoveToBench();
-                    onClose();
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800/80 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 ring-1 ring-zinc-700/80"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  Yedeğe gönder
-                </button>
-              )}
-              {onRemoveFromBench && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRemoveFromBench();
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-red-950/40 text-xs font-semibold text-red-400 hover:bg-red-950/60 ring-1 ring-red-900/50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Yedekten sil
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onRemoveFromBench();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-red-950/40 text-xs font-semibold text-red-400 hover:bg-red-950/60 ring-1 ring-red-900/50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Yedekten sil
+              </button>
             </div>
           )}
 

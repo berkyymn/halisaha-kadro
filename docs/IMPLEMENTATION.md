@@ -289,12 +289,18 @@ Title modal keeps preview fixed at top while scrolling effect/color controls.
 
 | | |
 |---|---|
-| **UI** | `BenchPanel.tsx`, `AssignToLineupModal.tsx` |
+| **UI** | `BenchPanel.tsx`, `PlayerOnPitch.tsx` |
 | **Store** | `addPlayerToBench`, `updateBenchPlayer`, `removeFromBench`, `assignBenchToSlot`, `moveSlotToBench` |
 | **Lib** | `playerPool.ts` (`sanitizeBenchIds`, `rebuildActivePlayers`) |
 | **QA** | §5, §6 |
 
-`substituteTarget` mode lives in **AppShell React state** (not store) — resets on page refresh.
+Substitutions are **drag-and-drop only**:
+- Drag a bench player from `BenchPanel` onto a pitch player to swap them (`assignBenchToSlot`).
+- Drag a pitch player onto the bench panel (or onto a bench card) to send them to the bench (`moveSlotToBench` / swap).
+- Both directions use `document.elementsFromPoint` and shared `data-*` attributes to locate the drop target.
+- Bench cards render a portal-based floating clone while dragging and reuse the same `activeSwapTarget` highlight that `PlayerOnPitch` uses for in-pitch swaps.
+
+`AssignToLineupModal` and the "Yedekle değiştir" / "Yedeğe gönder" buttons in `PlayerEditModal` were removed.
 
 ### F9 — PNG export
 
@@ -466,7 +472,6 @@ Follow this order:
 
 | Item | Notes |
 |------|-------|
-| `substituteTarget` | React state in `AppShell`; lost on refresh |
 | `PhotoEditorModal.tsx` | **Dead code** — do not use in new flows |
 | `requestBrandingCloudFlush` | `posterSyncEvents.ts`; prefer store revision bump + sync manager |
 | Firestore 1MB limit | Mitigated by slim data, branding split, Storage paths, compression tiers |
@@ -492,7 +497,6 @@ Follow this order:
 | `PlayerEditModal.tsx` | Player name/number/photo/bg removal |
 | `LogoDesignerModal.tsx` | Team logo & jersey designer |
 | `PosterTitleModal.tsx` | Title style editor |
-| `AssignToLineupModal.tsx` | Pick slot for bench player |
 | `ModalShell.tsx` | Shared modal chrome |
 | `StaticPosterBackground.tsx` | Theme background image |
 | `TeamLogoBadge.tsx` | Renders team logo (preset/generated/upload) |

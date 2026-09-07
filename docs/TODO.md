@@ -405,6 +405,19 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 32 — Yedek havuzu sürükle-bırak
+
+- [x] Yedek oyuncu kartları pointer-events ile sürüklenebilir hale getirildi
+- [x] Yedek oyuncu sahada bir oyuncunun üzerine bırakılınca `assignBenchToSlot` ile swap yapılıyor
+- [x] Saha oyuncusu yedekler paneline veya bir yedek kartının üzerine bırakılınca `moveSlotToBench` / swap çalışıyor
+- [x] `PlayerOnPitch` sahadan yedeğe drop hedefini `document.elementsFromPoint` ile tespit ediyor
+- [x] `pitchInteraction.ts` drag sınırları yedekler paneline kadar genişletildi
+- [x] `BenchPanel`de "Oyuna al" butonu ve `AssignToLineupModal` kaldırıldı
+- [x] `PlayerEditModal` ve `AppShell` üzerindeki "Yedekle değiştir" / "Yedeğe gönder" butonları kaldırıldı
+- [x] Yedek oyuncu düzenleme ve silme işlemleri korundu
+
+---
+
 
 - [x] `pitchInteraction.ts` ile single/versus hareket policy’leri ayrıştırıldı
 - [x] Tek takım pozisyonları için boş array’e güvenli position upsert eklendi

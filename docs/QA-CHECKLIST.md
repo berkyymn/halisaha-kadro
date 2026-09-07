@@ -79,23 +79,25 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Sağ panel "Yedekler" görünür | Panel açık |
 | "Yeni yedek" | Düzenleme modalı açılır |
 | Yedek düzenle / sil | Çalışır |
-| "Oyuna al" | Takım ve slot seçimi açılır |
+| Yedek kartını sürükle | Kart imleci takip eden kopyası görünür |
 
 - [ ] Geçti
 
 ---
 
-## 6. Yedeğe gönder / Yedekle değiştir
+## 6. Sürükle-bırak oyuncu değişikliği
 
-**Dosyalar:** `src/components/AppShell.tsx`, `src/components/PlayerEditModal.tsx`
+**Dosyalar:** `src/components/BenchPanel.tsx`, `src/components/PlayerOnPitch.tsx`, `src/components/AppShell.tsx`, `src/store/useAppStore.ts`
 
 | Adım | Beklenen |
 |------|----------|
-| Kadrodaki oyuncuyu aç | "Yedeğe gönder" ve "Yedekle değiştir" görünür |
-| Yedeğe gönder | Oyuncu yedek havuzuna gider, slot boşalır |
-| Yedekle değiştir | Yedek paneli yeşil moda geçer, yedek seçilince değişim olur |
-
-Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırlama).
+| Yedek oyuncuyu sahadaki bir oyuncunun üzerine bırak | Yedek oyuncu sahaya çıkar, sahadaki oyuncu yedeklere geçer |
+| Yedek oyuncuyu boş slotun üzerine bırak | Yedek oyuncu doğrudan o slota yerleşir |
+| Saha oyuncusunu yedekler panelinin boş alanına bırak | Oyuncu yedeklere gönderilir, slot boşalır |
+| Saha oyuncusunu bir yedek kartının üzerine bırak | İki oyuncu swap olur; yedek sahaya çıkar, saha oyuncusu yedeklere geçer |
+| Oyuncu değişimi sonrası formasyon | Oyuncular doğru pozisyonlarda kalır, kaptanlık ve forma numarası çakışması çözülür |
+| Tek takım modunda yedek sürükleme | Sadece home takım slotları hedef olur, away oyuncuları görünmez |
+| İki takım modunda yedek sürükleme | Home ve away slotlar hedef olabilir |
 
 - [ ] Geçti
 
@@ -233,7 +235,7 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 - [ ] Geçti
 
-**Manuel doğrulananlar:** İkili modda oyuncu taşıma, rakip sahada cross-team swap ve forma numarası conflict çözümleme çalışıyor. Tek takım özel senaryoları ayrıca tamamlanmalı.
+**Manuel doğrulananlar:** İkili modda oyuncu taşıma, rakip sahada cross-team swap ve forma numarası conflict çözümleme çalışıyor. Yedek havuzu sürükle-bırak değişiklikleri de çalışıyor.
 
 ## 14. Sync refactor PR
 
