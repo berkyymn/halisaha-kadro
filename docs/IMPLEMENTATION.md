@@ -49,7 +49,7 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
                             │ useAppStore()
 ┌───────────────────────────▼─────────────────────────────────┐
 │  State (src/store/useAppStore.ts)                             │
-│  All poster mutations; persist v31; syncRevisions           │
+│  All poster mutations; persist v32; syncRevisions           │
 └───────────────────────────┬─────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
@@ -94,7 +94,7 @@ AppShell
 ```
 
 **Hydration order:**
-1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v31)
+1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v32)
 2. `onRehydrateStorage` runs `finalizePosterSnapshot`
 3. If user signed in, `AuthContext.loadCloudPoster` fetches Firestore doc
 4. `hydrateFromSnapshot` merges cloud into local (LWW via `localUpdatedAt`)
@@ -208,6 +208,17 @@ Each feature lists: **UI → store actions → lib → QA section**.
 | **QA** | §4, §9 |
 
 Themes: `derby-night`, `champions-night`, `dark-arena`, `summer-cup`. Background images from `getPosterThemeBackgroundSrc()`.
+
+Formations (`src/lib/formations.ts`, `src/lib/formationEngine.ts`):
+- Squad sizes: 6v6, 7v7, 8v8. `squadSize` is total players **including** the goalkeeper.
+- Formation notation counts outfield lines from defense to attack; the goalkeeper is never shown in the name.
+- No formation starts with 1 defender.
+- 6v6 (5 outfield): `2-2-1`, `2-1-2`, `3-1-1`.
+- 7v7 (6 outfield): `2-2-2`, `2-1-3`, `2-3-1`, `3-2-1`, `3-1-2`.
+- 8v8 (7 outfield): `2-2-3`, `2-3-2`, `2-1-4`, `2-4-1`, `3-2-2`, `3-1-3`, `3-3-1`, `4-2-1`, `4-1-2`.
+- Default formations: 6v6 → `3-1-1`, 7v7 → `3-2-1`, 8v8 → `3-3-1`.
+- Versus mode uses a horizontal pitch: home attacks right, away attacks left, `computeFormationLayout` places slots by depth (`x`) and lateral spread (`y`).
+- Single-team mode uses a vertical pitch inside the 4:5 poster. `computeSingleFormationLayout` places the goalkeeper at the bottom center and stacks defenders, midfielders and attackers upward, with card-aware spacing and clamping.
 
 ### F2 — Roster & lineup slots
 
@@ -360,9 +371,11 @@ Store version 28 → 29 migration marks all `savedPlayers`/`players` with `didCo
 
 ### F14 — Single-team roster mode
 
-`teamMode` is persisted as `single` or `versus` (store v31). `singlePitchPlayers` stores single-mode positions separately from versus `pitchPlayers`. Existing users migrate to `versus`; fresh state defaults to `single`. In `single` mode, `homeTeam` is the user's roster, the poster uses a 4:5 composition, `derby-night` uses `/posters/vertical/derby_night_vertical.jpeg` while other themes temporarily use the rotated legacy background, the team logo is placed upper-left, the default `DERBİ GECESİ` title is hidden, and away lineup/branding controls are hidden. The existing `awayTeam` data and versus positions are retained so switching back to `versus` is lossless. This is a presentation/editing mode, not a second team data model.
+`teamMode` is persisted as `single` or `versus` (store v32). `singlePitchPlayers` stores single-mode positions separately from versus `pitchPlayers`. Existing users migrate to `versus`; fresh state defaults to `single`. In `single` mode, `homeTeam` is the user's roster, the poster uses a 4:5 composition, and each theme uses a dedicated vertical asset: Derby Night maps to `derby_night_vertical.jpeg`, Champions League to `champions_league_vertical.jpeg`, Dark Arena to `dark_arena_vertical.jpeg`, and Summer Cup to `summer_cup_vertical.jpeg`. All vertical assets are `928x1152` (4:5 aspect ratio) and live in `public/posters/vertical/`. The team logo is placed upper-left, the default `DERBİ GECESİ` title is hidden, and away lineup/branding controls are hidden. The existing `awayTeam` data and versus positions are retained so switching back to `versus` is lossless. This is a presentation/editing mode, not a second team data model.
 
 Pitch movement is centralized in `src/lib/pitchInteraction.ts`. The component receives a movement policy instead of branching on team mode. Single mode allows full-pitch movement for outfield players while keeping the goalkeeper locked; versus mode lets a card travel across the pitch for cross-team swap while allowing a final drop only in its own half. Position actions upsert missing positions so a fresh single-mode lineup can be dragged immediately.
+
+`applyFormations()` writes to `singlePitchPlayers` in single mode and to `pitchPlayers` in versus mode, preserving custom drag positions unless a reset is requested. Formation changes reset only the affected team's positions.
 
 ---
 
@@ -377,7 +390,7 @@ All poster mutations go through wrapped `set()`:
 
 `hydrateFromSnapshot` uses `realSet` directly (no revision bump).
 
-### 7.2 Persist middleware (v31)
+### 7.2 Persist middleware (v32)
 
 | Hook | Responsibility |
 |------|----------------|
@@ -565,4 +578,4 @@ Does the feature change what gets saved locally?
 
 ---
 
-*Last aligned with persist v31, Firebase data-flow hardening, and single-team mode.*
+*Last aligned with persist v32, Firebase data-flow hardening, single-team mode, and revised formations.*

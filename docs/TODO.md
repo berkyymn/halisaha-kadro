@@ -385,11 +385,26 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] İlk deneme olarak `derby-night` için `public/posters/vertical/derby_night_vertical.jpeg` bağlandı
 - [x] Tek takım posterinde takım logosu sol üstte konumlandı
 - [x] Tek takım posterinde varsayılan `DERBİ GECESİ` başlığı gizlendi
-- [ ] Beğenilen tasarım sonrası diğer temalar için dikey görseller üretilecek
+- [x] Dört tema için dikey tek takım görselleri bağlandı; Dark Arena `dark_arena_vertical.jpeg`, Summer Cup `summer_cup_vertical.jpeg` kullanıyor
+- [x] Tüm dikey assetler `928x1152` (4:5) boyutunda; geçici `champions_league_vertical_1.jpeg` ve `champions_league_vertical_2.jpeg` dosyaları kaldırıldı
 
 ---
 
-## Phase 30 — Pitch interaction architecture
+## Phase 31 — Diziliş ve dikey layout revizyonu
+
+- [x] 6v6/7v7/8v8 dizilişleri kurallara uygun şekilde yeniden tanımlandı: kaleci hariç defanstan forvete sayım, 1 defansla başlayan diziliş yok
+- [x] 6v6 dizilişleri: `2-2-1`, `2-1-2`, `3-1-1`
+- [x] 7v7 dizilişleri: `2-2-2`, `2-1-3`, `2-3-1`, `3-2-1`, `3-1-2`
+- [x] 8v8 dizilişleri: `2-2-3`, `2-3-2`, `2-1-4`, `2-4-1`, `3-2-2`, `3-1-3`, `3-3-1`, `4-2-1`, `4-1-2`
+- [x] Eski/geçersiz diziliş ID'leri persist v32 migration ile mevcut `squadSize` için ilk geçerli dizilişe resetleniyor
+- [x] Tek takım dikey posterde formasyon yerleşimi eksen takası yerine doğrudan dikey saha layout’uyla çiziliyor
+- [x] Tek takım modunda kaleci altta ortada, defans/orta saha/forvet yukarı doğru sıralanıyor
+- [x] `applyFormations` tek takım modunda `singlePitchPlayers`, iki takım modunda `pitchPlayers` güncelliyor
+- [x] `AppState` tipine eksik kalan `teamMode`, `singlePitchPlayers` ve diğer persisted alanlar eklendi
+- [x] Varsayılan dizilişler: 6v6 `3-1-1`, 7v7 `3-2-1`, 8v8 `3-3-1`
+
+---
+
 
 - [x] `pitchInteraction.ts` ile single/versus hareket policy’leri ayrıştırıldı
 - [x] Tek takım pozisyonları için boş array’e güvenli position upsert eklendi
@@ -420,7 +435,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v31** |
+| localStorage key | `halisaha-kadro` persist **v32** |
 | Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`) + `syncRevisions` |
 | Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, `revision`, optional omit flags |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |

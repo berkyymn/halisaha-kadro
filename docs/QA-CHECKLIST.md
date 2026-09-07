@@ -151,13 +151,18 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 
 ## 9. Format ve diziliş
 
-**Dosyalar:** `src/components/PosterToolbar.tsx`, `src/store/useAppStore.ts`
+**Dosyalar:** `src/components/PosterToolbar.tsx`, `src/store/useAppStore.ts`, `src/lib/formations.ts`, `src/lib/formationEngine.ts`
 
 | Adım | Beklenen |
 |------|----------|
-| 6v6 / 7v7 / 8v8 | Oyuncu sayısı değişir |
+| 6v6 / 7v7 / 8v8 | Oyuncu sayısı değişir, listedeki tüm dizilişler geçerli |
+| 6v6 diziliş dropdown | Yalnızca `2-2-1`, `2-1-2`, `3-1-1` gösterilir; varsayılan `3-1-1` |
+| 7v7 diziliş dropdown | Yalnızca `2-2-2`, `2-1-3`, `2-3-1`, `3-2-1`, `3-1-2` gösterilir; varsayılan `3-2-1` |
+| 8v8 diziliş dropdown | `2-2-3`, `2-3-2`, `2-1-4`, `2-4-1`, `3-2-2`, `3-1-3`, `3-3-1`, `4-2-1`, `4-1-2` gösterilir; varsayılan `3-3-1` |
+| Hiçbir listede 1 defansla başlayan diziliş yok | Örn. `1-3-2`, `1-4-2` vb. görünmez |
 | Ev / dep diziliş dropdown | Formasyon değişir, oyuncular yeniden konumlanır |
 | Oyuncu kartı / fotoğraf slider | Boyut değişir |
+| Tek takım dikey posterde her formasyon | Kaleci altta ortada; defans, orta saha, forvet mantıklı şekilde yukarı sıralanır; oyuncular üst üste binmez |
 
 - [ ] Geçti
 
@@ -220,7 +225,7 @@ Not: "Yedekle değiştir" modu sayfa yenilenince sıfırlanır (bilinen sınırl
 | İki takım modunda mevcut akış | İki takım posteri, iki formasyon ve iki takım yedek atama akışı eskisi gibi çalışır |
 | Tek takımda kaleciyi ve bir oyuncuyu sürükle | Kaleci yerinde kalır ve sürükleme edit ekranı açmaz; saha oyuncusu tam saha içinde serbestçe konumlanır |
 | Tek takımda pozisyonları değiştir, iki takıma dön, tekrar tek takıma dön | Her modun pozisyonları bağımsız korunur |
-| Tek takım posterini aç | `derby-night` dikey görseli kullanılır, logo sol üstte görünür ve `DERBİ GECESİ` başlığı görünmez |
+| Tek takım posterini aç | Seçili temanın ilgili dikey görseli kullanılır, logo sol üstte görünür ve `DERBİ GECESİ` başlığı görünmez |
 | Tek takım kalecisini sürüklemeye çalışıp bırak | Kaleci hareket etmez ve edit ekranı yanlışlıkla açılmaz; tıklama edit ekranını açar |
 | Tek takımda iki oyuncuyu üst üste sürükle | Oyuncular doğru isim/forma ile tek seferde swap olur |
 | İki takımda oyuncuyu rakip yarı sahaya sürükle | Kart imleci takip eder; rakip oyuncuda swap işareti oluşur ve üstünde bırakınca cross-team swap olur |

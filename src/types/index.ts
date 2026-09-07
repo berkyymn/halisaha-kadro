@@ -15,7 +15,8 @@ export type JerseyStyle =
 
 export type AppMode = "guest" | "saved";
 
-export type { PosterThemeId } from "@/lib/posterThemes";
+import type { PosterThemeId } from "@/lib/posterThemes";
+export type { PosterThemeId };
 
 export interface JerseyConfig {
   style: JerseyStyle;
@@ -224,8 +225,21 @@ export interface AppState {
   awayTeam: TeamConfig;
   players: Record<string, Player>;
   savedPlayers: Record<string, Player>;
+  benchPlayerIds: string[];
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
+  singlePitchPlayers: PitchPlayer[];
+  playerCardSize: number;
+  photoScalePercent: number;
+  teamLogoDisplaySize: number;
+  posterTheme: PosterThemeId;
+  teamMode: "single" | "versus";
   localUpdatedAt?: string;
+  syncRevisions: {
+    branding: number;
+    roster: number;
+    layout: number;
+    media: number;
+  };
 }

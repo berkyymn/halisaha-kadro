@@ -81,18 +81,28 @@ function buildFormation(
 }
 
 export const FORMATIONS: Formation[] = [
-  buildFormation("6-1-2-1-2", "1-2-1-2", 6, [1, 2, 1, 2]),
+  // 6v6: kaleci + 5 saha oyuncusu
   buildFormation("6-2-2-1", "2-2-1", 6, [1, 2, 2, 1]),
-  buildFormation("6-1-3-1", "1-3-1", 6, [1, 3, 1, 1]),
+  buildFormation("6-2-1-2", "2-1-2", 6, [1, 2, 1, 2]),
+  buildFormation("6-3-1-1", "3-1-1", 6, [1, 3, 1, 1]),
 
-  buildFormation("7-1-3-2", "1-3-2", 7, [1, 3, 2, 1]),
-  buildFormation("7-1-3-3", "1-3-3", 7, [1, 3, 3]),
+  // 7v7: kaleci + 6 saha oyuncusu
   buildFormation("7-2-2-2", "2-2-2", 7, [1, 2, 2, 2]),
-  buildFormation("7-1-2-3", "1-2-3", 7, [1, 2, 3, 1]),
+  buildFormation("7-2-1-3", "2-1-3", 7, [1, 2, 1, 3]),
+  buildFormation("7-2-3-1", "2-3-1", 7, [1, 2, 3, 1]),
+  buildFormation("7-3-2-1", "3-2-1", 7, [1, 3, 2, 1]),
+  buildFormation("7-3-1-2", "3-1-2", 7, [1, 3, 1, 2]),
 
-  buildFormation("8-1-3-3", "1-3-3", 8, [1, 3, 3, 1]),
+  // 8v8: kaleci + 7 saha oyuncusu
+  buildFormation("8-2-2-3", "2-2-3", 8, [1, 2, 2, 3]),
   buildFormation("8-2-3-2", "2-3-2", 8, [1, 2, 3, 2]),
-  buildFormation("8-1-4-2", "1-4-2", 8, [1, 4, 2, 1]),
+  buildFormation("8-2-1-4", "2-1-4", 8, [1, 2, 1, 4]),
+  buildFormation("8-2-4-1", "2-4-1", 8, [1, 2, 4, 1]),
+  buildFormation("8-3-2-2", "3-2-2", 8, [1, 3, 2, 2]),
+  buildFormation("8-3-1-3", "3-1-3", 8, [1, 3, 1, 3]),
+  buildFormation("8-3-3-1", "3-3-1", 8, [1, 3, 3, 1]),
+  buildFormation("8-4-2-1", "4-2-1", 8, [1, 4, 2, 1]),
+  buildFormation("8-4-1-2", "4-1-2", 8, [1, 4, 1, 2]),
 ];
 
 export function getFormationsForSize(size: SquadSize): Formation[] {
@@ -101,6 +111,19 @@ export function getFormationsForSize(size: SquadSize): Formation[] {
 
 export function getFormationById(id: string): Formation | undefined {
   return FORMATIONS.find((f) => f.id === id);
+}
+
+export function getDefaultFormationId(size: SquadSize): string {
+  switch (size) {
+    case 6:
+      return "6-3-1-1";
+    case 7:
+      return "7-3-2-1";
+    case 8:
+      return "8-3-3-1";
+    default:
+      return "7-3-2-1";
+  }
 }
 
 export function mirrorSlotX(x: number): number {

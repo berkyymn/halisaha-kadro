@@ -2,7 +2,10 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getFormationById, getFormationsForSize } from "@/lib/formations";
+import {
+  getDefaultFormationId,
+  getFormationById,
+} from "@/lib/formations";
 import { getFormationSlotCount } from "@/lib/formationEngine";
 import { DEFAULT_POSTER_THEME, normalizePosterTheme } from "@/lib/posterThemes";
 import { defaultTitleStyleForTheme } from "@/lib/posterTitleStyles";
@@ -221,7 +224,6 @@ function registerPlayer(
   };
 }
 
-const initialFormations = getFormationsForSize(7);
 const initialRoster = buildDefaultRoster(7);
 
 export const useAppStore = create<AppStore>()(
@@ -292,8 +294,8 @@ export const useAppStore = create<AppStore>()(
         players: initialRoster.players,
         savedPlayers: initialRoster.players,
         benchPlayerIds: [],
-        homeFormationId: initialFormations[0]?.id ?? "7-1-3-2",
-        awayFormationId: initialFormations[0]?.id ?? "7-1-3-2",
+        homeFormationId: getDefaultFormationId(7),
+        awayFormationId: getDefaultFormationId(7),
         pitchPlayers: [],
         singlePitchPlayers: [],
         playerCardSize: 100,
@@ -372,8 +374,7 @@ export const useAppStore = create<AppStore>()(
         })),
 
       setSquadSize: (size) => {
-        const formations = getFormationsForSize(size);
-        const formationId = formations[0]?.id ?? "";
+        const formationId = getDefaultFormationId(size);
         set((s) => {
           const homeFilled = fillEmptyRosterSlots(
             size,
@@ -616,6 +617,7 @@ export const useAppStore = create<AppStore>()(
 
       applyFormations: (options) => {
         const s = get();
+        const isSingle = s.teamMode === "single";
         const home = autoAssignLineup(
           s.homeTeam,
           s.homeFormationId,
@@ -628,13 +630,19 @@ export const useAppStore = create<AppStore>()(
           "away",
           s.players
         );
-        const merged = [...home, ...away].map((pp) => {
+
+        const base = isSingle ? home : [...home, ...away];
+        const currentPositions = isSingle
+          ? s.singlePitchPlayers
+          : s.pitchPlayers;
+
+        const merged = base.map((pp) => {
           const shouldReset =
             (pp.team === "home" && options?.resetHome) ||
             (pp.team === "away" && options?.resetAway);
           if (shouldReset) return pp;
 
-          const existing = s.pitchPlayers.find(
+          const existing = currentPositions.find(
             (e) => e.team === pp.team && e.slotIndex === pp.slotIndex
           );
           if (existing?.x != null && existing?.y != null) {
@@ -642,7 +650,12 @@ export const useAppStore = create<AppStore>()(
           }
           return pp;
         });
-        set({ pitchPlayers: merged });
+
+        set(
+          isSingle
+            ? { singlePitchPlayers: merged }
+            : { pitchPlayers: merged }
+        );
       },
 
       resetGuestSession: () => {
@@ -1040,7 +1053,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-       version: 31,
+       version: 32,
       migrate: (persisted, version) => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -1344,6 +1357,26 @@ export const useAppStore = create<AppStore>()(
         if (version < 31) {
           state = {
             ...state,
+            singlePitchPlayers: [],
+          };
+        }
+        if (version < 32) {
+          // Eski/çakışan diziliş ID'leri yeni geçerli sete resetlenir.
+          const squadSize = ((state.squadSize as SquadSize) || 7) as SquadSize;
+          const defaultId = getDefaultFormationId(squadSize);
+          const homeFormationId = (state.homeFormationId as string) || "";
+          const awayFormationId = (state.awayFormationId as string) || "";
+          const normalizedHome = getFormationById(homeFormationId)?.squadSize === squadSize
+            ? homeFormationId
+            : defaultId;
+          const normalizedAway = getFormationById(awayFormationId)?.squadSize === squadSize
+            ? awayFormationId
+            : defaultId;
+          state = {
+            ...state,
+            homeFormationId: normalizedHome,
+            awayFormationId: normalizedAway,
+            pitchPlayers: [],
             singlePitchPlayers: [],
           };
         }
