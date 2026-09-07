@@ -8,6 +8,7 @@ import {
 } from "@/lib/formations";
 import { getFormationSlotCount } from "@/lib/formationEngine";
 import { DEFAULT_POSTER_THEME, normalizePosterTheme } from "@/lib/posterThemes";
+import type { DragIntent } from "@/lib/dragIntent";
 import { defaultTitleStyleForTheme } from "@/lib/posterTitleStyles";
 import { normalizeTeamLogo, clampLogoDisplaySize } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
@@ -197,24 +198,8 @@ interface AppStore {
     benchPlayerId: string
   ) => void;
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
-  activeDrag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null;
-  activeSwapTarget: { team: "home" | "away"; slotIndex: number } | null;
-  activeSubTarget: { team: "home" | "away"; slotIndex: number } | null;
-  activeBenchDropSource: { team: "home" | "away"; slotIndex: number } | null;
-  activeBenchSwapTarget: string | null;
-  setActiveDrag: (
-    drag: { team: "home" | "away"; slotIndex: number; x: number; y: number } | null
-  ) => void;
-  setActiveSwapTarget: (
-    target: { team: "home" | "away"; slotIndex: number } | null
-  ) => void;
-  setActiveSubTarget: (
-    target: { team: "home" | "away"; slotIndex: number } | null
-  ) => void;
-  setActiveBenchDropSource: (
-    source: { team: "home" | "away"; slotIndex: number } | null
-  ) => void;
-  setActiveBenchSwapTarget: (playerId: string | null) => void;
+  dragIntent: DragIntent;
+  setDragIntent: (intent: DragIntent) => void;
   swapPlayers: (
     team1: "home" | "away",
     slotIndex1: number,
@@ -314,11 +299,7 @@ export const useAppStore = create<AppStore>()(
         posterTheme: DEFAULT_POSTER_THEME,
         logoDesignerTeam: null,
         remoteHydrating: false,
-        activeDrag: null,
-        activeSwapTarget: null,
-        activeSubTarget: null,
-        activeBenchDropSource: null,
-        activeBenchSwapTarget: null,
+        dragIntent: { kind: "idle" },
         localUpdatedAt: undefined,
         syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
 
@@ -867,6 +848,7 @@ export const useAppStore = create<AppStore>()(
               ...updatedTeam,
               captainId: wasCaptain ? benchPlayerId : t.captainId,
             },
+            dragIntent: { kind: "idle" } as const,
           };
         });
         get().applyFormations();
@@ -919,22 +901,13 @@ export const useAppStore = create<AppStore>()(
               state.squadSize
             ),
             [key]: updatedTeam,
+            dragIntent: { kind: "idle" } as const,
           };
         });
         get().applyFormations();
       },
 
-      setActiveDrag: (drag) => set({ activeDrag: drag }),
-
-      setActiveSwapTarget: (target) => set({ activeSwapTarget: target }),
-
-      setActiveSubTarget: (target) => set({ activeSubTarget: target }),
-
-      setActiveBenchDropSource: (source) =>
-        set({ activeBenchDropSource: source }),
-
-      setActiveBenchSwapTarget: (playerId) =>
-        set({ activeBenchSwapTarget: playerId }),
+      setDragIntent: (intent) => set({ dragIntent: intent }),
 
       swapPlayers: (team1, slotIndex1, team2, slotIndex2) => {
         set((state) => {
@@ -1064,11 +1037,7 @@ export const useAppStore = create<AppStore>()(
             awayTeam: finalAwayTeam,
             players: playersRegistry,
             savedPlayers: savedPlayersRegistry,
-            activeDrag: null,
-            activeSwapTarget: null,
-            activeSubTarget: null,
-            activeBenchDropSource: null,
-            activeBenchSwapTarget: null,
+            dragIntent: { kind: "idle" },
           };
         });
 

@@ -13,6 +13,11 @@ import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { useAppStore } from "@/store/useAppStore";
 import { PlayerOnPitch, type SlotPosition } from "./PlayerOnPitch";
 import { getPitchMovementPolicy } from "@/lib/pitchInteraction";
+import {
+  isDraggingPitchSlot,
+  isSwapTarget as checkSwapTarget,
+  isSubTarget as checkSubTarget,
+} from "@/lib/dragIntent";
 
 export function PitchPlayerLayer({
   onEditPlayer,
@@ -34,17 +39,11 @@ export function PitchPlayerLayer({
   const singlePitchPlayers = useAppStore((s) => s.singlePitchPlayers);
   const playerCardSize = useAppStore((s) => s.playerCardSize);
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
-  const activeDrag = useAppStore((s) => s.activeDrag);
-  const activeSwapTarget = useAppStore((s) => s.activeSwapTarget);
-  const activeSubTarget = useAppStore((s) => s.activeSubTarget);
+  const dragIntent = useAppStore((s) => s.dragIntent);
   const applyFormations = useAppStore((s) => s.applyFormations);
 
   const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
-  const setActiveDrag = useAppStore((s) => s.setActiveDrag);
-  const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
-  const setActiveBenchSwapTarget = useAppStore(
-    (s) => s.setActiveBenchSwapTarget
-  );
+  const setDragIntent = useAppStore((s) => s.setDragIntent);
   const swapPlayers = useAppStore((s) => s.swapPlayers);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
   const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);
@@ -139,9 +138,10 @@ export function PitchPlayerLayer({
          ? teamMode === "single" ? (pp?.y ?? layoutSlot?.y ?? 50) : (layoutSlot?.y ?? 50)
          : (pp?.y ?? layoutSlot?.y ?? 50);
 
-      const isDraggingThisCard = activeDrag?.team === team && activeDrag?.slotIndex === i;
-      const isSubTarget =
-        activeSubTarget?.team === team && activeSubTarget?.slotIndex === i;
+      const slotRef = { team, slotIndex: i };
+      const isDraggingThisCard = isDraggingPitchSlot(dragIntent, slotRef);
+      const isSwapTarget = checkSwapTarget(dragIntent, slotRef);
+      const isSubTarget = checkSubTarget(dragIntent, slotRef);
 
       return (
         <PlayerOnPitch
@@ -162,23 +162,18 @@ export function PitchPlayerLayer({
           positionY={posY}
           isGoalkeeper={isGk}
           pitchPlayer={pp}
-          isSwapTarget={
-            !isDraggingThisCard &&
-            activeSwapTarget?.team === team &&
-            activeSwapTarget?.slotIndex === i
-          }
+          isDragging={isDraggingThisCard}
+          isSwapTarget={isSwapTarget}
           isSubTarget={isSubTarget}
-          isDraggedWithTarget={isDraggingThisCard && activeSwapTarget !== null}
+          dragIntent={dragIntent}
           allSlotPositions={allSlotPositions}
-           movePitchPlayer={movePitchPlayer}
-           setActiveDrag={setActiveDrag}
-           setActiveSwapTarget={setActiveSwapTarget}
-           setActiveBenchSwapTarget={setActiveBenchSwapTarget}
-           swapPlayers={swapPlayers}
-           assignBenchToSlot={assignBenchToSlot}
-           moveSlotToBench={moveSlotToBench}
-            photoScalePercent={photoScalePercent}
-            movementPolicy={getPitchMovementPolicy(teamMode, team)}
+          movePitchPlayer={movePitchPlayer}
+          setDragIntent={setDragIntent}
+          swapPlayers={swapPlayers}
+          assignBenchToSlot={assignBenchToSlot}
+          moveSlotToBench={moveSlotToBench}
+          photoScalePercent={photoScalePercent}
+          movementPolicy={getPitchMovementPolicy(teamMode, team)}
         />
       );
     },
@@ -186,27 +181,23 @@ export function PitchPlayerLayer({
       homePlayerIds,
       awayPlayerIds,
       players,
-       pitchPlayers,
-       singlePitchPlayers,
+      pitchPlayers,
+      singlePitchPlayers,
       homeJersey,
       awayJersey,
       homeCaptainId,
       awayCaptainId,
       effectiveCardSize,
       onEditPlayer,
-      activeDrag,
-      activeSwapTarget,
-      activeSubTarget,
+      dragIntent,
       allSlotPositions,
       movePitchPlayer,
-      setActiveDrag,
-      setActiveSwapTarget,
-      setActiveBenchSwapTarget,
+      setDragIntent,
       swapPlayers,
       assignBenchToSlot,
       moveSlotToBench,
-       photoScalePercent,
-       teamMode,
+      photoScalePercent,
+      teamMode,
     ]
   );
 

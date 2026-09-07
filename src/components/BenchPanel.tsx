@@ -15,6 +15,11 @@ import { useAppStore } from "@/store/useAppStore";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import type { Player } from "@/types";
+import {
+  isIncomingBenchSub,
+  isBenchAreaTarget,
+  isBenchCloneSubIn,
+} from "@/lib/dragIntent";
 
 const PlayerEditModal = dynamic(
   () => import("./PlayerEditModal").then((module) => module.PlayerEditModal),
@@ -49,7 +54,6 @@ function findPitchTarget(clientX: number, clientY: number): PitchTarget | null {
 function BenchPlayerCard({
   player,
   dragging,
-  isSwapTarget,
   isIncomingSub,
   cardSize,
   onEdit,
@@ -58,7 +62,6 @@ function BenchPlayerCard({
 }: {
   player: Player;
   dragging: boolean;
-  isSwapTarget: boolean;
   isIncomingSub: boolean;
   cardSize: number;
   onEdit: () => void;
@@ -115,7 +118,6 @@ function BenchPlayerCard({
       </div>
 
       {isIncomingSub && <PlayerDropOverlay variant="sub-in" />}
-      {!isIncomingSub && isSwapTarget && <PlayerDropOverlay variant="swap" />}
     </div>
   );
 }
@@ -136,15 +138,12 @@ export function BenchPanel() {
   const savedPlayers = useAppStore((s) => s.savedPlayers);
   const homeTeam = useAppStore((s) => s.homeTeam);
   const playerCardSize = useAppStore((s) => s.playerCardSize);
-  const activeBenchSwapTarget = useAppStore((s) => s.activeBenchSwapTarget);
-  const activeBenchDropSource = useAppStore((s) => s.activeBenchDropSource);
-  const activeSubTarget = useAppStore((s) => s.activeSubTarget);
+  const dragIntent = useAppStore((s) => s.dragIntent);
   const addPlayerToBench = useAppStore((s) => s.addPlayerToBench);
   const updateBenchPlayer = useAppStore((s) => s.updateBenchPlayer);
   const removeFromBench = useAppStore((s) => s.removeFromBench);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
-  const setActiveSwapTarget = useAppStore((s) => s.setActiveSwapTarget);
-  const setActiveSubTarget = useAppStore((s) => s.setActiveSubTarget);
+  const setDragIntent = useAppStore((s) => s.setDragIntent);
 
   const benchCardSize = clampCardSize(Math.round(playerCardSize * 0.88));
 
@@ -202,7 +201,12 @@ export function BenchPanel() {
 
       setDragPos({ x: ev.clientX, y: ev.clientY });
       const target = findPitchTarget(ev.clientX, ev.clientY);
-      setActiveSubTarget(target);
+      setDragIntent({
+        kind: "active",
+        source: { type: "bench", playerId: benchId },
+        pointer: { x: ev.clientX, y: ev.clientY },
+        target: target ? { type: "pitch", ...target } : null,
+      });
     };
 
     const handleEnd = (ev: PointerEvent) => {
@@ -222,8 +226,7 @@ export function BenchPanel() {
         setEditingBenchId(benchId);
       }
       moved.current = false;
-      setActiveSwapTarget(null);
-      setActiveSubTarget(null);
+      setDragIntent({ kind: "idle" });
       setDraggingBenchId(null);
     };
 
@@ -256,7 +259,7 @@ export function BenchPanel() {
       <aside
         data-bench-drop="true"
         className={`shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0 transition-colors ${
-          activeBenchDropSource && !activeBenchSwapTarget
+          isBenchAreaTarget(dragIntent)
             ? "ring-2 ring-inset ring-green-500/40 bg-zinc-800/90"
             : ""
         }`}
@@ -296,11 +299,7 @@ export function BenchPanel() {
                   }
                 }
                 dragging={draggingBenchId === benchId}
-                isSwapTarget={activeBenchSwapTarget === benchId}
-                isIncomingSub={
-                  activeBenchDropSource !== null &&
-                  activeBenchSwapTarget === benchId
-                }
+                isIncomingSub={isIncomingBenchSub(dragIntent, benchId)}
                 cardSize={benchCardSize}
                 onEdit={() => setEditingBenchId(benchId)}
                 onDelete={() =>
@@ -351,7 +350,7 @@ export function BenchPanel() {
                 showName
                 variant="dark"
               />
-              {activeSubTarget && <PlayerDropOverlay variant="sub-in" />}
+              {isBenchCloneSubIn(dragIntent) && <PlayerDropOverlay variant="sub-in" />}
             </div>
           </div>,
           document.body

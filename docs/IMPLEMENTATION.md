@@ -129,7 +129,7 @@ AppShell
 
 - `players` — active registry rebuilt from lineup + bench
 - `logoDesignerTeam`, `remoteHydrating`
-- Drag preview states: `activeDrag`, `activeSwapTarget`, `activeSubTarget`, `activeBenchDropSource`, `activeBenchSwapTarget`
+- Drag preview state: `dragIntent` (`DragIntent` from `src/lib/dragIntent.ts`)
 
 ### 5.3 PosterSnapshot (`src/lib/posterSnapshot.ts`)
 
@@ -260,7 +260,7 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 | | |
 |---|---|---|
 | **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
-| **Store** | `setActiveDrag`, `setActiveSwapTarget`, `activeSubTarget`, `activeBenchDropSource`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
+| **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
 | **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy from `pitchInteraction.ts` |
 | **QA** | §1, §6, §9 |
 
@@ -271,7 +271,9 @@ A pitch player card can be dragged to reposition, to swap with another pitch pla
 
 Goalkeepers can be dragged for swaps (including with bench players) but cannot be freely repositioned or sent to an empty bench area; these rules are enforced by checking `isGoalkeeper` inside `PlayerOnPitch`.
 
-**Planned refactor:** collapse the five transient drag states into a single `dragIntent` model, extract a shared `usePlayerDrag` hook, replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
+**Refactor status:** Phase 1 complete — transient drag states collapsed into a single `dragIntent` model in `src/lib/dragIntent.ts`.
+
+**Remaining refactor:** extract a shared `usePlayerDrag` hook, replace `document.elementsFromPoint` with geometry-based target detection, and move goalkeeper special cases into an explicit `SlotRules` policy.
 
 ### F6 — Team branding (logo & jersey)
 
@@ -319,7 +321,9 @@ Substitutions are **drag-and-drop only**:
 
 `AssignToLineupModal` and the "Yedekle değiştir" / "Yedeğe gönder" buttons in `PlayerEditModal` were removed.
 
-**Planned refactor:** share a `usePlayerDrag` hook with `PlayerOnPitch`, replace DOM hit-testing with geometry, and centralize overlay decisions through a single helper.
+**Refactor status:** Phase 1 complete — overlay decisions now derive from the shared `dragIntent` model in `src/lib/dragIntent.ts`.
+
+**Remaining refactor:** share a `usePlayerDrag` hook with `PlayerOnPitch`, replace DOM hit-testing with geometry, and centralize overlay decisions through a single helper.
 
 ### F9 — PNG export
 

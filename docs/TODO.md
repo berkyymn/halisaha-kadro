@@ -439,13 +439,22 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
-## Phase 34 — Drag & drop refactor (planlanıyor)
+## Phase 34 — Drag & drop refactor
 
-- [ ] Store’daki 5 ayrı geçici drag state tek `dragIntent` discriminated union modeline indirgenecek
+### Faz 1: Tek `dragIntent` modeli ✅
+
+- [x] `src/lib/dragIntent.ts` oluşturuldu; `DragSource`, `DropTarget`, `DragIntent` tipleri ve overlay kararları burada tanımlandı
+- [x] Store’daki 5 ayrı geçici state (`activeDrag`, `activeSwapTarget`, `activeSubTarget`, `activeBenchDropSource`, `activeBenchSwapTarget`) kaldırıldı
+- [x] Yerine tek `dragIntent: DragIntent` state ve `setDragIntent` aksiyonu eklendi (runtime-only, persist edilmiyor)
+- [x] `PitchPlayerLayer` artık `dragIntent`’i okuyup her slot için `isDragging`, `isSwapTarget`, `isSubTarget` bayraklarını hesaplayıp `PlayerOnPitch`’e prop olarak iletiyor
+- [x] `PlayerOnPitch` sürükleme sırasında `dragIntent`’i güncelliyor; bırakma/iptal sonrası `{ kind: "idle" }` yapıyor
+- [x] `BenchPanel` sürükleme sırasında `dragIntent`’i güncelliyor; yedek klon ve hedef slot overlay’leri `dragIntent` üzerinden türetiliyor
+
+### Faz 2–5 (planlanıyor)
+
 - [ ] `PlayerOnPitch` ve `BenchPanel` için ortak `usePlayerDrag` hook’u çıkarılacak
 - [ ] Hedef tespiti `document.elementsFromPoint` yerine geometri/rect hesabına dönecek
 - [ ] Kaleci özel durumları `isGoalkeeper` dallanması yerine açık `SlotRules` politikasına taşınacak
-- [ ] Overlay kararları tek bir `getOverlayFor` yardımcısından yönetilecek
 
 ---
 
