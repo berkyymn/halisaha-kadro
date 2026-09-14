@@ -295,6 +295,24 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 18. IndexedDB misafir depolama
+
+**Dosyalar:** `src/lib/indexedDBStorage.ts`, `src/store/useAppStore.ts`, `src/contexts/AuthContext.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| Uygulama ilk açıldığında (misafir) | Veriler IndexedDB’ye (`halisaha-kadro-db`) kaydedilir; `localStorage`’da büyük data URL’ler kalmaz |
+| Eski `localStorage` verisi varsa | İlk açılışta otomatik IndexedDB’ye taşınır ve eski localStorage anahtarı silinir |
+| Birçok oyuncu fotoğrafı ekle (misafir) | Depolama limiti aşılmadan kaydedilir; tarayıcı localStorage quota hatası vermez |
+| Sayfayı yenile | Kadro ve fotoğraflar IndexedDB’den geri yüklenir |
+| Giriş yapmış kullanıcıda sync | Bulut sync aynı şekilde çalışır; yerel depolama IndexedDB’de olur |
+| Çıkış yap | IndexedDB temizlenir, sayfa yenilenir, boş varsayılan kadro gelir |
+| IndexedDB devre dışı / private mod | Graceful fallback: veriler localStorage’a döner (quota riski var ama uygulama çalışmaya devam eder) |
+
+- [ ] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -319,6 +337,7 @@ npm run lint
 | 2026-09-07 | Sürükleme görselleri: swap'te iki kart da yeşil, yedek değişiminde giren/çıkan ok işaretleri, tekli mod yan boşluk renklendirmesi | #6 + #15 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Auth güvenliği ve misafir göstergeleri: çıkış onay dialogu + localStorage temizliği, misafir "Yerel" rozeti, Firebase yapılandırılmamışsa "Çevrimdışı" rozeti | #16 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Varsayılan ayarlar ve toolbar temizliği: uygulama iki takım modunda açılır, default saha adı "HALI SAHA", fotoğraf ölçek slider’ı ve bağlı kodlar kaldırıldı | #9 + #17 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
+| 2026-09-14 | Misafir depolama: localStorage yerine IndexedDB tabanlı Zustand persist; eski localStorage verisi otomatik migrate; çıkışta IndexedDB temizleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı/depolama doğrulaması bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

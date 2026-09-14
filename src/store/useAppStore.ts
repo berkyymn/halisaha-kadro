@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage, type PersistOptions } from "zustand/middleware";
 import {
   getDefaultFormationId,
   getFormationById,
@@ -49,6 +49,7 @@ import {
 import { maxIsoTimestamp } from "@/lib/brandingSnapshot";
 import { bumpSyncRevisions, DEFAULT_SYNC_REVISIONS } from "@/lib/syncRevisionBump";
 import type { SyncRevisions } from "@/lib/syncRevisions";
+import { indexedDBStorage } from "@/lib/indexedDBStorage";
 
 let appStoreHydrated = false;
 const appStoreHydrationWaiters = new Set<() => void>();
@@ -1036,8 +1037,9 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-       version: 33,
-      migrate: (persisted, version) => {
+      version: 33,
+      storage: createJSONStorage(() => indexedDBStorage),
+      migrate: (persisted: unknown, version: number): AppStore => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
           const home = withLogo(state.homeTeam as TeamConfig);
@@ -1376,9 +1378,9 @@ export const useAppStore = create<AppStore>()(
             },
           };
         }
-        return state;
+        return state as unknown as AppStore;
       },
-      merge: (persisted, current) => {
+      merge: (persisted: unknown, current: AppStore): AppStore => {
         const saved = persisted as Partial<PosterSnapshot> & {
           syncRevisions?: SyncRevisions;
         };
@@ -1386,13 +1388,13 @@ export const useAppStore = create<AppStore>()(
           ...current,
           ...mergePosterSnapshot(current, saved),
           syncRevisions: saved.syncRevisions ?? current.syncRevisions,
-        };
+        } as AppStore;
       },
-      partialize: (s) => ({
+      partialize: (s: AppStore): Partial<AppStore> => ({
         ...buildPosterSnapshot(s),
         syncRevisions: s.syncRevisions,
       }),
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (state: AppStore | undefined, error: unknown) => {
         markAppStoreHydrated();
         if (error || !state) return;
         const finalized = finalizePosterSnapshot({
@@ -1416,6 +1418,6 @@ export const useAppStore = create<AppStore>()(
         });
         Object.assign(state, finalized);
       },
-    }
+    } as PersistOptions<AppStore>
   )
 );

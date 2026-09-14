@@ -44,6 +44,7 @@ import {
   subscribeCloudSyncStatus,
 } from "@/hooks/useCloudSync";
 import { cleanupOrphanedMedia } from "@/lib/mediaSync";
+import { clearIndexedDBStorage } from "@/lib/indexedDBStorage";
 import type { CloudSyncPhase } from "@/lib/cloudSyncManager";
 
 export type SyncStatus = "idle" | "loading" | "syncing" | "saved" | "error";
@@ -452,7 +453,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(getFirebaseAuth());
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.removeItem("halisaha-kadro");
+        await clearIndexedDBStorage();
       } catch {
         // ignore
       }
