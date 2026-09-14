@@ -114,8 +114,13 @@ export const indexedDBStorage: StateStorage = {
   setItem: async (name, value) => {
     try {
       await idbSet(name, value);
-      // Eski localStorage kopyası varsa çakışma olmaması için temizle
-      removeLocalStorageItem(LEGACY_LOCAL_STORAGE_KEY);
+      // IndexedDB birincil kaynak; localStorage’ı sessiz yedek olarak tut.
+      // Kotası dolarsa uygulama çalışmaya devam etsin.
+      try {
+        window.localStorage.setItem(name, value);
+      } catch {
+        // ignore localStorage quota errors
+      }
     } catch {
       fallbackStorage.setItem(name, value);
     }

@@ -8,8 +8,8 @@ Durumlar: `✅ Tamamlandı`, `🔄 Devam ediyor`, `⏳ Beklemede`, `❌ Blokta`.
 | # | Konu | Durum | Not |
 |---|------|-------|-----|
 | 1 | Paket A: Auth güvenliği ve misafir göstergeleri | ✅ Tamamlandı | Çıkış onayı + localStorage/IndexedDB temizliği; misafir "Yerel" / yapılandırılmamış "Çevrimdışı" rozeti |
-| 2 | Paket C: IndexedDB misafir depolama | ✅ Tamamlandı | `src/lib/indexedDBStorage.ts`; eski localStorage migrate; çıkışta temizlik |
-| 3 | Paket B: Misafir çoklu sekme senkronizasyonu | ⏳ Beklemede | `window.storage` event ile guest state sync |
+| 2 | Paket C: IndexedDB misafir depolama | ✅ Tamamlandı | `src/lib/indexedDBStorage.ts`; eski localStorage migrate; setItem artık localStorage yedeği de tutuyor; çıkışta temizlik |
+| 2b | Bulut sync güvenliği: ilk açılışta pull yapmadan push engelleme | ✅ Tamamlandı | `initialCloudPullCompleted` ile `useCloudSync` pause; default state bulut üzerine yazamaz |
 | 4 | Paket B: Giriş anında yerel/bulut çatışma diyaloğu | ⏳ Beklemede | Misafir verisi + bulut verisi çakışırsa seçenek sun |
 | 5 | Paket D: Performans / Lighthouse / Core Web Vitals | ⏳ Beklemede | Prod build üzerinde ölçüm |
 | 6 | Paket D: Mobil testler (drag & drop, fotoğraf, indirme) | ⏳ Beklemede | Gerçek cihazlar ve tarayıcı emülatörleri |
@@ -35,4 +35,4 @@ Durumlar: `✅ Tamamlandı`, `🔄 Devam ediyor`, `⏳ Beklemede`, `❌ Blokta`.
 
 ## Son güncelleme
 
-- 2026-09-14: Checklist oluşturuldu; Paket A ve Paket C tamamlandı, Paket B ve D beklemede.
+- 2026-09-14: Checklist oluşturuldu; Paket A, Paket C ve bulut sync güvenliği tamamlandı, Paket B ve D beklemede.

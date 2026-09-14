@@ -308,6 +308,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Giriş yapmış kullanıcıda sync | Bulut sync aynı şekilde çalışır; yerel depolama IndexedDB’de olur |
 | Çıkış yap | IndexedDB temizlenir, sayfa yenilenir, boş varsayılan kadro gelir |
 | IndexedDB devre dışı / private mod | Graceful fallback: veriler localStorage’a döner (quota riski var ama uygulama çalışmaya devam eder) |
+| Giriş yapmış kullanıcı, boş/default yerel state ile açılış | İlk bulut çekme işlemi tamamlanmadan buluta yazma (push) yapılmaz; default state buluttaki verinin üzerine yazamaz |
 
 - [ ] Geçti
 
@@ -338,6 +339,7 @@ npm run lint
 | 2026-09-14 | Auth güvenliği ve misafir göstergeleri: çıkış onay dialogu + localStorage temizliği, misafir "Yerel" rozeti, Firebase yapılandırılmamışsa "Çevrimdışı" rozeti | #16 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Varsayılan ayarlar ve toolbar temizliği: uygulama iki takım modunda açılır, default saha adı "HALI SAHA", fotoğraf ölçek slider’ı ve bağlı kodlar kaldırıldı | #9 + #17 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Misafir depolama: localStorage yerine IndexedDB tabanlı Zustand persist; eski localStorage verisi otomatik migrate; çıkışta IndexedDB temizleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı/depolama doğrulaması bekliyor |
+| 2026-09-14 | Depolama ve bulut sync güvenliği: IndexedDB setItem localStorage yedeği tutuyor; ilk bulut çekme bitmeden push engelleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

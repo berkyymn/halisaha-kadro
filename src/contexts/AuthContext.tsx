@@ -106,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncPhase, setSyncPhase] = useState<CloudSyncPhase>("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [initialCloudPullCompleted, setInitialCloudPullCompleted] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [loadRetryNonce, setLoadRetryNonce] = useState(0);
   const loadGenerationRef = useRef(0);
@@ -293,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             row.doc.branding
           );
           loadedUserRef.current = userId;
+          setInitialCloudPullCompleted(true);
           return;
         }
 
@@ -304,6 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSyncStatus("error");
           loadedUserRef.current = userId;
           markPosterSnapshotSynced(getPosterSnapshot());
+          setInitialCloudPullCompleted(true);
           return;
         }
 
@@ -319,6 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cloudSnapshotRef.current = snapshot;
         loadedUserRef.current = userId;
         markPosterSnapshotSynced(getPosterSnapshot(), { clearOutbox: true });
+        setInitialCloudPullCompleted(true);
       } catch (err) {
         if (generation !== loadGenerationRef.current) return;
         console.error("Bulut yükleme hatası:", err);
@@ -373,6 +377,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (nextUser) {
         if (loadedUserRef.current !== nextUser.uid) {
           setRemoteHydrating(true);
+          setInitialCloudPullCompleted(false);
         }
       } else {
         loadGenerationRef.current += 1;
@@ -382,6 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRemoteHydrating(false);
         setSyncStatus("idle");
         setSyncError(null);
+        setInitialCloudPullCompleted(false);
       }
     });
 
@@ -585,7 +591,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useCloudSync({
     enabled: Boolean(user && configured && storeReady),
-    paused: remoteHydrating,
+    paused: remoteHydrating || !initialCloudPullCompleted,
     sessionKey: user?.uid ?? null,
     onSync: pushSnapshot,
     onBrandingSync: pushBranding,
