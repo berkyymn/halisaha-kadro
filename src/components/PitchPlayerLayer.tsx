@@ -36,7 +36,6 @@ export function PitchPlayerLayer({
   const players = useAppStore((s) => s.players);
   const pitchPlayers = useAppStore((s) => s.pitchPlayers);
   const singlePitchPlayers = useAppStore((s) => s.singlePitchPlayers);
-  const photoScalePercent = useAppStore((s) => s.photoScalePercent);
   const dragIntent = useAppStore((s) => s.dragIntent);
   const applyFormations = useAppStore((s) => s.applyFormations);
 
@@ -160,7 +159,6 @@ export function PitchPlayerLayer({
           swapPlayers={swapPlayers}
           assignBenchToSlot={assignBenchToSlot}
           moveSlotToBench={moveSlotToBench}
-          photoScalePercent={photoScalePercent}
           movementPolicy={getPitchMovementPolicy(teamMode, team)}
         />
       );
@@ -184,7 +182,6 @@ export function PitchPlayerLayer({
       swapPlayers,
       assignBenchToSlot,
       moveSlotToBench,
-      photoScalePercent,
       teamMode,
     ]
   );

@@ -14,7 +14,6 @@ interface PlayerDragPreviewProps {
   overlay?: DragOverlayVariant | null;
   number?: number;
   name?: string;
-  photoScale?: number;
   isCaptain?: boolean;
   showName?: boolean;
 }
@@ -32,7 +31,6 @@ export function PlayerDragPreview({
   overlay,
   number = player?.number ?? 0,
   name = player?.name || "İsimsiz",
-  photoScale = 100,
   isCaptain = false,
   showName = true,
 }: PlayerDragPreviewProps) {
@@ -45,7 +43,6 @@ export function PlayerDragPreview({
         number={number}
         name={name}
         size={size}
-        photoScale={photoScale}
         isCaptain={isCaptain}
         showName={showName}
         variant={variant}

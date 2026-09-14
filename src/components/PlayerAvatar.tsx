@@ -18,7 +18,6 @@ interface PlayerAvatarProps {
   number: number;
   name?: string;
   size?: number;
-  photoScale?: number;
   isCaptain?: boolean;
   showName?: boolean;
   variant?: PlayerCardVariant;
@@ -84,7 +83,6 @@ export const PlayerAvatar = memo(function PlayerAvatar({
   number,
   name,
   size = 150,
-  photoScale = 100,
   isCaptain = false,
   showName = true,
 }: PlayerAvatarProps) {
@@ -96,11 +94,10 @@ export const PlayerAvatar = memo(function PlayerAvatar({
   const h = Math.round(size * 1.48);
 
   const BASE_PHOTO_RATIO = 0.78;
-  const basePhotoD = w * BASE_PHOTO_RATIO;
-  const photoD = basePhotoD * (photoScale / 100);
+  const photoD = w * BASE_PHOTO_RATIO;
   const photoTop = 0;
 
-  const bodyTop = basePhotoD * 0.54;
+  const bodyTop = photoD * 0.54;
   const bodyH = h * 0.72;
 
   const compact = w < 92;
@@ -130,7 +127,7 @@ export const PlayerAvatar = memo(function PlayerAvatar({
       <div
         className="absolute inset-x-[3%] overflow-hidden rounded-[18%]"
         style={{
-          top: basePhotoD * 0.16,
+          top: photoD * 0.16,
           height: h - nameH * 0.55,
           background:
             "linear-gradient(180deg, rgba(10,12,16,.97) 0%, rgba(18,20,24,.97) 48%, rgba(6,8,10,.98) 100%)",

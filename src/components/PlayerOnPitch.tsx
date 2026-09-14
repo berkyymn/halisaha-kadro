@@ -54,7 +54,6 @@ interface PlayerOnPitchProps {
   swapPlayers: (team1: "home" | "away", slotIndex1: number, team2: "home" | "away", slotIndex2: number) => void;
   assignBenchToSlot: (team: "home" | "away", slotIndex: number, benchPlayerId: string) => void;
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
-  photoScalePercent: number;
   movementPolicy: PitchMovementPolicy;
 }
 
@@ -83,7 +82,6 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   swapPlayers,
   assignBenchToSlot,
   moveSlotToBench,
-  photoScalePercent,
   movementPolicy,
 }: PlayerOnPitchProps) {
   const [dragPos, setDragPos] = useState({ x: positionX, y: positionY });
@@ -284,7 +282,6 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
           number={number}
           name={displayName}
           size={cardSize}
-          photoScale={photoScalePercent}
           isCaptain={isCaptain}
           showName
           variant={team === "home" ? "light" : "dark"}
@@ -323,7 +320,6 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
             number={number}
             name={displayName}
             size={cardSize}
-            photoScale={photoScalePercent}
             isCaptain={isCaptain}
             showName
             variant={team === "home" ? "light" : "dark"}

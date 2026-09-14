@@ -38,7 +38,6 @@ export type PosterSnapshot = {
   pitchPlayers: PitchPlayer[];
   singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
-  photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   localUpdatedAt?: string;
@@ -49,7 +48,7 @@ export function createDefaultMatchInfo(): MatchInfo {
     titleLine1: "DERBİ",
     titleLine2: "GECESİ",
     ...DEFAULT_TITLE_STYLE,
-    venue: "DEMİR TEKLİ HALISAHA",
+    venue: "HALI SAHA",
     time: "21:00",
     date: todayDisplayDate(),
   };
@@ -96,7 +95,6 @@ export type PosterSnapshotSource = {
   pitchPlayers: PitchPlayer[];
   singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
-  photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   localUpdatedAt?: string;
@@ -125,7 +123,6 @@ export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapsho
     pitchPlayers: source.pitchPlayers,
     singlePitchPlayers: source.singlePitchPlayers,
     playerCardSize: source.playerCardSize,
-    photoScalePercent: source.photoScalePercent,
     teamLogoDisplaySize: source.teamLogoDisplaySize,
     posterTheme: source.posterTheme,
     localUpdatedAt: source.localUpdatedAt,
@@ -287,7 +284,6 @@ export function parsePosterSnapshot(raw: unknown): PosterSnapshot | null {
     pitchPlayers: data.pitchPlayers ?? [],
     singlePitchPlayers: data.singlePitchPlayers ?? [],
     playerCardSize: data.playerCardSize ?? 100,
-    photoScalePercent: data.photoScalePercent ?? 100,
     teamLogoDisplaySize: data.teamLogoDisplaySize ?? DEFAULT_LOGO_DISPLAY_SIZE,
     posterTheme: normalizePosterTheme(data.posterTheme),
     localUpdatedAt: data.localUpdatedAt,

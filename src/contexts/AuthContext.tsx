@@ -450,9 +450,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cloudSnapshotRef.current = null;
     resetCloudSyncState();
     await firebaseSignOut(getFirebaseAuth());
-    setUser(null);
-    setSyncStatus("idle");
-    setSyncError(null);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("halisaha-kadro");
+      } catch {
+        // ignore
+      }
+      window.location.reload();
+    }
   }, [configured]);
 
   const pushSnapshot = useCallback(

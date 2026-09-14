@@ -18,7 +18,6 @@ const LAYOUT_STORE_KEYS = new Set([
   "awayFormationId",
   "pitchPlayers",
   "playerCardSize",
-  "photoScalePercent",
   "posterTheme",
   "teamMode",
   "singlePitchPlayers",

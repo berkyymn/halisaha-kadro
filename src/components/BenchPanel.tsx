@@ -98,7 +98,6 @@ function BenchPlayerCard({
           number={player.number}
           name={player.name || "İsimsiz"}
           size={cardSize}
-          photoScale={100}
           isCaptain={false}
           showName
           variant="dark"

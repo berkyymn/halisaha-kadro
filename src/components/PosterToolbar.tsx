@@ -15,8 +15,6 @@ export function PosterToolbar() {
   const awayFormationId = useAppStore((s) => s.awayFormationId);
   const setHomeFormation = useAppStore((s) => s.setHomeFormation);
   const setAwayFormation = useAppStore((s) => s.setAwayFormation);
-  const photoScalePercent = useAppStore((s) => s.photoScalePercent);
-  const setPhotoScalePercent = useAppStore((s) => s.setPhotoScalePercent);
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
   const setPosterTheme = useAppStore((s) => s.setPosterTheme);
 
@@ -142,24 +140,6 @@ export function PosterToolbar() {
             </select>
           </label>
         )}
-
-        <label className="flex items-center gap-2 min-w-[9rem] flex-1 max-w-[12rem]">
-          <span className="text-zinc-500 shrink-0 whitespace-nowrap">
-            Fotoğraf
-          </span>
-          <input
-            type="range"
-            min={60}
-            max={120}
-            step={1}
-            value={photoScalePercent}
-            onChange={(e) => setPhotoScalePercent(Number(e.target.value))}
-            className="flex-1 accent-green-600"
-          />
-          <span className="text-green-400 font-bold tabular-nums w-9 text-right">
-            {photoScalePercent}%
-          </span>
-        </label>
 
       </div>
     </div>

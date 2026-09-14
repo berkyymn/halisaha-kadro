@@ -21,7 +21,6 @@ import {
 import { PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
 import { removeBackground, isModelReady } from "@/lib/backgroundRemoval";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
-import { useAppStore } from "@/store/useAppStore";
 import type { JerseyConfig, PhotoCrop, Player } from "@/types";
 import { PlayerAvatar } from "./PlayerAvatar";
 
@@ -98,7 +97,6 @@ function PlayerEditModalBody({
   const [saving, setSaving] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoScalePercent = useAppStore((s) => s.photoScalePercent);
 
   const { backdropProps, panelProps, openFilePicker, clearPickingFile } =
     useModalBackdrop({
@@ -248,7 +246,6 @@ function PlayerEditModalBody({
               number={number}
               name={name}
               size={120}
-              photoScale={photoScalePercent}
               isCaptain={isCaptain}
               variant={variant}
             />

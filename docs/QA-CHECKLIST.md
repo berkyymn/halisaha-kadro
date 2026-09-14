@@ -262,6 +262,39 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 16. Auth / oturum güvenliği ve misafir göstergeleri
+
+**Dosyalar:** `src/components/UserAuthButton.tsx`, `src/contexts/AuthContext.tsx`, `src/components/ModalShell.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| Misafir (giriş yapılmamış) modda header sağ taraf | "Yerel" rozeti görünür; tooltip "veriler sadece bu tarayıcıda saklanıyor" der |
+| Misafir modda "Giriş yap" butonu | Hâlâ görünür, tıklayınca auth modalı açılır |
+| Firebase yapılandırılmamışken (`configured === false`) | "Giriş yap" butonu görünmez; sadece sarı "Çevrimdışı" rozeti görünür |
+| Giriş yapmış kullanıcı "Çıkış yap" ikonuna tıklar | Onay modalı açılır; "tüm kadro verileri silinecek" mesajı görünür |
+| Çıkış onayında "İptal" | Modal kapanır, veri silinmez, oturum açık kalır |
+| Çıkış onayında "Çıkış yap" | Firebase oturumu kapanır, `localStorage` temizlenir, sayfa yenilenir, boş varsayılan kadro gelir |
+| Çıkış sonrası başka kullanıcı giriş yaparsa | Önceki kullanıcının yerel verisi bulut verisiyle karışmaz |
+
+- [ ] Geçti
+
+---
+
+## 17. Varsayılan poster ayarları ve toolbar
+
+**Dosyalar:** `src/store/useAppStore.ts`, `src/lib/posterSnapshot.ts`, `src/components/PosterToolbar.tsx`, `src/components/PlayerAvatar.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| Uygulama ilk açıldığında | İki takım (versus) modu seçili gelir |
+| Yeni oluşturulan posterin saha adı | "HALI SAHA" olarak görünür; eski "DEMİR TEKLİ HALISAHA" kalmamış |
+| PosterToolbar’da | "Fotoğraf" slider’ı ve yüzde göstergesi yok |
+| Oyuncu kartlarındaki fotoğraf boyutu | Sabit %100 ölçekte, eski slider ayarına bağlı kalmadan görünür |
+
+- [ ] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -284,6 +317,8 @@ npm run lint
 | 2026-08-28 | Sync durability refactor: revision guard, durable outbox, `onSnapshot`, rules allowlist | §14 + build/lint | Rules deploy edildi; revision 10 mevcut dokümanda doğrulandı; iki istemci/offline manuel testi bekliyor |
 | 2026-09-04 | Tek takım dikey poster ve pitch interaction düzeltmeleri | §15 + build/lint | İkili mod taşıma/cross-team swap/forma conflict manuel doğrulandı; tekli QA devam ediyor |
 | 2026-09-07 | Sürükleme görselleri: swap'te iki kart da yeşil, yedek değişiminde giren/çıkan ok işaretleri, tekli mod yan boşluk renklendirmesi | #6 + #15 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
+| 2026-09-14 | Auth güvenliği ve misafir göstergeleri: çıkış onay dialogu + localStorage temizliği, misafir "Yerel" rozeti, Firebase yapılandırılmamışsa "Çevrimdışı" rozeti | #16 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
+| 2026-09-14 | Varsayılan ayarlar ve toolbar temizliği: uygulama iki takım modunda açılır, default saha adı "HALI SAHA", fotoğraf ölçek slider’ı ve bağlı kodlar kaldırıldı | #9 + #17 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

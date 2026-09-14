@@ -43,7 +43,6 @@ export function fingerprintPosterData(snapshot: PosterSnapshot): string {
     awayFormationId: snapshot.awayFormationId,
     pitchPlayers: snapshot.pitchPlayers,
     playerCardSize: snapshot.playerCardSize,
-    photoScalePercent: snapshot.photoScalePercent,
     posterTheme: snapshot.posterTheme,
     localUpdatedAt: snapshot.localUpdatedAt,
   });

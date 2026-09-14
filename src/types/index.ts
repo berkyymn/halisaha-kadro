@@ -231,7 +231,6 @@ export interface AppState {
   pitchPlayers: PitchPlayer[];
   singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
-  photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   teamMode: "single" | "versus";

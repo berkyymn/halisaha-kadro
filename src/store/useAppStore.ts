@@ -120,7 +120,6 @@ interface AppStore {
   pitchPlayers: PitchPlayer[];
   singlePitchPlayers: PitchPlayer[];
   playerCardSize: number;
-  photoScalePercent: number;
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   logoDesignerTeam: "home" | "away" | null;
@@ -172,7 +171,6 @@ interface AppStore {
   resetPitchPositions: (team?: "home" | "away") => void;
   resetGuestSession: () => void;
   setPlayerCardSize: (size: number) => void;
-  setPhotoScalePercent: (percent: number) => void;
   setTeamLogoDisplaySize: (size: number) => void;
   setPosterTheme: (theme: PosterThemeId) => void;
   setLogoDesignerTeam: (team: "home" | "away" | null) => void;
@@ -245,7 +243,6 @@ export const useAppStore = create<AppStore>()(
           "pitchPlayers",
           "singlePitchPlayers",
           "playerCardSize",
-          "photoScalePercent",
           "teamLogoDisplaySize",
           "posterTheme",
           "teamMode",
@@ -280,7 +277,7 @@ export const useAppStore = create<AppStore>()(
       };
 
       return {
-        teamMode: "single",
+        teamMode: "versus",
         mode: "guest",
         matchInfo: createDefaultMatchInfo(),
         squadSize: 7,
@@ -294,7 +291,6 @@ export const useAppStore = create<AppStore>()(
         pitchPlayers: [],
         singlePitchPlayers: [],
         playerCardSize: 100,
-        photoScalePercent: 100,
         teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
         posterTheme: DEFAULT_POSTER_THEME,
         logoDesignerTeam: null,
@@ -337,7 +333,6 @@ export const useAppStore = create<AppStore>()(
             pitchPlayers: finalized.pitchPlayers,
             singlePitchPlayers: finalized.singlePitchPlayers,
             playerCardSize: finalized.playerCardSize,
-            photoScalePercent: finalized.photoScalePercent,
             teamLogoDisplaySize: finalized.teamLogoDisplaySize,
             posterTheme: finalized.posterTheme,
             logoDesignerTeam: null,
@@ -679,11 +674,6 @@ export const useAppStore = create<AppStore>()(
             MIN_PLAYER_CARD_SIZE,
             Math.min(MAX_PLAYER_CARD_SIZE, Math.round(size))
           ),
-        }),
-
-      setPhotoScalePercent: (percent) =>
-        set({
-          photoScalePercent: Math.max(60, Math.min(120, Math.round(percent))),
         }),
 
       setTeamLogoDisplaySize: (size) =>
@@ -1046,7 +1036,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-       version: 32,
+       version: 33,
       migrate: (persisted, version) => {
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -1088,7 +1078,6 @@ export const useAppStore = create<AppStore>()(
           state = {
             ...state,
             playerCardSize: Math.max(80, Math.min(200, size)),
-            photoScalePercent: 100,
           };
         }
         if (version < 7) {
@@ -1373,6 +1362,20 @@ export const useAppStore = create<AppStore>()(
             singlePitchPlayers: [],
           };
         }
+        if (version < 33) {
+          // photoScalePercent kaldırıldı; eski default saha adı güncelleniyor.
+          const { photoScalePercent, ...rest } = state;
+          void photoScalePercent;
+          const info = (rest.matchInfo as MatchInfo) || createDefaultMatchInfo();
+          const oldVenue = "DEMİR TEKLİ HALISAHA";
+          state = {
+            ...rest,
+            matchInfo: {
+              ...info,
+              venue: info.venue === oldVenue ? "HALI SAHA" : info.venue,
+            },
+          };
+        }
         return state;
       },
       merge: (persisted, current) => {
@@ -1407,7 +1410,6 @@ export const useAppStore = create<AppStore>()(
           pitchPlayers: state.pitchPlayers ?? [],
           singlePitchPlayers: state.singlePitchPlayers ?? [],
           playerCardSize: state.playerCardSize,
-          photoScalePercent: state.photoScalePercent,
           teamLogoDisplaySize: state.teamLogoDisplaySize,
           posterTheme: state.posterTheme,
           localUpdatedAt: state.localUpdatedAt,
