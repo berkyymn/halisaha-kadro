@@ -45,6 +45,12 @@ import {
 } from "@/hooks/useCloudSync";
 import { cleanupOrphanedMedia } from "@/lib/mediaSync";
 import { clearIndexedDBStorage } from "@/lib/indexedDBStorage";
+import {
+  areSnapshotsEquivalent,
+  buildConflictSummary,
+  hasMeaningfulLocalChanges,
+} from "@/lib/loginConflict";
+import { LoginConflictModal } from "@/components/LoginConflictModal";
 import type { CloudSyncPhase } from "@/lib/cloudSyncManager";
 
 export type SyncStatus = "idle" | "loading" | "syncing" | "saved" | "error";
@@ -108,6 +114,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [initialCloudPullCompleted, setInitialCloudPullCompleted] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [loginConflict, setLoginConflict] = useState<{
+    userId: string;
+    row: {
+      updatedAt: string;
+      brandingUpdatedAt?: string;
+      revision?: number;
+      data: PosterSnapshot;
+      branding?: Parameters<typeof mergeCloudBrandingIntoSnapshot>[1];
+    };
+    localSnapshot: PosterSnapshot;
+  } | null>(null);
+  const [conflictBusy, setConflictBusy] = useState(false);
   const [loadRetryNonce, setLoadRetryNonce] = useState(0);
   const loadGenerationRef = useRef(0);
   const loadedUserRef = useRef<string | null>(null);
@@ -287,6 +305,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (row.status === "ok") {
           loadRetryAttemptRef.current = 0;
+          const localIsCustom = hasMeaningfulLocalChanges(localSnapshot);
+          const sameAsCloud = areSnapshotsEquivalent(localSnapshot, row.doc.data);
+          if (localIsCustom && !sameAsCloud) {
+            setLoginConflict({
+              userId,
+              row: {
+                updatedAt: row.doc.updatedAt,
+                brandingUpdatedAt: row.doc.brandingUpdatedAt,
+                revision: row.doc.revision,
+                data: row.doc.data,
+                branding: row.doc.branding,
+              },
+              localSnapshot,
+            });
+            setRemoteHydrating(false);
+            return;
+          }
+
           applyCloudRow(
             row.doc.data,
             row.doc,
@@ -364,6 +400,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getPosterSnapshot,
       setRemoteHydrating,
       scheduleRepush,
+    ]
+  );
+
+  const resolveLoginConflict = useCallback(
+    async (choice: "local" | "cloud" | "merge") => {
+      if (!loginConflict) return;
+      const { userId, row, localSnapshot } = loginConflict;
+      setRemoteHydrating(true);
+      try {
+        if (choice === "local") {
+          const snapshot = getPosterSnapshot();
+          const result = await saveUserPoster(userId, snapshot);
+          lastRemoteUpdatedAtRef.current = result.updatedAt;
+          cloudRevisionRef.current = result.revision;
+          await cleanupOrphanedMedia(cloudSnapshotRef.current, snapshot);
+          cloudSnapshotRef.current = snapshot;
+          markPosterSnapshotSynced(snapshot, { clearOutbox: true });
+          setSyncStatus("saved");
+          setSyncError(describeCloudSaveResult(result));
+        } else if (choice === "cloud") {
+          // Bulutun tamamen kazanması için yerel zaman damgasını geçici sıfırla.
+          useAppStore.setState({ localUpdatedAt: undefined });
+          const cloudData = mergeCloudBrandingIntoSnapshot(
+            row.data,
+            row.branding,
+            row.brandingUpdatedAt
+          );
+          hydrateFromSnapshot(cloudData, row.updatedAt);
+          lastRemoteUpdatedAtRef.current = row.updatedAt;
+          lastRemoteBrandingUpdatedAtRef.current = row.brandingUpdatedAt || null;
+          cloudRevisionRef.current = row.revision ?? 0;
+          cloudSnapshotRef.current = cloudData;
+          markPosterSnapshotSynced(getPosterSnapshot());
+          setSyncStatus("saved");
+          setSyncError(null);
+        } else {
+          applyCloudRow(row.data, row, localSnapshot, row.branding);
+        }
+        loadedUserRef.current = userId;
+        setInitialCloudPullCompleted(true);
+      } catch (err) {
+        console.error("Login conflict resolution error:", err);
+        setSyncError(mapFirestoreError(err));
+        setSyncStatus("error");
+      } finally {
+        setLoginConflict(null);
+        setRemoteHydrating(false);
+      }
+    },
+    [
+      loginConflict,
+      getPosterSnapshot,
+      applyCloudRow,
+      hydrateFromSnapshot,
+      setRemoteHydrating,
     ]
   );
 
@@ -614,7 +705,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [configured, user, loading, syncStatus, syncPhase, syncError, authModalOpen, signOut]
   );
 
+  const localConflictSummary = loginConflict
+    ? buildConflictSummary(loginConflict.localSnapshot)
+    : null;
+  const cloudConflictSummary = loginConflict
+    ? buildConflictSummary(loginConflict.row.data)
+    : null;
+
   return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={value}>
+      {children}
+      {loginConflict && localConflictSummary && cloudConflictSummary && (
+        <LoginConflictModal
+          open
+          busy={conflictBusy}
+          localSummary={localConflictSummary}
+          cloudSummary={cloudConflictSummary}
+          cloudUpdatedAt={loginConflict.row.updatedAt}
+          onResolve={async (choice) => {
+            setConflictBusy(true);
+            await resolveLoginConflict(choice);
+            setConflictBusy(false);
+          }}
+        />
+      )}
+    </AuthContext.Provider>
   );
 }

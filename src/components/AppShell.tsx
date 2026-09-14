@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useAppStore } from "@/store/useAppStore";
+import { useGuestTabSync } from "@/hooks/useGuestTabSync";
 import { BenchPanel } from "./BenchPanel";
 import { LogoDesignerModal } from "./LogoDesignerModal";
 import { MatchPoster } from "./MatchPoster";
@@ -18,6 +19,8 @@ const PlayerEditModal = dynamic(
 );
 
 export function AppShell() {
+  useGuestTabSync();
+
   const resetGuestSession = useAppStore((s) => s.resetGuestSession);
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);

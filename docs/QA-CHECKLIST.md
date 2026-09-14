@@ -314,6 +314,25 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 19. Misafir çoklu sekme senkronizasyonu ve giriş çatışması
+
+**Dosyalar:** `src/hooks/useGuestTabSync.ts`, `src/contexts/AuthContext.tsx`, `src/components/LoginConflictModal.tsx`, `src/lib/loginConflict.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| Misafir modunda A sekmesinde kadro değiştir | B sekmesinde (aynı origin) değişiklik otomatik yansır |
+| Misafir modunda A sekmesinde fotoğraf ekle | B sekmesinde fotoğraf görünür; sayfa yenilemeden güncellenir |
+| Misafir modunda çoklu sekme senkronizasyonu | Yenileme / rehydrate sırasında mevcut düzenleme kaybolmaz |
+| Misafir kullanıcı giriş yap, bulutta farklı bir kadro var | `LoginConflictModal` açılır; “Bu cihazı kullan”, “Bulutu kullan”, “Birleştir” seçenekleri görünür |
+| “Bu cihazı kullan” | Yerel kadro buluta yazılır, buluttaki eski kadro ezilir |
+| “Bulutu kullan” | Buluttaki kadro yerel duruma uygulanır, yerel veri kaybolur |
+| “Birleştir” | Bulut son kaydı temel alınır ama yerel fotoğraflar/logolar (bulutta yoksa) korunur |
+| Giriş yapmış kullanıcı, yerel veri varsayılan / boş | Çatışma modalı açılmaz, doğrudan bulut verisi yüklenir |
+
+- [ ] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -340,6 +359,7 @@ npm run lint
 | 2026-09-14 | Varsayılan ayarlar ve toolbar temizliği: uygulama iki takım modunda açılır, default saha adı "HALI SAHA", fotoğraf ölçek slider’ı ve bağlı kodlar kaldırıldı | #9 + #17 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Misafir depolama: localStorage yerine IndexedDB tabanlı Zustand persist; eski localStorage verisi otomatik migrate; çıkışta IndexedDB temizleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı/depolama doğrulaması bekliyor |
 | 2026-09-14 | Depolama ve bulut sync güvenliği: IndexedDB setItem localStorage yedeği tutuyor; ilk bulut çekme bitmeden push engelleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
+| 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 
