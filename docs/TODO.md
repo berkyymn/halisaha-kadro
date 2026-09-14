@@ -503,6 +503,13 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 - [x] `PlayerEditModal.tsx` önizlemesi için sabit 120px kullanılıyor; eski `playerCardSize` bağımlılığı kaldırıldı
 - [x] `MatchPoster.tsx` footer’daki saat/tarih/saha ikonları ve aralıkları `clamp(...)` ile viewport’a göre ölçekleniyor
 - [x] Footer’daki “SAAT:” ve “TARİH:” yazıları kaldırıldı; her üç bölüm kendi hücresinde ortalandı
+- [x] `PosterDateField.tsx` butonu dikey olarak ortalandı; tarih ikonu diğer alanlarla aynı hizaya getirildi
+- [x] `BenchPanel.tsx`’deki “Yeni yedek” butonu “Yeni oyuncu” olarak değiştirildi
+- [x] Tekli mod formasyon yerleşimi aşağı kaydırıldı (`SINGLE_GK_Y`, `SINGLE_OUTFIELD_Y_*` arttırıldı)
+- [x] İkili mod formasyon satırları `layoutRowY` merkezi 50→55 yapılarak aşağı kaydırıldı
+- [x] Tekli mod kaleci sabiti aşırı aşağı kaydırılmadan, saha oyuncuları aşağı kaydırıldı (`SINGLE_GK_Y` tekrar 86; `SINGLE_OUTFIELD_Y_*` ayarlandı)
+- [x] Tekli mod satırlarındaki yatay oyuncu aralığı `SINGLE_ROW_EXTRA_GAP` ile arttırıldı; default dizilişlerde yığın görünümü azaltıldı
+- [x] Sürüklenip bırakılan kartların `hasCustomPosition` z-index farkı kaldırıldı; artık tüm saha kartları aynı z-seviyesinde
 - [x] `PosterToolbar.tsx`’den “Oyuncu kartı” slider’ı ve ilgili state okumaları kaldırıldı
 
 ---
