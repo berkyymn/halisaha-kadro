@@ -6,9 +6,8 @@ import {
   computeFormationLayout,
   computeSingleFormationLayout,
   getFormationSlotCount,
-  maxPlayersInRow,
 } from "@/lib/formationEngine";
-import { getAutoCardSize } from "@/lib/posterLayout";
+import { useAutoCardSize } from "@/hooks/useAutoCardSize";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { useAppStore } from "@/store/useAppStore";
 import { PlayerOnPitch, type SlotPosition } from "./PlayerOnPitch";
@@ -48,13 +47,9 @@ export function PitchPlayerLayer({
   const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);
 
   const metrics = usePosterMetrics();
+  const effectiveCardSize = useAutoCardSize();
   const homeFormation = getFormationById(homeFormationId);
   const awayFormation = getFormationById(awayFormationId);
-
-  const maxInRow = teamMode === "single"
-    ? maxPlayersInRow(homeFormation)
-    : Math.max(maxPlayersInRow(homeFormation), maxPlayersInRow(awayFormation));
-  const effectiveCardSize = getAutoCardSize(metrics, maxInRow);
 
   const homeLayout = useMemo(
     () =>

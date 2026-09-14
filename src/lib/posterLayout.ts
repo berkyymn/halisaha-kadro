@@ -1,5 +1,6 @@
 import type { Formation } from "@/types";
 import type { PosterMetrics } from "@/types";
+import type { TeamMode } from "@/lib/posterSnapshot";
 import {
   MAX_PLAYER_CARD_SIZE,
   MIN_PLAYER_CARD_SIZE,
@@ -11,6 +12,12 @@ export type { PosterMetrics };
 export { maxPlayersInRow };
 
 const CARD_ASPECT = 1.48;
+
+// Auto-responsive card sizing. The vertical cap is the most important guard
+// for single-team (portrait) mode where rows are stacked densely.
+const CARD_HEIGHT_RATIO = 0.2;
+const CARD_WIDTH_RATIO = 0.14;
+const CARD_MAX_HEIGHT_RATIO = 0.18;
 
 /** Satırda üst üste binmeden sığabilecek üst kart boyutu */
 export function computeSafeMaxCardSize(
@@ -38,24 +45,43 @@ export function computeSafeMaxCardSize(
 /**
  * Auto-responsive pitch card size. Derives the card size from the pitch
  * container rather than a user-controlled slider, so cards scale naturally
- * across 14" laptops and 27" monitors. It is still capped by the safe max
- * to avoid overlapping dense formations.
+ * across 13"-27" screens. It is still capped by the safe max to avoid
+ * overlapping dense formations and by a vertical height cap so stacked rows
+ * in single-team mode do not overlap.
+ *
+ * `mode` allows versus mode to use a slightly larger default while keeping
+ * single-team (portrait) cards compact.
  */
 export function getAutoCardSize(
   metrics: PosterMetrics,
-  maxPlayersInRowCount: number
+  maxPlayersInRowCount: number,
+  mode?: TeamMode
 ): number {
+  const isSingle = mode === "single";
+  const heightRatio = isSingle ? CARD_HEIGHT_RATIO : 0.26;
+  const widthRatio = isSingle ? CARD_WIDTH_RATIO : 0.18;
+  const maxHeightRatio = isSingle ? CARD_MAX_HEIGHT_RATIO : 0.24;
+
   const pitch = getPitchMetrics(metrics);
-  const safeMax = computeSafeMaxCardSize(metrics, maxPlayersInRowCount);
+  const safeHorizontal = computeSafeMaxCardSize(metrics, maxPlayersInRowCount);
 
   const targetFromHeight = Math.floor(
-    (pitch.height * 0.32) / CARD_ASPECT
+    (pitch.height * heightRatio) / CARD_ASPECT
   );
-  const targetFromWidth = Math.floor(pitch.width * 0.18);
+  const targetFromWidth = Math.floor(pitch.width * widthRatio);
+  const verticalCap = Math.floor(
+    (pitch.height * maxHeightRatio) / CARD_ASPECT
+  );
 
   return Math.max(
     MIN_PLAYER_CARD_SIZE,
-    Math.min(targetFromHeight, targetFromWidth, safeMax, MAX_PLAYER_CARD_SIZE)
+    Math.min(
+      targetFromHeight,
+      targetFromWidth,
+      verticalCap,
+      safeHorizontal,
+      MAX_PLAYER_CARD_SIZE
+    )
   );
 }
 

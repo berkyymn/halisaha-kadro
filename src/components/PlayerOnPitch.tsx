@@ -232,19 +232,15 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       setDragPos({ x: effectiveX, y: effectiveY });
-      const pitch = pitchRef.current;
-      if (pitch) {
-        const rect = pitch.getBoundingClientRect();
-        const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
-        const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
-        dragOffset.current = { x: pointerX - effectiveX, y: pointerY - effectiveY };
-      }
+      // Kart merkezi pointer'ı takip etsin; bırakılan yer tam olarak
+      // pointer'ın olduğu nokta olur. Eski relative offset kaldırıldı.
+      dragOffset.current = { x: 0, y: 0 };
       handlePointerDown(e, (rect) => ({
         x: rect.width / 2,
         y: rect.height / 2,
       }));
     },
-    [handlePointerDown, pitchRef, effectiveX, effectiveY]
+    [handlePointerDown, effectiveX, effectiveY]
   );
 
   if (!layoutSlot) return null;

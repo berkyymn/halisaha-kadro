@@ -116,15 +116,15 @@ function PosterFooter({
   onDateChange: (v: string) => void;
 }) {
   const footerTextStyle = {
-    fontSize: "clamp(0.65rem, 1.15vw, 0.95rem)",
+    fontSize: "clamp(0.55rem, 1vw, 0.85rem)",
   } as const;
-  const footerIconSize = "clamp(1rem, 2vw, 1.5rem)";
-  const footerGap = "clamp(0.4rem, 0.8vw, 0.75rem)";
+  const footerIconSize = "clamp(0.875rem, 1.6vw, 1.25rem)";
+  const footerGap = "clamp(0.3rem, 0.6vw, 0.5rem)";
 
   return (
     <div
       className="absolute left-[4%] right-[4%] z-50 pointer-events-auto"
-      style={{ bottom: "2%", height: "11.5%" }}
+      style={{ bottom: "1.5%", height: "10%" }}
     >
       <div className="relative h-full">
         <div
@@ -146,14 +146,14 @@ function PosterFooter({
               "inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 28px rgba(0,0,0,0.6)",
           }}
         >
-          <div className="flex items-center min-w-0 px-4 h-full" style={{ gap: footerGap }}>
+          <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
             <MapPin className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <PosterEditableText
               value={venue}
               onChange={onVenueChange}
               placeholder="SAHA ADI"
               variant="footer"
-              align="left"
+              align="center"
               style={footerTextStyle}
             />
           </div>
@@ -167,14 +167,8 @@ function PosterFooter({
             }}
           />
 
-          <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
+          <div className="flex items-center justify-center min-w-0 px-2 h-full" style={{ gap: footerGap }}>
             <Clock className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
-            <span
-              className="font-black uppercase tracking-wide text-white whitespace-nowrap shrink-0"
-              style={footerTextStyle}
-            >
-              SAAT:
-            </span>
             <PosterEditableText
               value={time}
               onChange={onTimeChange}
@@ -194,14 +188,8 @@ function PosterFooter({
             }}
           />
 
-          <div className="flex items-center justify-end min-w-0 px-4 h-full" style={{ gap: footerGap }}>
+          <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
             <Calendar className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
-            <span
-              className="font-black uppercase tracking-wide text-white whitespace-nowrap shrink-0"
-              style={footerTextStyle}
-            >
-              TARİH:
-            </span>
             <PosterDateField
               value={date}
               onChange={onDateChange}

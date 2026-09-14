@@ -48,7 +48,7 @@ export function PosterDateField({
       <button
         type="button"
         onClick={openPicker}
-        className="poster-editable poster-editable-footer-accent relative z-10 w-full cursor-pointer rounded px-1 text-right"
+        className="poster-editable poster-editable-footer-accent relative z-10 w-full cursor-pointer rounded px-1 text-center"
         style={style}
         title="Tarih seç"
         aria-label="Tarih seç"
