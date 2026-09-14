@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronLeft,
@@ -120,13 +120,14 @@ export function BenchPanel() {
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragCardSize, setDragCardSize] = useState({ width: 0, height: 0 });
+  const [benchCardSize, setBenchCardSize] = useState(88);
   const currentBenchId = useRef<string | null>(null);
+  const benchPanelRef = useRef<HTMLElement>(null);
 
   const benchPlayerIds = useAppStore((s) => s.benchPlayerIds);
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);
   const homeTeam = useAppStore((s) => s.homeTeam);
-  const playerCardSize = useAppStore((s) => s.playerCardSize);
   const dragIntent = useAppStore((s) => s.dragIntent);
   const addPlayerToBench = useAppStore((s) => s.addPlayerToBench);
   const updateBenchPlayer = useAppStore((s) => s.updateBenchPlayer);
@@ -134,7 +135,21 @@ export function BenchPanel() {
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
   const setDragIntent = useAppStore((s) => s.setDragIntent);
 
-  const benchCardSize = clampCardSize(Math.round(playerCardSize * 0.88));
+  useEffect(() => {
+    const el = benchPanelRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const width = el.getBoundingClientRect().width;
+      // Bench cards scale with the panel width but stay within a sane range.
+      setBenchCardSize(clampCardSize(Math.round(width * 0.42)));
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const benchEntries = benchPlayerIds.map((benchId) => ({
     benchId,
@@ -232,6 +247,7 @@ export function BenchPanel() {
   return (
     <>
       <aside
+        ref={benchPanelRef}
         data-bench-drop="true"
         className={`shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0 transition-colors ${
           isBenchAreaTarget(dragIntent)

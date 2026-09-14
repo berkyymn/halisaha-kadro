@@ -1,19 +1,10 @@
 "use client";
 
-import { getFormationById, getFormationsForSize } from "@/lib/formations";
-import {
-  computeSafeMaxCardSize,
-  getEffectiveCardSize,
-} from "@/lib/posterLayout";
-import { usePosterMetrics } from "@/hooks/usePosterMetrics";
-import { maxPlayersInRow } from "@/lib/formationEngine";
+import { getFormationsForSize } from "@/lib/formations";
 import { useAppStore } from "@/store/useAppStore";
 import { POSTER_THEME_LIST, normalizePosterTheme } from "@/lib/posterThemes";
 import type { SquadSize } from "@/types";
 import { UserRound, UsersRound } from "lucide-react";
-import {
-  MIN_PLAYER_CARD_SIZE,
-} from "@/types";
 
 export function PosterToolbar() {
   const teamMode = useAppStore((s) => s.teamMode);
@@ -24,28 +15,12 @@ export function PosterToolbar() {
   const awayFormationId = useAppStore((s) => s.awayFormationId);
   const setHomeFormation = useAppStore((s) => s.setHomeFormation);
   const setAwayFormation = useAppStore((s) => s.setAwayFormation);
-  const playerCardSize = useAppStore((s) => s.playerCardSize);
-  const setPlayerCardSize = useAppStore((s) => s.setPlayerCardSize);
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
   const setPhotoScalePercent = useAppStore((s) => s.setPhotoScalePercent);
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
   const setPosterTheme = useAppStore((s) => s.setPosterTheme);
-  const metrics = usePosterMetrics();
 
   const formations = getFormationsForSize(squadSize);
-  const homeFormation = getFormationById(homeFormationId);
-  const awayFormation = getFormationById(awayFormationId);
-  const maxInRow = Math.max(
-    maxPlayersInRow(homeFormation),
-    teamMode === "versus" ? maxPlayersInRow(awayFormation) : 0
-  );
-  const sliderMax = computeSafeMaxCardSize(metrics, maxInRow);
-  const effectiveCardSize = getEffectiveCardSize(
-    metrics,
-    maxInRow,
-    playerCardSize
-  );
-  const isCapped = effectiveCardSize < playerCardSize;
 
   return (
     <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/90 px-4 py-2">
@@ -167,32 +142,6 @@ export function PosterToolbar() {
             </select>
           </label>
         )}
-
-        <label className="flex items-center gap-2 min-w-[10rem] flex-1 max-w-[14rem]">
-          <span className="text-zinc-500 shrink-0 whitespace-nowrap">
-            Oyuncu kartı
-          </span>
-          <input
-            type="range"
-            min={MIN_PLAYER_CARD_SIZE}
-            max={sliderMax}
-            step={1}
-            value={Math.min(playerCardSize, sliderMax)}
-            onChange={(e) => setPlayerCardSize(Number(e.target.value))}
-            className="flex-1 accent-green-600"
-          />
-          <span
-            className="text-green-400 font-bold tabular-nums text-right shrink-0"
-            title={
-              isCapped
-                ? `Seçilen ${playerCardSize}, diziliş için en fazla ${effectiveCardSize}`
-                : undefined
-            }
-          >
-            {effectiveCardSize}
-            {isCapped ? "*" : ""}
-          </span>
-        </label>
 
         <label className="flex items-center gap-2 min-w-[9rem] flex-1 max-w-[12rem]">
           <span className="text-zinc-500 shrink-0 whitespace-nowrap">

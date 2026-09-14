@@ -118,6 +118,8 @@ function PosterFooter({
   const footerTextStyle = {
     fontSize: "clamp(0.65rem, 1.15vw, 0.95rem)",
   } as const;
+  const footerIconSize = "clamp(1rem, 2vw, 1.5rem)";
+  const footerGap = "clamp(0.4rem, 0.8vw, 0.75rem)";
 
   return (
     <div
@@ -144,8 +146,8 @@ function PosterFooter({
               "inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 28px rgba(0,0,0,0.6)",
           }}
         >
-          <div className="flex items-center gap-3 min-w-0 px-4 h-full">
-            <MapPin className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2.5} />
+          <div className="flex items-center min-w-0 px-4 h-full" style={{ gap: footerGap }}>
+            <MapPin className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <PosterEditableText
               value={venue}
               onChange={onVenueChange}
@@ -165,8 +167,8 @@ function PosterFooter({
             }}
           />
 
-          <div className="flex items-center justify-center gap-2 min-w-0 px-3 h-full">
-            <Clock className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2.5} />
+          <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
+            <Clock className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <span
               className="font-black uppercase tracking-wide text-white whitespace-nowrap shrink-0"
               style={footerTextStyle}
@@ -192,8 +194,8 @@ function PosterFooter({
             }}
           />
 
-          <div className="flex items-center justify-end gap-2 min-w-0 px-4 h-full">
-            <Calendar className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2.5} />
+          <div className="flex items-center justify-end min-w-0 px-4 h-full" style={{ gap: footerGap }}>
+            <Calendar className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <span
               className="font-black uppercase tracking-wide text-white whitespace-nowrap shrink-0"
               style={footerTextStyle}

@@ -98,7 +98,6 @@ function PlayerEditModalBody({
   const [saving, setSaving] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const playerCardSize = useAppStore((s) => s.playerCardSize);
   const photoScalePercent = useAppStore((s) => s.photoScalePercent);
 
   const { backdropProps, panelProps, openFilePicker, clearPickingFile } =
@@ -248,7 +247,7 @@ function PlayerEditModalBody({
               jersey={jersey}
               number={number}
               name={name}
-              size={playerCardSize}
+              size={120}
               photoScale={photoScalePercent}
               isCaptain={isCaptain}
               variant={variant}
