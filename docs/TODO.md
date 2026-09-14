@@ -493,6 +493,18 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 35 — Responsive kart boyutlandırma ve footer ölçekleme
+
+- [x] `playerCardSize` kullanıcı slider’ı kaldırıldı; kart boyutu artık sahayı kaplayan konteynıra göre otomatik hesaplanıyor
+- [x] `src/lib/posterLayout.ts`’e `getAutoCardSize()` eklendi; hedef yükseklik ve genişlik oranları ile güvenli üst sınır (`computeSafeMaxCardSize`) birleştiriliyor
+- [x] `PitchPlayerLayer.tsx` artık `getAutoCardSize(metrics, maxInRow)` kullanıyor
+- [x] `BenchPanel.tsx` kendi panel genişliğini `ResizeObserver` ile ölçüp orantılı `benchCardSize` üretiyor
+- [x] `PlayerEditModal.tsx` önizlemesi için sabit 120px kullanılıyor; eski `playerCardSize` bağımlılığı kaldırıldı
+- [x] `MatchPoster.tsx` footer’daki saat/tarih/saha ikonları ve aralıkları `clamp(...)` ile viewport’a göre ölçekleniyor
+- [x] `PosterToolbar.tsx`’den “Oyuncu kartı” slider’ı ve ilgili state okumaları kaldırıldı
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud

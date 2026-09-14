@@ -261,12 +261,14 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 |---|---|---|
 | **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
 | **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
-| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy and `SlotRules` from `pitchInteraction.ts`; geometry-based drop targets from `dropTargets.ts` |
+| **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy and `SlotRules` from `pitchInteraction.ts`; geometry-based drop targets from `dropTargets.ts`; auto card sizing from `posterLayout.ts` |
 | **Hook** | `usePlayerDrag.ts` — shared pointer capture, threshold, portal offset, and release handling |
 | **Preview** | `PlayerDragPreview.tsx` — shared pitch + bench drag ghost |
 | **QA** | §1, §6, §9 |
 
-A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`:
+A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`.
+
+Card size is **auto-responsive**: `PitchPlayerLayer` computes `effectiveCardSize` via `getAutoCardSize(metrics, maxInRow)`, which derives the size from the pitch container (target ratios capped by a safe maximum). The manual player-card-size slider was removed so the same layout looks balanced on a 14" MacBook and a 27" monitor.
 - `swap` — green "DEĞİŞTİR" on both the dragged clone and the target card.
 - `sub-out` — red "ÇIKAN" on the dragged clone when moving to bench.
 - `sub-in` — green "GİREN" on the bench target card.
@@ -316,6 +318,7 @@ Substitutions are **drag-and-drop only**:
 - Both directions use geometry-based target detection (`src/lib/dropTargets.ts`) over shared `data-*` attributes to locate the drop target.
 - Dragged cards render a portal-based floating clone (`createPortal`) so they can leave the pitch container and reach the bench panel in both single-team and versus modes.
 - Bench cards are rendered with `PlayerAvatar` to match the pitch player cards, with a `GripVertical` drag handle.
+- Bench card size is measured from the panel itself via `ResizeObserver`, so it also responds to viewport / panel width changes.
 - Overlay semantics mirror football substitution boards:
   - `sub-in` (green ↑ `GİREN`) on the incoming bench card or dragged bench clone.
   - `sub-out` (red ↓ `ÇIKAN`) on the outgoing pitch slot or dragged pitch clone.
