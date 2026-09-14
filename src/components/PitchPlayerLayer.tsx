@@ -119,7 +119,6 @@ export function PitchPlayerLayer({
       const num = player?.number ?? i + 1;
       const dName = player?.name?.trim() || `Oyuncu ${i + 1}`;
       const isGk = layoutSlot?.isGoalkeeper ?? false;
-      const hasCustom = !isGk && pp?.x != null && pp?.y != null;
        const rawX = pp?.x ?? layoutSlot?.x ?? 50;
        const posX = isGk
          ? teamMode === "single" ? rawX : (layoutSlot?.x ?? 50)
@@ -147,7 +146,6 @@ export function PitchPlayerLayer({
           isCaptain={isCaptain}
           number={num}
           displayName={dName}
-          hasCustomPosition={hasCustom}
           positionX={posX}
           positionY={posY}
           isGoalkeeper={isGk}

@@ -295,7 +295,7 @@ export function BenchPanel() {
             className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200"
           >
             <Plus className="w-3.5 h-3.5" />
-            Yeni yedek
+            Yeni oyuncu
           </button>
         </div>
       </aside>

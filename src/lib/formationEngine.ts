@@ -93,14 +93,15 @@ function rowYLimits(role: FormationRowRole): {
 function layoutRowY(
   count: number,
   halfH: number,
-  role: FormationRowRole
+  role: FormationRowRole,
+  centerY = 50
 ): number[] {
-  if (count <= 1) return [50];
+  if (count <= 1) return [centerY];
 
   const { min, max } = rowYLimits(role);
   const minGap = halfH * 2 + 2.5;
   const span = (count - 1) * minGap;
-  const start = 50 - span / 2;
+  const start = centerY - span / 2;
 
   return Array.from({ length: count }, (_, i) =>
     clamp(start + (i / (count - 1)) * span, min, max)
@@ -175,7 +176,7 @@ export function computeFormationLayout(
   const rowXs = resolveRowDepths(formation, halfW);
   const rowYs = new Map<number, number[]>();
   formation.rows.forEach((row, rowIndex) => {
-    rowYs.set(rowIndex, layoutRowY(row.count, halfH, row.role));
+    rowYs.set(rowIndex, layoutRowY(row.count, halfH, row.role, 55));
   });
 
   const mutable: LayoutSlot[] = [];
@@ -219,10 +220,11 @@ export function computeFormationLayout(
 }
 
 const SINGLE_GK_Y = 86;
-const SINGLE_OUTFIELD_Y_MIN = 18;
-const SINGLE_OUTFIELD_Y_MAX = 72;
+const SINGLE_OUTFIELD_Y_MIN = 22;
+const SINGLE_OUTFIELD_Y_MAX = 74;
 const SINGLE_X_MIN = 8;
 const SINGLE_X_MAX = 92;
+const SINGLE_ROW_EXTRA_GAP = 4;
 
 export function getSinglePitchMetrics(poster: PosterMetrics): PosterMetrics {
   return {
@@ -268,7 +270,9 @@ function resolveSingleRowDepths(
 function layoutSingleRowX(count: number, halfW: number): number[] {
   if (count <= 1) return [50];
 
-  const minGap = halfW * 2 + ROW_GAP;
+  // Tekli modda kartlar dikey olarak üst üste bindiği için yatayda
+  // daha geniş aralıklarla dağıtarak "yığın" görünümünü önlüyoruz.
+  const minGap = halfW * 2 + ROW_GAP + SINGLE_ROW_EXTRA_GAP;
   const span = (count - 1) * minGap;
   const start = 50 - span / 2;
 

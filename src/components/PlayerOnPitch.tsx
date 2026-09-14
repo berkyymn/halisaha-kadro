@@ -40,7 +40,6 @@ interface PlayerOnPitchProps {
   isCaptain: boolean;
   number: number;
   displayName: string;
-  hasCustomPosition: boolean;
   positionX: number;
   positionY: number;
   isGoalkeeper: boolean;
@@ -71,7 +70,6 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   isCaptain,
   number,
   displayName,
-  hasCustomPosition,
   positionX,
   positionY,
   isGoalkeeper,
@@ -255,9 +253,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
           ? "z-50 cursor-grabbing"
           : isGoalkeeper
             ? "z-[25]"
-            : hasCustomPosition
-              ? "z-30"
-              : "z-20"
+            : "z-20"
       } ${isDragging ? "cursor-grabbing" : `cursor-${slotRules.cursor}`}`}
       style={{
         left: `${effectiveX}%`,

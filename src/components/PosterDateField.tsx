@@ -44,11 +44,11 @@ export function PosterDateField({
   };
 
   return (
-    <div className="relative inline-flex min-h-[1.75rem] min-w-[5.5rem] items-center">
+    <div className="relative flex h-full min-h-[1.75rem] min-w-[5.5rem] items-center">
       <button
         type="button"
         onClick={openPicker}
-        className="poster-editable poster-editable-footer-accent relative z-10 w-full cursor-pointer rounded px-1 text-center"
+        className="poster-editable poster-editable-footer-accent relative z-10 flex h-full w-full cursor-pointer items-center justify-center rounded px-1 text-center"
         style={style}
         title="Tarih seç"
         aria-label="Tarih seç"
