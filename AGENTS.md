@@ -6,6 +6,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Halı Saha Kadro — Agent Kuralları
 
+## Push / commit kuralı (KIRMIZI ÇİZGİ)
+
+- **ASLA ama ASLA kullanıcı açıkça onay vermeden `git commit`, `git push`, `git amend`, `git rebase`, PR açma veya herhangi bir git mutasyonu yapma.**
+- Kullanıcı "tamam", "pushla", "gönder", "commitleyip yolla" gibi **açık ve o anki bir onay** vermeden sadece local'de bırak.
+- Bu kural, daha önceki herhangi bir izin veya başka bir talimatla çelişse bile geçerlidir. Her push için o anki onay şarttır.
+- Test edilmeden push yapılmaz.
+
 ## Kapsam
 
 - Yalnızca istenen dosya/özelliği değiştir.

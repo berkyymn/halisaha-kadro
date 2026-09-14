@@ -496,11 +496,13 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 ## Phase 35 — Responsive kart boyutlandırma ve footer ölçekleme
 
 - [x] `playerCardSize` kullanıcı slider’ı kaldırıldı; kart boyutu artık sahayı kaplayan konteynıra göre otomatik hesaplanıyor
-- [x] `src/lib/posterLayout.ts`’e `getAutoCardSize()` eklendi; hedef yükseklik ve genişlik oranları ile güvenli üst sınır (`computeSafeMaxCardSize`) birleştiriliyor
-- [x] `PitchPlayerLayer.tsx` artık `getAutoCardSize(metrics, maxInRow)` kullanıyor
-- [x] `BenchPanel.tsx` kendi panel genişliğini `ResizeObserver` ile ölçüp orantılı `benchCardSize` üretiyor
+- [x] `src/lib/posterLayout.ts`’e `getAutoCardSize()` eklendi; tekli ve ikili görünüm için farklı oranlar kullanılıyor (ikili modda biraz daha büyük)
+- [x] `src/hooks/useAutoCardSize.ts` oluşturuldu; hem saha hem yedek kartları aynı boyutu kullanıyor
+- [x] `PitchPlayerLayer.tsx` ve `BenchPanel.tsx` `useAutoCardSize()` kullanıyor; yedekler artık oyuncu kartlarıyla aynı boyutta
+- [x] Dikey üst sınır eklendi; tekli görünümdeki üst üste binme önlendi
 - [x] `PlayerEditModal.tsx` önizlemesi için sabit 120px kullanılıyor; eski `playerCardSize` bağımlılığı kaldırıldı
 - [x] `MatchPoster.tsx` footer’daki saat/tarih/saha ikonları ve aralıkları `clamp(...)` ile viewport’a göre ölçekleniyor
+- [x] Footer’daki “SAAT:” ve “TARİH:” yazıları kaldırıldı; her üç bölüm kendi hücresinde ortalandı
 - [x] `PosterToolbar.tsx`’den “Oyuncu kartı” slider’ı ve ilgili state okumaları kaldırıldı
 
 ---

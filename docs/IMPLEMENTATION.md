@@ -263,12 +263,13 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 | **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
 | **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy and `SlotRules` from `pitchInteraction.ts`; geometry-based drop targets from `dropTargets.ts`; auto card sizing from `posterLayout.ts` |
 | **Hook** | `usePlayerDrag.ts` — shared pointer capture, threshold, portal offset, and release handling |
+| **Sizing** | `useAutoCardSize.ts` + `getAutoCardSize()` — responsive pitch/bench card size |
 | **Preview** | `PlayerDragPreview.tsx` — shared pitch + bench drag ghost |
 | **QA** | §1, §6, §9 |
 
 A pitch player card can be dragged to reposition, to swap with another pitch player, or to drop onto the bench panel / a bench card. During drag a portal clone follows the cursor. Swap targets and bench drop targets are highlighted with `PlayerDropOverlay`.
 
-Card size is **auto-responsive**: `PitchPlayerLayer` computes `effectiveCardSize` via `getAutoCardSize(metrics, maxInRow)`, which derives the size from the pitch container (target ratios capped by a safe maximum). The manual player-card-size slider was removed so the same layout looks balanced on a 14" MacBook and a 27" monitor.
+Card size is **auto-responsive**: `PitchPlayerLayer` and `BenchPanel` both use `useAutoCardSize()`, which calls `getAutoCardSize(metrics, maxInRow, teamMode)`. Single-team mode keeps cards compact to avoid vertical overlap in the portrait layout, while versus mode uses a slightly larger default. The manual player-card-size slider was removed so the layout scales with the browser window/tab on 13"-27" screens.
 - `swap` — green "DEĞİŞTİR" on both the dragged clone and the target card.
 - `sub-out` — red "ÇIKAN" on the dragged clone when moving to bench.
 - `sub-in` — green "GİREN" on the bench target card.
@@ -561,6 +562,7 @@ Follow this order:
 | `useModalBackdrop.ts` | Modal dismiss + file picker guards |
 | `usePosterMetrics.ts` | Poster container dimensions for layout |
 | `usePlayerDrag.ts` | Shared drag interaction hook for pitch/bench cards |
+| `useAutoCardSize.ts` | Responsive pitch + bench card size derived from poster container |
 | `useAppStore.ts` | Central Zustand store |
 
 ---
