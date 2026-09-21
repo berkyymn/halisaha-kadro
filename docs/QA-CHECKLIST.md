@@ -333,6 +333,52 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 20. SEO, meta tagler, favicon ve PWA manifest
+
+**Dosyalar:** `src/app/layout.tsx`, `public/manifest.json`, `public/icon.svg`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/og-image.png`, `public/robots.txt`, `public/sitemap.xml`
+
+| Adım | Beklenen |
+|------|----------|
+| `<title>` ve `<meta name="description">` | Doğru Türkçe metinler |
+| Open Graph / Twitter Card | `og-image.png` 1200x630, başlık/açıklama mevcut |
+| Favicon | `icon.svg` tarayıcı sekmesinde görünür |
+| PWA manifest | Tarayıcı "Install" teklif edebilir, tema rengi yeşil/siyah |
+| `robots.txt` ve `sitemap.xml` | Kök dizinde, arama motorlarına izin veriyor |
+| Apple touch icon | iOS cihazda kısayol ikonu olarak çalışır |
+
+- [x] Geçti
+
+---
+
+## 21. Analytics / kullanım ölçümü
+
+**Dosyalar:** `src/components/Analytics.tsx`, `src/app/layout.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| `NEXT_PUBLIC_GA_ID` boş/eksik | Analytics scripti yüklenmez, uygulama çalışır |
+| `NEXT_PUBLIC_GA_ID` tanımlı | GA4 `gtag` yüklenir, `page_title` ve `page_location` gönderilir |
+| Çerez / izin yönetimi yok (şimdilik) | GA4 varsayılan `gtag` davranışı kullanılır; ileride izin modalı eklenebilir |
+
+- [x] Geçti
+
+---
+
+## 22. Performans ve erişilebilirlik iyileştirmeleri
+
+**Dosyalar:** `src/components/AppShell.tsx`, `src/hooks/useModalBackdrop.ts`, `src/components/PlayerOnPitch.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| İlk bundle | `html-to-image` ilk yüklemede çekilmez, sadece "Poster İndir"e tıklanınca indirilir |
+| Logo designer modal | `next/dynamic` ile lazy load edilir, ilk render’a dahil olmaz |
+| Modal Escape tuşu | Açık modal Escape ile kapanır (`busy` durumunda kapanmaz) |
+| Oyuncu kartı | Ekran okuyucu için `role="button"` ve `aria-label` içerir |
+
+- [x] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -340,8 +386,8 @@ npm run build
 npm run lint
 ```
 
-- [ ] Build geçti
-- [ ] Lint geçti
+- [x] Build geçti
+- [x] Lint geçti
 
 ---
 
@@ -360,6 +406,7 @@ npm run lint
 | 2026-09-14 | Misafir depolama: localStorage yerine IndexedDB tabanlı Zustand persist; eski localStorage verisi otomatik migrate; çıkışta IndexedDB temizleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı/depolama doğrulaması bekliyor |
 | 2026-09-14 | Depolama ve bulut sync güvenliği: IndexedDB setItem localStorage yedeği tutuyor; ilk bulut çekme bitmeden push engelleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
+| 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

@@ -1,24 +1,23 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import { globalIgnores } from "eslint/config";
+import next from "eslint-config-next";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
+/** @type {import('eslint').Linter.Config[]} */
+const config = [
+  globalIgnores([
+    ".next/**",
+    "dist/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "*.min.js",
+  ]),
+  ...next,
   {
     rules: {
       // Data URLs and user uploads require native img, not next/image.
       "@next/next/no-img-element": "off",
     },
   },
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
+];
 
-export default eslintConfig;
+export default config;

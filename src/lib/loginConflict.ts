@@ -2,6 +2,7 @@ import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import { DEFAULT_AWAY_SHORT_NAME, DEFAULT_HOME_SHORT_NAME } from "@/lib/defaults";
 import { DEFAULT_POSTER_THEME } from "@/lib/posterThemes";
 import { getDefaultFormationId } from "@/lib/formations";
+import type { JerseyConfig, TeamLogo } from "@/types";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 export type ConflictSummary = {
@@ -68,50 +69,74 @@ function normalizePlayerIdentity(
     });
 }
 
+const DEFAULT_JERSEY = {
+  primaryColor: "#374151",
+  secondaryColor: "#111827",
+  style: "solid" as const,
+  numberColor: "#ffffff",
+};
+
+const DEFAULT_LOGO = {
+  mode: "generated" as const,
+  presetId: undefined as string | undefined,
+  initials: "?",
+  teamName: "",
+  primaryColor: "#374151",
+  secondaryColor: "#111827",
+  accentColor: "#e5e7eb",
+  icon: "none" as const,
+  showInitials: false,
+  showTeamName: false,
+  showIcon: false,
+};
+
 function normalizeTeam(snapshot: PosterSnapshot, team: "home" | "away") {
   const config = team === "home" ? snapshot.homeTeam : snapshot.awayTeam;
+  const jersey = (config.jersey ?? {}) as Partial<JerseyConfig>;
+  const logo = (config.logo ?? {}) as Partial<TeamLogo>;
   return {
-    name: config.name,
-    shortName: config.shortName,
-    atmosphereColor: config.atmosphereColor,
+    name: config.name ?? "",
+    shortName: config.shortName ?? "",
+    atmosphereColor: config.atmosphereColor ?? "#000000",
     jersey: {
-      primaryColor: config.jersey.primaryColor,
-      secondaryColor: config.jersey.secondaryColor,
-      style: config.jersey.style,
-      numberColor: config.jersey.numberColor,
+      primaryColor: jersey.primaryColor ?? DEFAULT_JERSEY.primaryColor,
+      secondaryColor: jersey.secondaryColor ?? DEFAULT_JERSEY.secondaryColor,
+      style: jersey.style ?? DEFAULT_JERSEY.style,
+      numberColor: jersey.numberColor ?? DEFAULT_JERSEY.numberColor,
     },
     logo: {
-      mode: config.logo.mode,
-      presetId: config.logo.presetId,
-      initials: config.logo.initials,
-      teamName: config.logo.teamName,
-      primaryColor: config.logo.primaryColor,
-      secondaryColor: config.logo.secondaryColor,
-      accentColor: config.logo.accentColor,
-      icon: config.logo.icon,
-      showInitials: config.logo.showInitials,
-      showTeamName: config.logo.showTeamName,
-      showIcon: config.logo.showIcon,
+      mode: logo.mode ?? DEFAULT_LOGO.mode,
+      presetId: logo.presetId ?? DEFAULT_LOGO.presetId,
+      initials: logo.initials ?? DEFAULT_LOGO.initials,
+      teamName: logo.teamName ?? DEFAULT_LOGO.teamName,
+      primaryColor: logo.primaryColor ?? DEFAULT_LOGO.primaryColor,
+      secondaryColor: logo.secondaryColor ?? DEFAULT_LOGO.secondaryColor,
+      accentColor: logo.accentColor ?? DEFAULT_LOGO.accentColor,
+      icon: logo.icon ?? DEFAULT_LOGO.icon,
+      showInitials: logo.showInitials ?? DEFAULT_LOGO.showInitials,
+      showTeamName: logo.showTeamName ?? DEFAULT_LOGO.showTeamName,
+      showIcon: logo.showIcon ?? DEFAULT_LOGO.showIcon,
     },
     players: normalizePlayerIdentity(snapshot, team),
   };
 }
 
 function normalizeMatchInfo(snapshot: PosterSnapshot) {
+  const matchInfo = snapshot.matchInfo ?? ({} as Partial<PosterSnapshot["matchInfo"]>);
   return {
-    titleLine1: snapshot.matchInfo.titleLine1,
-    titleLine2: snapshot.matchInfo.titleLine2,
-    titleSubtitle: snapshot.matchInfo.titleSubtitle,
-    venue: snapshot.matchInfo.venue,
-    time: snapshot.matchInfo.time,
-    date: snapshot.matchInfo.date,
-    titleStyleId: snapshot.matchInfo.titleStyleId,
-    titleEffectId: snapshot.matchInfo.titleEffectId,
-    titleFontSize: snapshot.matchInfo.titleFontSize,
-    titleLetterSpacing: snapshot.matchInfo.titleLetterSpacing,
-    titleShadow: snapshot.matchInfo.titleShadow,
-    titleRotation: snapshot.matchInfo.titleRotation,
-    titleMaxWidth: snapshot.matchInfo.titleMaxWidth,
+    titleLine1: matchInfo.titleLine1 ?? "",
+    titleLine2: matchInfo.titleLine2 ?? "",
+    titleSubtitle: matchInfo.titleSubtitle ?? "",
+    venue: matchInfo.venue ?? "",
+    time: matchInfo.time ?? "",
+    date: matchInfo.date ?? "",
+    titleStyleId: matchInfo.titleStyleId ?? "cinematic",
+    titleEffectId: matchInfo.titleEffectId ?? "normal",
+    titleFontSize: matchInfo.titleFontSize ?? 64,
+    titleLetterSpacing: matchInfo.titleLetterSpacing ?? 0,
+    titleShadow: matchInfo.titleShadow ?? 0,
+    titleRotation: matchInfo.titleRotation ?? 0,
+    titleMaxWidth: matchInfo.titleMaxWidth ?? 100,
   };
 }
 

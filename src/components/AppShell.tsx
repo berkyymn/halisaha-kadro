@@ -3,11 +3,15 @@
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
-import { toPng } from "html-to-image";
+
 import { useAppStore } from "@/store/useAppStore";
 import { useGuestTabSync } from "@/hooks/useGuestTabSync";
 import { BenchPanel } from "./BenchPanel";
-import { LogoDesignerModal } from "./LogoDesignerModal";
+const LogoDesignerModal = dynamic(
+  () =>
+    import("./LogoDesignerModal").then((module) => module.LogoDesignerModal),
+  { ssr: false }
+);
 import { MatchPoster } from "./MatchPoster";
 import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
@@ -82,6 +86,7 @@ export function AppShell() {
     if (!el) return;
     setExporting(true);
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement("a");
       link.download = "halisaha-kadro.png";

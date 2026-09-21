@@ -27,9 +27,18 @@ export function useModalBackdrop({
         pickingFileRef.current = false;
       }, 400);
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) {
+        onClose();
+      }
+    };
     window.addEventListener("focus", clearPickingFile);
-    return () => window.removeEventListener("focus", clearPickingFile);
-  }, [open]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("focus", clearPickingFile);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, busy, onClose]);
 
   const openFilePicker = useCallback((input: HTMLInputElement | null) => {
     pickingFileRef.current = true;
