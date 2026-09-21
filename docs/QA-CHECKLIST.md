@@ -352,7 +352,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 21. Analytics / kullanım ölçümü
 
-**Dosyalar:** `src/components/Analytics.tsx`, `src/app/layout.tsx`
+**Dosyalar:** `src/app/layout.tsx`, `src/lib/analytics.ts`
 
 | Adım | Beklenen |
 |------|----------|
@@ -381,16 +381,34 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 23. Analytics özel eventleri
 
-**Dosyalar:** `src/lib/analytics.ts`, `src/components/PlayerEditModal.tsx`, `src/components/BenchPanel.tsx`, `src/components/AppShell.tsx`
+**Dosyalar:** `src/lib/analytics.ts`, `src/store/useAppStore.ts`, `src/components/AppShell.tsx`, `src/components/PlayerEditModal.tsx`, `src/components/PosterTitleModal.tsx`, `src/components/MatchPoster.tsx`, `src/components/LogoDesignerModal.tsx`, `src/components/JerseyControls.tsx`, `src/components/UserAuthButton.tsx`, `src/components/AuthModal.tsx`
 
 | Adım | Beklenen |
 |------|----------|
-| Oyuncuya ilk kez fotoğraf ekle | `player_photo_added` eventi `collect` isteğinde görünür |
-| Mevcut oyuncunun fotoğrafını değiştir | `player_photo_changed` eventi görünür |
-| Arka plan kaldır | `background_removed` eventi görünür |
-| Yedek havuzuna yeni oyuncu ekle | `bench_player_added` eventi görünür |
-| Yedek oyuncuyu sahaya sürükle-bırak | `substitute_entered` eventi görünür |
-| Poster indir | `poster_downloaded` eventi görünür |
+| Uygulama açılışı | `page_view` otomatik gönderilir |
+| Misafir oturumu sıfırla | `guest_session_reset` |
+| Poster indir | `poster_downloaded` |
+| Tema değiştir | `poster_theme_changed` |
+| Format (6v6/7v7/8v8) değiştir | `squad_size_changed` |
+| Diziliş değiştir | `formation_changed` |
+| Tek takım ↔ İki takım değiştir | `team_mode_changed` |
+| Oyuncu modalında kaydet | `player_edited` (lineup) / `bench_player_edited` (bench) |
+| Kaptan yap / kaldır | `captain_set` / `captain_unset` |
+| İlk fotoğraf ekle / fotoğraf değiştir | `player_photo_added` / `player_photo_changed` |
+| Arka plan kaldır | `background_removed` |
+| Saha kartını sürükle-bırak konumlandır | `player_repositioned` |
+| İki saha oyuncusu swap | `players_swapped` |
+| Saha oyuncusunu yedeğe gönder | `player_sent_to_bench` |
+| Yedek oyuncuyu sahaya al | `substitute_entered` |
+| Yedek havuzuna ekle / sil | `bench_player_added` / `bench_player_removed` |
+| Logo tasarımcısını aç | `logo_designer_opened` |
+| Hazır logo seç / yükle / rastgele / oluştur | `logo_preset_selected` / `logo_uploaded` / `logo_randomized` / `logo_generated` |
+| Takım adı değiştir | `team_name_changed` |
+| Forma değiştir | `jersey_changed` |
+| Logo boyutu değiştir | `logo_display_size_changed` |
+| Başlık düzenle / stil / efekt | `title_edited` / `title_style_changed` / `title_effect_changed` |
+| Saha adı / saat / tarih değiştir | `venue_changed` / `match_date_changed` |
+| Giriş yap / çıkış yap | `sign_in_completed` / `sign_out` |
 | GA4 kapalıyken (`NEXT_PUBLIC_GA_ID` boş) | Uygulama çalışmaya devam eder, hata vermez |
 
 - [x] Geçti
@@ -425,7 +443,7 @@ npm run lint
 | 2026-09-14 | Depolama ve bulut sync güvenliği: IndexedDB setItem localStorage yedeği tutuyor; ilk bulut çekme bitmeden push engelleniyor | #18 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
-| 2026-09-14 | GA4 özel eventleri: `player_photo_added`, `player_photo_changed`, `background_removed`, `bench_player_added`, `substitute_entered`, `poster_downloaded` | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

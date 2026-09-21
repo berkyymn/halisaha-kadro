@@ -47,6 +47,8 @@ interface PlayerEditModalProps {
   showCaptainToggle?: boolean;
   onRemoveFromBench?: () => void;
   defaultPlayerName?: string;
+  source?: "lineup" | "bench";
+  team?: "home" | "away";
 }
 
 export function PlayerEditModal({ open, ...props }: PlayerEditModalProps) {
@@ -71,6 +73,8 @@ function PlayerEditModalBody({
   showCaptainToggle = true,
   onRemoveFromBench,
   defaultPlayerName,
+  source = "lineup",
+  team,
 }: Omit<PlayerEditModalProps, "open">) {
   const [name, setName] = useState(
     () =>
@@ -206,6 +210,9 @@ function PlayerEditModalBody({
         photoCrop: crop,
         clearPhoto: !finalPhoto && !finalCutout,
       });
+      if (source === "lineup") {
+        trackEvent("player_edited", { source, team: team ?? "" });
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -292,7 +299,12 @@ function PlayerEditModalBody({
               {showCaptainToggle && (
                 <button
                   type="button"
-                  onClick={onToggleCaptain}
+                  onClick={() => {
+                    trackEvent(isCaptain ? "captain_unset" : "captain_set", {
+                      team: team ?? "",
+                    });
+                    onToggleCaptain();
+                  }}
                   className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium transition-colors ${
                     isCaptain
                       ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/40"

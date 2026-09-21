@@ -1,6 +1,7 @@
 "use client";
 
 import type { JerseyConfig, JerseyStyle } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 import {
   JERSEY_STYLE_OPTIONS,
   JERSEY_TEXT_COLORS,
@@ -53,8 +54,10 @@ export function JerseyControls({
   onChange: (jersey: JerseyConfig) => void;
   compact?: boolean;
 }) {
-  const update = (patch: Partial<JerseyConfig>) =>
+  const update = (patch: Partial<JerseyConfig>) => {
+    trackEvent("jersey_changed");
     onChange({ ...jersey, ...patch });
+  };
 
   const needsSecondary =
     jersey.style !== "solid";

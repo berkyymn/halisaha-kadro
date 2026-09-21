@@ -8,6 +8,7 @@ export function PosterEditableText({
   style,
   align = "center",
   variant = "default",
+  onBlur,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -16,6 +17,7 @@ export function PosterEditableText({
   style?: React.CSSProperties;
   align?: "left" | "center" | "right";
   variant?: "default" | "title" | "footer" | "footerAccent";
+  onBlur?: () => void;
 }) {
   const alignClass =
     align === "left"
@@ -39,6 +41,7 @@ export function PosterEditableText({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
       className={`poster-editable ${variantClass} ${alignClass} ${className}`}
       style={style}
       spellCheck={false}

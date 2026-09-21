@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
+import { trackEvent } from "@/lib/analytics";
 import { getPosterThemeConfig, normalizePosterTheme } from "@/lib/posterThemes";
 import {
   DEFAULT_TITLE_STYLE,
@@ -97,6 +98,7 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
   const paletteMismatch = draft.titleStyleId !== themeStyleId;
 
   const handleSave = () => {
+    trackEvent("title_edited");
     setMatchInfo({
       titleLine1: (draft.titleLine1 ?? "").trim() || "DERBİ",
       titleLine2: (draft.titleLine2 ?? "").trim() || "GECESİ",
@@ -218,7 +220,10 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
               {paletteMismatch && (
                 <button
                   type="button"
-                  onClick={() => patch({ titleStyleId: themeStyleId })}
+                  onClick={() => {
+                    trackEvent("title_style_changed", { style_id: themeStyleId });
+                    patch({ titleStyleId: themeStyleId });
+                  }}
                   className="text-[10px] font-semibold text-green-500 hover:text-green-400 whitespace-nowrap"
                 >
                   Poster temasına uy
@@ -230,7 +235,10 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
                 <button
                   key={preset.id}
                   type="button"
-                  onClick={() => patch({ titleStyleId: preset.id })}
+                  onClick={() => {
+                    trackEvent("title_style_changed", { style_id: preset.id });
+                    patch({ titleStyleId: preset.id });
+                  }}
                   className={`rounded-lg px-2 py-2 text-left border transition-colors ${
                     draft.titleStyleId === preset.id
                       ? "border-green-500 bg-green-950/40"
@@ -260,9 +268,12 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
                 <button
                   key={preset.id}
                   type="button"
-                  onClick={() =>
-                    patch({ titleEffectId: preset.id as PosterTitleEffectId })
-                  }
+                  onClick={() => {
+                    trackEvent("title_effect_changed", {
+                      effect_id: preset.id,
+                    });
+                    patch({ titleEffectId: preset.id as PosterTitleEffectId });
+                  }}
                   className={`h-8 px-2.5 rounded-md text-[10px] font-semibold transition-colors ${
                     draft.titleEffectId === preset.id
                       ? "bg-green-600 text-white"

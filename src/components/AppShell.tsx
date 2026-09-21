@@ -107,7 +107,10 @@ export function AppShell() {
   );
 
   const handleLogoClick = useCallback(
-    (team: "home" | "away") => setLogoDesignerTeam(team),
+    (team: "home" | "away") => {
+      trackEvent("logo_designer_opened", { team });
+      setLogoDesignerTeam(team);
+    },
     [setLogoDesignerTeam]
   );
 
@@ -141,7 +144,10 @@ export function AppShell() {
           <div className="hidden sm:block h-5 w-px bg-zinc-800" />
           <button
             type="button"
-            onClick={resetGuestSession}
+            onClick={() => {
+              trackEvent("guest_session_reset");
+              resetGuestSession();
+            }}
             className="p-1.5 text-zinc-500 hover:text-white"
             title="Posteri sıfırla"
           >
@@ -190,6 +196,8 @@ export function AppShell() {
             setSlotPlayer(editing.team, editing.slotIndex, data);
           }}
           variant={editing.team === "home" ? "light" : "dark"}
+          source="lineup"
+          team={editing.team}
         />
       )}
 

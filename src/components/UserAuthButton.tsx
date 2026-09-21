@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 import { ModalShell } from "@/components/ModalShell";
 
 export function UserAuthButton() {
@@ -60,7 +61,10 @@ export function UserAuthButton() {
         </span>
         <button
           type="button"
-          onClick={openAuthModal}
+          onClick={() => {
+            trackEvent("auth_modal_opened");
+            openAuthModal();
+          }}
           className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-zinc-600 bg-zinc-800 hover:bg-zinc-700 hover:border-zinc-500 text-[11px] font-semibold text-white shrink-0"
           title="Hesabınla giriş yap, verilerin bulutta saklansın"
         >
@@ -88,6 +92,7 @@ export function UserAuthButton() {
     setSigningOut(true);
     try {
       await signOut();
+      trackEvent("sign_out");
     } catch {
       setSigningOut(false);
     }

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage, type PersistOptions } from "zustand/middleware";
+import { trackEvent } from "@/lib/analytics";
 import {
   getDefaultFormationId,
   getFormationById,
@@ -356,7 +357,10 @@ export const useAppStore = create<AppStore>()(
         }));
       },
 
-      setTeamMode: (teamMode) => set({ teamMode }),
+      setTeamMode: (teamMode) => {
+        trackEvent("team_mode_changed", { team_mode: teamMode });
+        set({ teamMode });
+      },
 
       setMatchInfo: (info) =>
         set((s) => ({
@@ -364,6 +368,7 @@ export const useAppStore = create<AppStore>()(
         })),
 
       setSquadSize: (size) => {
+        trackEvent("squad_size_changed", { squad_size: size });
         const formationId = getDefaultFormationId(size);
         set((s) => {
           const homeFilled = fillEmptyRosterSlots(
@@ -411,11 +416,13 @@ export const useAppStore = create<AppStore>()(
       },
 
       setHomeFormation: (id) => {
+        trackEvent("formation_changed", { team: "home", formation_id: id });
         set({ homeFormationId: id });
         get().applyFormations({ resetHome: true });
       },
 
       setAwayFormation: (id) => {
+        trackEvent("formation_changed", { team: "away", formation_id: id });
         set({ awayFormationId: id });
         get().applyFormations({ resetAway: true });
       },
@@ -555,7 +562,8 @@ export const useAppStore = create<AppStore>()(
       applyCompressedPlayers: (players, savedPlayers) =>
         set({ players, savedPlayers }),
 
-      movePitchPlayer: (team, slotIndex, x, y) =>
+      movePitchPlayer: (team, slotIndex, x, y) => {
+        trackEvent("player_repositioned", { team, slot_index: slotIndex });
         set((s) => {
           const key = s.teamMode === "single" ? "singlePitchPlayers" : "pitchPlayers";
           const current = s[key];
@@ -581,7 +589,8 @@ export const useAppStore = create<AppStore>()(
                 },
               ];
           return { [key]: positions };
-        }),
+        });
+      },
 
       clearPitchPlayerPosition: (team, slotIndex) =>
         set((s) => {
@@ -677,10 +686,13 @@ export const useAppStore = create<AppStore>()(
           ),
         }),
 
-      setTeamLogoDisplaySize: (size) =>
-        set({ teamLogoDisplaySize: clampLogoDisplaySize(size) }),
+      setTeamLogoDisplaySize: (size) => {
+        trackEvent("logo_display_size_changed", { size });
+        set({ teamLogoDisplaySize: clampLogoDisplaySize(size) });
+      },
 
       setPosterTheme: (theme) => {
+        trackEvent("poster_theme_changed", { theme_id: theme });
         const posterTheme = normalizePosterTheme(theme);
         set((s) => ({
           posterTheme,
@@ -694,6 +706,7 @@ export const useAppStore = create<AppStore>()(
       setLogoDesignerTeam: (team) => set({ logoDesignerTeam: team }),
 
       addPlayerToBench: (data) => {
+        trackEvent("bench_player_added");
         const playerId = crypto.randomUUID();
         const count = get().benchPlayerIds.length;
         const player: Player = {
@@ -716,6 +729,7 @@ export const useAppStore = create<AppStore>()(
         if (!s.benchPlayerIds.includes(playerId)) return;
         const existing = s.players[playerId] ?? s.savedPlayers[playerId];
         if (!existing) return;
+        trackEvent("bench_player_edited");
 
         const patch: Partial<Player> = {
           ...(data.name !== undefined ? { name: data.name } : {}),
@@ -737,6 +751,7 @@ export const useAppStore = create<AppStore>()(
 
       removeFromBench: (playerId) => {
         if (!playerId) return;
+        trackEvent("bench_player_removed");
 
         set((state) => {
           if (!state.benchPlayerIds.includes(playerId)) return state;
@@ -777,6 +792,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       assignBenchToSlot: (team, slotIndex, benchPlayerId) => {
+        trackEvent("substitute_entered", { team, slot_index: slotIndex });
         set((state) => {
           if (!state.benchPlayerIds.includes(benchPlayerId)) return state;
 
@@ -846,6 +862,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       moveSlotToBench: (team, slotIndex) => {
+        trackEvent("player_sent_to_bench", { team, slot_index: slotIndex });
         set((state) => {
           const key = team === "home" ? "homeTeam" : "awayTeam";
           const t = state[key];
@@ -901,6 +918,11 @@ export const useAppStore = create<AppStore>()(
       setDragIntent: (intent) => set({ dragIntent: intent }),
 
       swapPlayers: (team1, slotIndex1, team2, slotIndex2) => {
+        trackEvent("players_swapped", {
+          team_a: team1,
+          team_b: team2,
+          cross_team: team1 !== team2,
+        });
         set((state) => {
           if (team1 === team2 && slotIndex1 === slotIndex2) return {};
 

@@ -9,6 +9,7 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/app";
+import { trackEvent } from "@/lib/analytics";
 import { mapAuthError } from "@/lib/cloudPoster";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +58,7 @@ function AuthModalBody({
     try {
       const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, email.trim(), password);
+      trackEvent("sign_in_completed", { method: "email", is_new_user: false });
       onClose();
     } catch (err) {
       setError(mapAuthError(err));
@@ -83,6 +85,7 @@ function AuthModalBody({
     try {
       const auth = getFirebaseAuth();
       await createUserWithEmailAndPassword(auth, email.trim(), password);
+      trackEvent("sign_in_completed", { method: "email", is_new_user: true });
       setMessage("Kayıt tamam. Giriş yapıldı, verilerin buluta kaydedilecek.");
       onClose();
     } catch (err) {
@@ -100,6 +103,7 @@ function AuthModalBody({
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, provider);
+      trackEvent("sign_in_completed", { method: "google", is_new_user: false });
       onClose();
     } catch (err) {
       setError(mapAuthError(err));

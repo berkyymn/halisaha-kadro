@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar, Clock, MapPin } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import { useAppStore } from "@/store/useAppStore";
 import { PitchPlayerLayer } from "./PitchPlayerLayer";
 import { PosterDateField } from "./PosterDateField";
@@ -105,14 +106,18 @@ function PosterFooter({
   time,
   date,
   onVenueChange,
+  onVenueBlur,
   onTimeChange,
+  onTimeBlur,
   onDateChange,
 }: {
   venue: string;
   time: string;
   date: string;
   onVenueChange: (v: string) => void;
+  onVenueBlur?: () => void;
   onTimeChange: (v: string) => void;
+  onTimeBlur?: () => void;
   onDateChange: (v: string) => void;
 }) {
   const footerTextStyle = {
@@ -151,6 +156,7 @@ function PosterFooter({
             <PosterEditableText
               value={venue}
               onChange={onVenueChange}
+              onBlur={onVenueBlur}
               placeholder="SAHA ADI"
               variant="footer"
               align="center"
@@ -172,6 +178,7 @@ function PosterFooter({
             <PosterEditableText
               value={time}
               onChange={onTimeChange}
+              onBlur={onTimeBlur}
               placeholder="21:00"
               variant="footerAccent"
               align="center"
@@ -258,8 +265,13 @@ export function MatchPoster({
           time={matchInfo.time}
           date={matchInfo.date}
           onVenueChange={(venue) => setMatchInfo({ venue })}
+          onVenueBlur={() => trackEvent("venue_changed")}
           onTimeChange={(time) => setMatchInfo({ time })}
-          onDateChange={(date) => setMatchInfo({ date })}
+          onTimeBlur={() => trackEvent("match_date_changed", { field: "time" })}
+          onDateChange={(date) => {
+            trackEvent("match_date_changed", { field: "date" });
+            setMatchInfo({ date });
+          }}
         />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Palette, RotateCcw, Shirt, X } from "lucide-react";
 import type { JerseyConfig, TeamLogo } from "@/types";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
+import { trackEvent } from "@/lib/analytics";
 import { LogoDesignerCustomPanel } from "./LogoDesignerCustomPanel";
 import { LogoDesignerPresetPanel } from "./LogoDesignerPresetPanel";
 import { TeamBrandingPreview } from "./TeamBrandingPreview";
@@ -61,6 +62,7 @@ export function LogoDesignerModal({
     });
 
   const handlePresetSelect = (preset: LogoImagePreset) => {
+    trackEvent("logo_preset_selected", { preset_id: preset.id });
     onLogoChange(applyLogoImagePreset(preset, logo, shortName));
     onJerseyChange({ ...preset.jersey });
     setPanel("logo");
@@ -75,6 +77,7 @@ export function LogoDesignerModal({
         quality: 0.8,
         kind: "photo",
       });
+      trackEvent("logo_uploaded");
       onLogoChange({ ...logo, mode: "upload", presetId: undefined, imageUrl });
       setPanel("logo");
     } catch {
@@ -99,6 +102,7 @@ export function LogoDesignerModal({
   const startCustomDesign = () => {
     setPanel("custom");
     if (logo.mode !== "generated") {
+      trackEvent("logo_generated");
       onLogoChange({
         ...logo,
         mode: "generated",
@@ -144,6 +148,7 @@ export function LogoDesignerModal({
             <input
               value={shortName}
               onChange={(e) => onTeamNameChange(e.target.value.toUpperCase())}
+              onBlur={() => trackEvent("team_name_changed", { team: teamSide })}
               placeholder={teamSide === "home" ? "TAKIM A" : "TAKIM B"}
               className="flex-1 min-w-0 h-9 bg-zinc-800 border border-zinc-600 rounded-lg px-2.5 text-sm text-white font-bold uppercase tracking-wide focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/30"
             />
@@ -236,9 +241,10 @@ export function LogoDesignerModal({
               logo={logo}
               shortName={shortName}
               onLogoChange={onLogoChange}
-              onRandomize={() =>
-                onLogoChange(randomizeTeamLogo(logo, shortName))
-              }
+              onRandomize={() => {
+                trackEvent("logo_randomized");
+                onLogoChange(randomizeTeamLogo(logo, shortName));
+              }}
             />
           )}
           {panel === "jersey" && (
