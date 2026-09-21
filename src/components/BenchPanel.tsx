@@ -18,6 +18,7 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import { PlayerDragPreview } from "./PlayerDragPreview";
 import type { Player } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 import { findPitchSlotTarget } from "@/lib/dropTargets";
 import {
   isIncomingBenchSub,
@@ -182,6 +183,10 @@ export function BenchPanel() {
       const target = findPitchSlotTarget(clientX, clientY);
       if (target) {
         assignBenchToSlot(target.team, target.slotIndex, benchId);
+        trackEvent("substitute_entered", {
+          team: target.team,
+          slot_index: target.slotIndex,
+        });
       } else if (!moved) {
         setEditingBenchId(benchId);
       }
@@ -290,6 +295,7 @@ export function BenchPanel() {
             onClick={() => {
               const id = addPlayerToBench({});
               setEditingBenchId(id);
+              trackEvent("bench_player_added");
             }}
             className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200"
           >

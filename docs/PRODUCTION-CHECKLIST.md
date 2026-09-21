@@ -18,7 +18,7 @@ Durumlar: `✅ Tamamlandı`, `🔄 Devam ediyor`, `⏳ Beklemede`, `❌ Blokta`.
 | 8 | Paket D: Firebase Hosting deploy ve domain/SSL | 🔄 Devam ediyor | `firebase.json` hosting + rewrite/header yapılandırıldı; deploy kullanıcı onayı bekliyor |
 | 9 | Paket D: SEO / meta tag / favicon / PWA manifest | ✅ Tamamlandı | `app/layout.tsx` meta/OG/Twitter, `public/manifest.json`, ikonlar, `robots.txt`, `sitemap.xml` |
 | 10 | Paket D: Hata takibi (Sentry vb.) | ⏳ Beklemede | Değerlendirme aşamasında; opsiyonel |
-| 11 | Paket D: Analytics / kullanım ölçümü | ✅ Tamamlandı | `Analytics.tsx` GA4; `NEXT_PUBLIC_GA_ID` ile etkinleşir |
+| 11 | Paket D: Analytics / kullanım ölçümü | ✅ Tamamlandı | GA4 page view; özel eventler: fotoğraf ekleme/değiştirme, arka plan kaldırma, yedek/saha değişimi, poster indirme |
 | 12 | Paket D: Erişilebilirlik ve duyarlılık kontrolü | 🔄 Devam ediyor | Modal Escape kapatma, oyuncu kartları `aria-label` eklendi; devam ediyor |
 | 13 | Paket D: Yasal / Gizlilik politikası ve KVKK uyumu | ⏳ Beklemede | Gerekirse sayfa ekle |
 

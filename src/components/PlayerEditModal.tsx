@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import { blobUrlToDataUrl, fileToDataUrl } from "@/lib/fileToDataUrl";
 import {
   compressDataUrl,
@@ -111,6 +112,9 @@ function PlayerEditModalBody({
 
   const handleFile = async (file: File) => {
     clearPickingFile();
+    const hadPhotoBefore = Boolean(
+      player?.photoSource || player?.photoUrl
+    );
     const url = await fileToDataUrl(file);
     setPhotoSource(url);
     setCutoutUrl(null);
@@ -118,6 +122,7 @@ function PlayerEditModalBody({
     setCrop(DEFAULT_CROP);
     setBgError(null);
     setBgProgress(null);
+    trackEvent(hadPhotoBefore ? "player_photo_changed" : "player_photo_added");
   };
 
   const handleRemoveBg = async () => {
@@ -145,6 +150,7 @@ function PlayerEditModalBody({
       const compressed = await compressDataUrl(dataUrl, { kind: "cutout" });
       setCutoutUrl(compressed);
       setBgProgress(null);
+      trackEvent("background_removed");
     } catch (err) {
       console.error("Background removal failed:", err);
       setBgError(

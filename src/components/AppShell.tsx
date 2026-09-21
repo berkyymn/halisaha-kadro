@@ -6,6 +6,7 @@ import { Download, RotateCcw } from "lucide-react";
 
 import { useAppStore } from "@/store/useAppStore";
 import { useGuestTabSync } from "@/hooks/useGuestTabSync";
+import { trackEvent } from "@/lib/analytics";
 import { BenchPanel } from "./BenchPanel";
 const LogoDesignerModal = dynamic(
   () =>
@@ -92,6 +93,7 @@ export function AppShell() {
       link.download = "halisaha-kadro.png";
       link.href = dataUrl;
       link.click();
+      trackEvent("poster_downloaded");
     } catch {
       alert("Görsel indirilemedi.");
     } finally {
