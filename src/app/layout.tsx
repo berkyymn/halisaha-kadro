@@ -15,8 +15,8 @@ const bebas = Bebas_Neue({
   subsets: ["latin"],
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://halisahakadro.app";
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://halisahakadro.app";
+const siteUrl = /^https?:\/\//i.test(rawSiteUrl) ? rawSiteUrl : `https://${rawSiteUrl}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
