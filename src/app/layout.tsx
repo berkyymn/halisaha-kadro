@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist } from "next/font/google";
 import { AppProviders } from "@/components/AppProviders";
-import { Analytics } from "@/components/Analytics";
 import "./globals.css";
 
 const geist = Geist({
@@ -15,8 +14,13 @@ const bebas = Bebas_Neue({
   subsets: ["latin"],
 });
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://halisahakadro.app";
-const siteUrl = /^https?:\/\//i.test(rawSiteUrl) ? rawSiteUrl : `https://${rawSiteUrl}`;
+const rawSiteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://halisahakadro.app";
+const siteUrl = /^https?:\/\//i.test(rawSiteUrl)
+  ? rawSiteUrl
+  : `https://${rawSiteUrl}`;
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -97,9 +101,31 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="tr" className={`${geist.variable} ${bebas.variable} h-full`}>
+      <head>
+        {GA_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}', {
+                    page_title: document.title,
+                    page_location: window.location.href,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
+      </head>
       <body className="h-full antialiased font-sans overflow-hidden">
         <AppProviders>{children}</AppProviders>
-        <Analytics />
       </body>
     </html>
   );
