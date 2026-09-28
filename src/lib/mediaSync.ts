@@ -28,8 +28,22 @@ class _MediaUploadCache {
 
 const _uploadCache = new _MediaUploadCache();
 
+/** Tam içerik hash'i: aynı uzunluk/başlığa sahip farklı görseller çakışmasın */
+function hashString(value: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${(h2 >>> 0).toString(36)}${(h1 >>> 0).toString(36)}`;
+}
+
 function cacheKey(path: string, dataUrl: string): string {
-  return `${path}:${dataUrl.length}:${dataUrl.slice(0, 48)}`;
+  return `${path}:${dataUrl.length}:${hashString(dataUrl)}`;
 }
 
 async function uploadIfDataUrl(
@@ -40,7 +54,6 @@ async function uploadIfDataUrl(
   const cached = _uploadCache.get(path, dataUrl);
   if (cached) return cached;
 
-  console.log("[SYNC-DIAG] uploadIfDataUrl uploading", JSON.stringify({ path }));
   try {
     const storagePath = await uploadDataUrlToStorage(path, dataUrl);
     _uploadCache.set(path, dataUrl, storagePath);

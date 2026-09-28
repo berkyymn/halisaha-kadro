@@ -2,24 +2,33 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{userId}/players/{playerId}/{mediaFile} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
-      allow create, update: if request.auth != null
-        && request.auth.uid == userId
-        && mediaFile in ['source.jpg', 'cutout.webp']
-        && request.resource.contentType.matches('image/.*')
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Uygulamanın ürettiği görseller en fazla birkaç yüz KB; 5 MB güvenli üst sınır.
+    function validImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp)')
         && request.resource.size < 5 * 1024 * 1024;
     }
 
+    match /users/{userId}/players/{playerId}/{mediaFile} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && mediaFile in ['source.jpg', 'cutout.webp']
+        && validImage();
+    }
+
     match /users/{userId}/logos/{logoFile} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
-      allow create, update: if request.auth != null
-        && request.auth.uid == userId
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId)
         && logoFile in ['home.webp', 'away.webp']
-        && request.resource.contentType.matches('image/.*')
-        && request.resource.size < 5 * 1024 * 1024;
+        && validImage();
+    }
+
+    // Tanımlı olmayan her yol kapalı.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
