@@ -24,12 +24,22 @@ service cloud.firestore {
             == (resource == null ? 0 : resource.data.get('revision', 0)) + 1;
       }
 
+      // Kötüye kullanım sınırları (uygulama yedeği 20 ile sınırlar; burası daha geniş).
+      function validDataLimits() {
+        let data = request.resource.data.data;
+        return (!data.keys().hasAny(['savedPlayers'])
+            || (data.savedPlayers is map && data.savedPlayers.size() <= 60))
+          && (!data.keys().hasAny(['benchPlayerIds'])
+            || (data.benchPlayerIds is list && data.benchPlayerIds.size() <= 40));
+      }
+
       function validPoster() {
         return request.resource.data.keys().hasOnly([
             'data', 'branding', 'updatedAt', 'brandingUpdatedAt',
             'photosOmitted', 'logosOmitted', 'revision'
           ])
           && request.resource.data.data is map
+          && validDataLimits()
           && request.resource.data.updatedAt is string
           && request.resource.data.updatedAt.size() <= 40
           && optionalType('branding', 'map')

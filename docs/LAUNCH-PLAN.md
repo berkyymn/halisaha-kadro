@@ -120,7 +120,7 @@ Sıra önemli: önce testler (refactor'ların güvenlik ağı), sonra refactor'l
 - [ ] **R4** Bulut veri modeli sadeleştirme: tek parça doküman yazımı (data+branding ayrımı ve 4 revision türü kalkar), net okuma/yazma katmanı
 - [ ] **R5** AuthContext refactor: açık durum makinesi (idle → loading → conflict → synced), yarış durumlarına dayanıklı; UI yalnızca durumu okur
 - [ ] **R6** Hata takibi (Sentry, EU bölgesi) + sürüm/kaynak haritası; gizlilik metnine eklenmesi
-- [ ] **R7** Kotalar: kadro/yedek üst sınırı (toplam 30 kayıtlı oyuncu), Firestore rules'ta liste boyutu, Storage dosya limiti 1 MB; GCP bütçe uyarısı (kullanıcı)
+- [~] **R7** Kotalar: yedek 20 (uygulama), rules: ≤60 oyuncu / ≤40 yedek, Storage dosya ≤1 MB — `npm run test:rules` (11/11 emülatörde) ✅; **GCP bütçe uyarısı kullanıcı tarafından kurulacak**
 - [ ] **R8** Uygulama içi hesap silme (Firestore + Storage + Auth, yeniden kimlik doğrulamalı)
 - [x] **R9** JPEG poster çıktısı (%92, 2400×1500 ≈ 0,7 MB; önce PNG 5,6 MB)
 - [ ] **R10** Safari/Firefox kontrolü, pilot grup geri bildirimleri

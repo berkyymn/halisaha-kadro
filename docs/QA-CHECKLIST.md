@@ -621,6 +621,17 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 38. Kotalar ve güvenlik kuralları (R7)
+
+| Adım | Beklenen |
+|------|----------|
+| 20 yedek varken | "Yeni oyuncu" pasif, "Yedek havuzu dolu" açıklaması |
+| `npm run emulators` + `npm run test:rules` | 11/11 ✅ (revision, liste sınırları, dosya boyutu/adı, başka kullanıcı) |
+
+- [x] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash

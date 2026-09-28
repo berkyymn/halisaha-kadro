@@ -13,7 +13,8 @@
     "dev:emulator": "NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true next dev",
     "emulators": "firebase emulators:start --only auth,firestore,storage",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:rules": "node scripts/rules-smoke.mjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
