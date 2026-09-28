@@ -26,6 +26,12 @@ service firebase.storage {
         && validImage();
     }
 
+    // Hesap silme: kullanıcı kendi klasöründeki her şeyi listeleyip silebilir
+    // (eski/sahipsiz dosyalar dahil). Yazma yukarıdaki kurallarla sınırlı.
+    match /users/{userId}/{allPaths=**} {
+      allow list, delete: if isOwner(userId);
+    }
+
     // Tanımlı olmayan her yol kapalı.
     match /{allPaths=**} {
       allow read, write: if false;

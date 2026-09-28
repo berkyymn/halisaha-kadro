@@ -632,6 +632,22 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 39. Hesap silme (R8) ve hata takibi (R6)
+
+| Adım | Beklenen |
+|------|----------|
+| Header → hesap simgesi | Hesap penceresi: e-posta, giriş yöntemi, "Hesabımı sil" |
+| Hesabımı sil → yanlış şifre | "E-posta veya şifre hatalı"; hiçbir veri silinmez |
+| Doğru şifre + onay kutusu | Firestore dokümanı, tüm Storage dosyaları ve Auth hesabı silinir; cihaz misafir moduna döner |
+| Google hesabı | Onay için Google penceresi açılır |
+| Logo yükle (giriş yapılı) | "Logo buluta kaydedilemedi" gibi yanlış uyarı çıkmaz |
+| Canlıda bir hata oluşur | Sentry'de `area` etiketiyle görünür; localhost'tan gönderim yok |
+| Render hatası | Beyaz ekran yerine "Bir şeyler ters gitti" + yenile butonu |
+
+- [x] Geçti (emülatör + LAN build)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash

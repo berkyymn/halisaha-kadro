@@ -121,6 +121,6 @@ Sıra önemli: önce testler (refactor'ların güvenlik ağı), sonra refactor'l
 - [ ] **R5** AuthContext refactor: açık durum makinesi (idle → loading → conflict → synced), yarış durumlarına dayanıklı; UI yalnızca durumu okur
 - [x] **R6** Hata takibi: Sentry (EU), yalnızca hatalar, kişisel veri yok, sürüm = paket+git sha, hata sınırı (kurtarma ekranı), yakalanan hatalar alan etiketiyle; gizlilik metni güncellendi. İlk testte gerçek bir hata yakalandı: `crypto.randomUUID` güvenli olmayan bağlam/eski Safari’de yok → `createId()` fallback
 - [~] **R7** Kotalar: yedek 20 (uygulama), rules: ≤60 oyuncu / ≤40 yedek, Storage dosya ≤1 MB — `npm run test:rules` (11/11 emülatörde) ✅; **GCP bütçe uyarısı kullanıcı tarafından kurulacak**
-- [ ] **R8** Uygulama içi hesap silme (Firestore + Storage + Auth, yeniden kimlik doğrulamalı)
+- [x] **R8** Uygulama içi hesap silme: Hesap → Hesabımı sil; yeniden doğrulama → senkron durur → Storage (sahipsizler dahil) → doküman → Auth → cihaz. Emülatörde uçtan uca ✅; rules 15/15 ✅. Yan bulgu: logo yüklenince çıkan yanlış "buluta kaydedilemedi" uyarısı düzeltildi
 - [x] **R9** JPEG poster çıktısı (%92, 2400×1500 ≈ 0,7 MB; önce PNG 5,6 MB)
 - [ ] **R10** Safari/Firefox kontrolü, pilot grup geri bildirimleri

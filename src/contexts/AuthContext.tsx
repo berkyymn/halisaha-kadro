@@ -12,7 +12,12 @@ import {
   type ReactNode,
 } from "react";
 import {
+  deleteUser,
+  EmailAuthProvider,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
@@ -21,6 +26,7 @@ import { getFirebaseAuth } from "@/lib/firebase/app";
 import {
   describeCloudSaveResult,
   fetchUserPoster,
+  mapAuthError,
   mapFirestoreError,
   saveUserBranding,
   saveUserPoster,
@@ -44,7 +50,10 @@ import {
   notifyCloudSyncDirty,
   subscribeCloudSyncStatus,
   flushCloudSyncNow,
+  waitForCloudSyncIdle,
 } from "@/hooks/useCloudSync";
+import { deleteCloudAccountData } from "@/lib/accountDeletion";
+import { trackEvent } from "@/lib/analytics";
 import { cleanupOrphanedMedia } from "@/lib/mediaSync";
 import { clearIndexedDBStorage } from "@/lib/indexedDBStorage";
 import {
@@ -75,7 +84,10 @@ type AuthContextValue = {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   signOut: (options?: { force?: boolean }) => Promise<SignOutResult>;
+  deleteAccount: (options: { password?: string }) => Promise<DeleteAccountResult>;
 };
+
+export type DeleteAccountResult = { ok: true } | { ok: false; error: string };
 
 export type SignOutResult = { ok: true } | { ok: false; reason: "unsynced" };
 
@@ -623,6 +635,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, [configured]);
 
+  /**
+   * KVKK silme hakkı: yeniden doğrula → senkronu durdur → Storage + bulut
+   * kadrosu → Auth hesabı → cihazdaki veri. Doğrulama en başta: veri silinip
+   * hesabın silinemediği yarım durum oluşmasın.
+   */
+  const deleteAccount = useCallback(
+    async (options: { password?: string }): Promise<DeleteAccountResult> => {
+      if (!configured) return { ok: false, error: "Bulut hesabı yapılandırılmamış." };
+      const auth = getFirebaseAuth();
+      const current = auth.currentUser;
+      if (!current) return { ok: false, error: "Oturum bulunamadı." };
+      const providers = current.providerData.map((p) => p.providerId);
+      try {
+        if (providers.includes("password")) {
+          if (!options.password) return { ok: false, error: "Şifreni gir." };
+          await reauthenticateWithCredential(
+            current,
+            EmailAuthProvider.credential(current.email ?? "", options.password)
+          );
+        } else if (providers.includes("google.com")) {
+          await reauthenticateWithPopup(current, new GoogleAuthProvider());
+        }
+
+        // Yeni yazım başlamasın; devam eden varsa bitsin.
+        loadGenerationRef.current += 1;
+        setRemoteHydrating(true);
+        await waitForCloudSyncIdle();
+
+        const uid = current.uid;
+        await deleteCloudAccountData(uid);
+        await deleteUser(current);
+        trackEvent("account_deleted");
+
+        clearQueuedCloudSync(uid);
+        clearLocalOwner();
+        resetCloudSyncState();
+        await clearIndexedDBStorage();
+        window.location.reload();
+        return { ok: true };
+      } catch (err) {
+        setRemoteHydrating(false);
+        reportError(err, "account-delete");
+        const code = (err as { code?: string })?.code ?? "";
+        return {
+          ok: false,
+          error: code.startsWith("auth/") ? mapAuthError(err) : mapFirestoreError(err),
+        };
+      }
+    },
+    [configured, setRemoteHydrating]
+  );
+
   const pushSnapshot = useCallback(
     async (
       snapshot: PosterSnapshot,
@@ -774,8 +838,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       openAuthModal: () => setAuthModalOpen(true),
       closeAuthModal: () => setAuthModalOpen(false),
       signOut,
+      deleteAccount,
     }),
-    [configured, user, loading, syncStatus, syncPhase, syncError, authModalOpen, signOut]
+    [configured, user, loading, syncStatus, syncPhase, syncError, authModalOpen, signOut, deleteAccount]
   );
 
   const localConflictSummary = loginConflict

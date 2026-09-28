@@ -122,9 +122,11 @@ export default function PrivacyPage() {
 
         <Section title="6. Saklama süresi">
           <p>
-            Hesap verilerin ve posterin, hesabın silinene kadar saklanır. Hesabının
-            ve tüm verilerinin silinmesini {LEGAL.contactEmail} adresine yazarak
-            isteyebilirsin; talebin en geç 30 gün içinde sonuçlandırılır. Çıkış
+            Hesap verilerin ve posterin, hesabın silinene kadar saklanır. Hesabını
+            ve tüm verilerini (bulut kadrosu, fotoğraflar, logolar) istediğin an
+            uygulamada sağ üstteki hesap simgesi → <strong className="text-white">Hesabımı sil</strong> ile
+            kalıcı olarak silebilirsin; silme anında gerçekleşir. Yardım için{" "}
+            {LEGAL.contactEmail} adresine de yazabilirsin. Çıkış
             yaptığında bu cihazdaki kopya silinir.
           </p>
         </Section>

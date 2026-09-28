@@ -8,11 +8,13 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  UserRound,
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { ModalShell } from "@/components/ModalShell";
+import { AccountModal } from "@/components/AccountModal";
 
 export function UserAuthButton() {
   const {
@@ -27,6 +29,7 @@ export function UserAuthButton() {
   } = useAuth();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unsyncedWarning, setUnsyncedWarning] = useState(false);
 
@@ -133,12 +136,16 @@ export function UserAuthButton() {
             <Cloud className="w-3.5 h-3.5" />
           )}
         </span>
-        <span
-          className="hidden lg:inline max-w-[140px] truncate text-[11px] text-zinc-400"
-          title={email}
+        <button
+          type="button"
+          onClick={() => setAccountOpen(true)}
+          className="inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
+          title="Hesap"
+          aria-label="Hesap"
         >
-          {email}
-        </span>
+          <UserRound className="w-3.5 h-3.5" aria-hidden />
+          <span className="hidden lg:inline max-w-[140px] truncate text-[11px]">{email}</span>
+        </button>
         <button
           type="button"
           onClick={() => setConfirmOpen(true)}
@@ -148,6 +155,8 @@ export function UserAuthButton() {
           <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} user={user} />
 
       <ModalShell
         open={confirmOpen}

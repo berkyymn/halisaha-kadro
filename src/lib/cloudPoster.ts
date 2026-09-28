@@ -255,8 +255,11 @@ export async function prepareSnapshotForCloud(
   }
 
   const photosBefore = countPlayerPhotos(working.savedPlayers);
-  const uploadLogosBefore = countUploadLogos(working);
   let next = slimSnapshotForCloud(working);
+  // Logolar data'da değil branding alanında (Storage) saklanır; data'daki slim
+  // takımlarda logo yoktur. Sayım slim hâlden yapılmalı, yoksa her yüklenen
+  // logo "buluta kaydedilemedi" diye yanlış uyarı üretir.
+  const uploadLogosBefore = countUploadLogos(next);
   let strippedMedia = false;
 
   const buildResult = (payload: PosterSnapshot): CloudSaveResult => ({
@@ -571,6 +574,12 @@ export function mapAuthError(error: unknown): string {
       return "Bağlantı hatası. İnternetini kontrol edip tekrar dene.";
     case "auth/missing-email":
       return "E-posta adresini yaz.";
+    case "auth/requires-recent-login":
+      return "Güvenlik için yeniden giriş yapman gerekiyor. Çıkış yapıp tekrar girip dene.";
+    case "auth/user-mismatch":
+      return "Farklı bir hesapla doğrulama yapıldı. Aynı hesabı seç.";
+    case "auth/missing-password":
+      return "Şifreni gir.";
     default:
       return message || "İşlem başarısız.";
   }

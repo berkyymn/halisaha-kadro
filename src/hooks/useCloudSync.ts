@@ -52,6 +52,10 @@ export function notifyCloudSyncDirty() {
   cloudSyncManager.notifyDirty();
 }
 
+export function waitForCloudSyncIdle(timeoutMs?: number) {
+  return cloudSyncManager.waitForIdle(timeoutMs);
+}
+
 export function flushCloudSyncNow(timeoutMs?: number) {
   return cloudSyncManager.flushNow(timeoutMs);
 }

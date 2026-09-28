@@ -226,6 +226,14 @@ class CloudSyncManager {
     this.markDirty();
   }
 
+  /** Hesap silme gibi işlemlerden önce: devam eden yazımın bitmesini bekler. */
+  async waitForIdle(timeoutMs = 20_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (this.inFlight && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+
   requestFlush() {
     if (!this.enabled || this.paused || useAppStore.getState().remoteHydrating) {
       return;

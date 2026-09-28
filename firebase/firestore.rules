@@ -51,7 +51,8 @@ service cloud.firestore {
 
       allow read: if isOwner();
       allow create, update: if isOwner() && validPoster();
-      allow delete: if false;
+      // Uygulama içi "Hesabımı sil" (KVKK silme hakkı).
+      allow delete: if isOwner();
     }
 
     // Tanımlı olmayan her yol kapalı.

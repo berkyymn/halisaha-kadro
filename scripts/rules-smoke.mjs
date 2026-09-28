@@ -35,6 +35,20 @@ async function write(uid, target, body) {
   return res.status;
 }
 
+async function remove(uid, target) {
+  const res = await fetch(`${FS}/posters/${target}`, {
+    method: "DELETE", headers: { Authorization: `Bearer ${token(uid)}` },
+  });
+  return res.status;
+}
+
+async function listFolder(uid, prefix) {
+  const res = await fetch(`${ST}?prefix=${encodeURIComponent(prefix)}`, {
+    headers: { Authorization: `Bearer ${token(uid)}` },
+  });
+  return res.status;
+}
+
 async function upload(uid, path, bytes, type) {
   const res = await fetch(`${ST}?name=${encodeURIComponent(path)}`, {
     method: "POST", headers: { Authorization: `Bearer ${token(uid)}`, "Content-Type": type },
@@ -56,6 +70,10 @@ const cases = [
   ["2 MB fotoğraf", () => upload(uid, `users/${uid}/players/x/cutout.webp`, 2_000_000, "image/webp"), 403],
   ["izinsiz dosya adı", () => upload(uid, `users/${uid}/players/x/evil.exe`, 1000, "image/webp"), 403],
   ["başkasının klasörü", () => upload(uid, `users/baska/players/x/cutout.webp`, 1000, "image/webp"), 403],
+  ["kendi klasörünü listeleme", () => listFolder(uid, `users/${uid}/`), 200],
+  ["başkasının klasörünü listeleme", () => listFolder(uid, `users/baska/`), 403],
+  ["başkasının dokümanını silme", () => remove(uid, "baska-kullanici"), 403],
+  ["kendi dokümanını silme (hesap silme)", () => remove(uid, uid), 200],
 ];
 
 let failed = 0;
