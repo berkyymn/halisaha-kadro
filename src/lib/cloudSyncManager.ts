@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/errorReporting";
 import { buildPosterSnapshot, type PosterSnapshot } from "@/lib/posterSnapshot";
 import {
   DEFAULT_SYNC_REVISIONS,
@@ -501,6 +502,7 @@ class CloudSyncManager {
       }
       this.retryAttempt += 1;
       this.dirty = true;
+      reportError(error, "cloud-save", { extra: { source: "flush" } });
       logSyncEvent("flush:exception", {
         message: error instanceof Error ? error.message : String(error),
       });

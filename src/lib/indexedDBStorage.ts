@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError } from "@/lib/errorReporting";
 import type { StateStorage } from "zustand/middleware";
 
 const DB_NAME = "halisaha-kadro-db";
@@ -179,7 +180,8 @@ export const indexedDBStorage: StateStorage = {
       }
       const migrated = await migrateLegacyLocalStorage(name);
       return migrated;
-    } catch {
+    } catch (error) {
+      reportError(error, "local-storage", { level: "warning", extra: { op: "get" } });
       return fallbackStorage.getItem(name);
     }
   },
@@ -193,7 +195,8 @@ export const indexedDBStorage: StateStorage = {
       } catch {
         // ignore localStorage quota errors
       }
-    } catch {
+    } catch (error) {
+      reportError(error, "local-storage", { level: "warning", extra: { op: "set" } });
       fallbackStorage.setItem(name, value);
     }
   },

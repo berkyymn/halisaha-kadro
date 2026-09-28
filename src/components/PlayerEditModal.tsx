@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError } from "@/lib/errorReporting";
 import { useCallback, useRef, useState } from "react";
 import {
   Camera,
@@ -199,6 +200,7 @@ function PlayerEditModalBody({
       trackEvent("background_removed");
     } catch (err) {
       console.error("Background removal failed:", err);
+      reportError(err, "background-removal", { level: "warning" });
       setBgError(
         err instanceof Error
           ? err.message
@@ -259,6 +261,7 @@ function PlayerEditModalBody({
       onClose();
     } catch (err) {
       console.error("Player save failed:", err);
+      reportError(err, "photo");
       setPhotoError("Fotoğraf işlenemedi. Farklı bir görsel seçip tekrar deneyin.");
     } finally {
       setSaving(false);

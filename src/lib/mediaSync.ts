@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/errorReporting";
 import {
   isFirebaseStorageConfigured,
   playerCutoutStoragePath,
@@ -61,6 +62,7 @@ async function uploadIfDataUrl(
   } catch (error) {
     // Storage is optional; a failed media upload must not block poster data.
     console.warn("Storage media upload failed:", path, error);
+    reportError(error, "cloud-media", { level: "warning", extra: { op: "upload" } });
     return undefined;
   }
 }
@@ -155,6 +157,7 @@ export async function hydratePlayerPhotosFromStorage(
         }
       } catch (error) {
         console.warn("Storage player media hydrate failed:", id, error);
+        reportError(error, "cloud-media", { level: "warning", extra: { op: "hydrate-player" } });
       }
     })
   );
@@ -169,6 +172,7 @@ export async function hydrateLogoFromStorage(logo: TeamLogo): Promise<TeamLogo> 
     return { ...logo, imageUrl };
   } catch (error) {
     console.warn("Storage logo hydrate failed:", error);
+    reportError(error, "cloud-media", { level: "warning", extra: { op: "hydrate-logo" } });
     return logo;
   }
 }
@@ -204,6 +208,7 @@ export async function cleanupOrphanedMedia(
         await deleteStorageObject(path);
       } catch (error) {
         console.warn("Storage orphan cleanup failed:", path, error);
+        reportError(error, "cloud-media", { level: "warning", extra: { op: "cleanup" } });
       }
     })
   );

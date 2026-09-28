@@ -60,6 +60,7 @@ import { maxIsoTimestamp } from "@/lib/brandingSnapshot";
 import { bumpSyncRevisions, DEFAULT_SYNC_REVISIONS } from "@/lib/syncRevisionBump";
 import type { SyncRevisions } from "@/lib/syncRevisions";
 import { indexedDBStorage } from "@/lib/indexedDBStorage";
+import { createId } from "@/lib/id";
 import { MAX_BENCH_PLAYERS } from "@/lib/limits";
 import {
   EMPTY_FORMAT_OVERFLOW,
@@ -566,7 +567,7 @@ export const useAppStore = create<AppStore>()(
             data.number === undefined
           )
             return;
-          playerId = crypto.randomUUID();
+          playerId = createId();
           const player: Player = {
             id: playerId,
             name,
@@ -789,7 +790,7 @@ export const useAppStore = create<AppStore>()(
         // Kota: yeni yedek oluşturma sınırı (sunucu kuralları ayrıca sınırlar).
         if (get().benchPlayerIds.length >= MAX_BENCH_PLAYERS) return "";
         trackEvent("bench_player_added");
-        const playerId = crypto.randomUUID();
+        const playerId = createId();
         const count = get().benchPlayerIds.length;
         const player: Player = {
           id: playerId,

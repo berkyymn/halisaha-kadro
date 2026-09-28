@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError } from "@/lib/errorReporting";
 import { useState } from "react";
 import { Palette, RotateCcw, Shirt, X } from "lucide-react";
 import type { JerseyConfig, TeamLogo } from "@/types";
@@ -81,7 +82,8 @@ export function LogoDesignerModal({
       trackEvent("logo_uploaded");
       onLogoChange({ ...logo, mode: "upload", presetId: undefined, imageUrl });
       setPanel("logo");
-    } catch {
+    } catch (err) {
+      reportError(err, "logo", { level: "warning" });
       setUploadError("Logo yüklenemedi. Daha küçük bir görsel deneyin.");
     }
   };

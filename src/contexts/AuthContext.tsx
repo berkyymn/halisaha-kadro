@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError, setErrorReportingUser } from "@/lib/errorReporting";
 import {
   createContext,
   useCallback,
@@ -294,6 +295,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       } catch (err) {
         console.error("Bulut yenileme hatası:", err);
+        reportError(err, "cloud-load", {
+          level: isRetryableFirestoreError(err) ? "warning" : "error",
+        });
         setSyncError(mapFirestoreError(err));
         setSyncStatus("error");
       } finally {
@@ -393,6 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         if (generation !== loadGenerationRef.current) return;
         console.error("Bulut yükleme hatası:", err);
+        if (!isRetryableFirestoreError(err)) reportError(err, "cloud-load");
         setSyncError(mapFirestoreError(err));
         setSyncStatus("error");
         if (isRetryableFirestoreError(err)) {
@@ -490,6 +495,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         // Modal açık kalır; kullanıcı tekrar deneyebilir veya başka seçenek seçer.
         console.error("Login conflict resolution error:", err);
+        reportError(err, "cloud-conflict", { extra: { choice } });
         setConflictError(mapFirestoreError(err));
       } finally {
         setRemoteHydrating(false);
@@ -531,6 +537,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [configured, setRemoteHydrating]);
 
   useEffect(() => {
+    setErrorReportingUser(user?.uid ?? null);
     resetCloudSyncState();
     lastRemoteUpdatedAtRef.current = null;
     lastRemoteBrandingUpdatedAtRef.current = null;
@@ -577,6 +584,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       (error) => {
         console.warn("Realtime cloud listener failed:", error);
+        reportError(error, "cloud-load", { level: "warning", extra: { source: "onSnapshot" } });
       }
     );
   }, [configured, user, softReloadFromCloud]);
@@ -659,6 +667,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, rateLimited: true, retryable: true };
         }
         console.error("Bulut kayıt hatası:", err);
+        reportError(err, "cloud-save", {
+          level: isRetryableFirestoreError(err) ? "warning" : "error",
+        });
         setSyncError(mapFirestoreError(err));
         setSyncStatus("error");
         return { ok: false, retryable: isRetryableFirestoreError(err) };
@@ -696,6 +707,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, rateLimited: true, retryable: true };
       }
       console.error("Branding bulut kayıt hatası:", err);
+      reportError(err, "cloud-save", {
+        level: isRetryableFirestoreError(err) ? "warning" : "error",
+        extra: { kind: "branding" },
+      });
       return { ok: false, retryable: isRetryableFirestoreError(err) };
     }
   }, [configured, user, softReloadFromCloud]);

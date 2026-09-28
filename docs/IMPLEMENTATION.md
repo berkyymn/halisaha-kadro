@@ -637,6 +637,8 @@ Does the feature change what gets saved locally?
 | Roster integrity | `src/lib/rosterIntegrity.ts`: `normalizeRoster` (used by `finalizePosterSnapshot`) enforces slot count, no duplicate players, valid bench, captain in lineup, valid `formatOverflow`. `resizeSquad` handles 6v6/7v7/8v8: customized overflow players go to bench and are pushed on the team's `formatOverflow` stack (persist v34); growing pops them back. Placeholders are dropped. |
 | Persist write lock | `guardedStorage` in the store ignores writes until `onRehydrateStorage` finishes (initial load and tab-sync rehydrate). Migrated data is written once after unlock. |
 | Export | Fixed output width: versus 2400px, single 1600px. |
+| Error tracking | `src/lib/errorReporting.ts` is the only Sentry touchpoint: `initErrorReporting` (skips localhost, errors only, no PII, console breadcrumbs dropped), `reportError(err, area, {level})`, `setErrorReportingUser(uid)`. `AppErrorBoundary` wraps the page. DSN: `NEXT_PUBLIC_SENTRY_DSN`; release: `NEXT_PUBLIC_RELEASE` (next.config). Transient/retryable errors → warning; user mistakes (e.g. HEIC) are not reported. |
+| IDs | `createId()` (`src/lib/id.ts`) instead of `crypto.randomUUID` (missing in insecure contexts / old Safari). |
 | Deploy | `npm run deploy:hosting` (clean build + hosting). `firebase.json` ignores `dev/**` and source maps; `cleanUrls: true`. Rules: `npm run deploy:rules`. |
 
 ---

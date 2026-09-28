@@ -55,6 +55,12 @@ export default function PrivacyPage() {
               logoları, maç yeri/tarihi/saati.
             </li>
             <li>
+              <strong className="text-white">Hata kayıtları:</strong> uygulamada
+              bir hata oluştuğunda teknik ayrıntılar (hata mesajı, tarayıcı/sürüm
+              bilgisi, giriş yaptıysan anonim kullanıcı kimliği). E-posta, IP
+              adresi, oyuncu isimleri veya fotoğraflar gönderilmez.
+            </li>
+            <li>
               <strong className="text-white">Kullanım istatistikleri:</strong> yalnızca
               onay verirsen, Google Analytics aracılığıyla anonimleştirilmiş kullanım
               verileri (hangi özelliklerin kullanıldığı, cihaz/tarayıcı türü).
@@ -73,6 +79,11 @@ export default function PrivacyPage() {
               erişebilmen için kaydetmek (KVKK m.5/2-c: sözleşmenin ifası).
             </li>
             <li>Hesap güvenliğini sağlamak (KVKK m.5/2-f: meşru menfaat).</li>
+            <li>
+              Hataları tespit edip düzeltmek (KVKK m.5/2-f: meşru menfaat). Hata
+              kayıtları Sentry (Functional Software, Inc.) altyapısında, Avrupa
+              Birliği (Almanya) veri merkezinde, 90 gün saklanır; çerez kullanılmaz.
+            </li>
             <li>
               Uygulamayı geliştirmek için kullanım istatistiği toplamak (KVKK m.5/1:
               açık rıza — çerez banner&apos;ından verilir ve her zaman geri alınabilir).
@@ -101,7 +112,7 @@ export default function PrivacyPage() {
         <Section title="5. Yurt dışına aktarım">
           <p>
             Firebase ve Google Analytics hizmet sağlayıcısı Google LLC&apos;nin
-            sunucuları ile arka plan kaldırma modelinin indirildiği IMG.LY GmbH sunucuları yurt dışında bulunabilir. Giriş yaparak bulut kaydını
+            sunucuları, arka plan kaldırma modelinin indirildiği IMG.LY GmbH sunucuları ve hata kayıtlarının tutulduğu Sentry (AB/Almanya) sunucuları yurt dışında bulunabilir. Giriş yaparak bulut kaydını
             kullanman ve analitik çerezlere onay vermen halinde verilerin KVKK m.9
             kapsamında yurt dışına aktarılmasına açık rıza vermiş olursun. Giriş
             yapmadan ve analitiği reddederek uygulamayı yurt dışına veri aktarımı

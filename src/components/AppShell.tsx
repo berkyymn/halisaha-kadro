@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError } from "@/lib/errorReporting";
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
@@ -111,7 +112,8 @@ export function AppShell() {
       link.href = dataUrl;
       link.click();
       trackEvent("poster_downloaded");
-    } catch {
+    } catch (err) {
+      reportError(err, "export", { extra: { teamMode } });
       alert(
         "Poster indirilemedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse fotoğrafları yeniden yükleyin."
       );
