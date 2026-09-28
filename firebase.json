@@ -8,7 +8,13 @@
   },
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "dev/**",
+      "**/*.map"
+    ],
     "rewrites": [
       {
         "source": "**",
@@ -34,23 +40,57 @@
         ]
       },
       {
-        "source": "**/*.@(js|css|svg|png|webp|jpg|jpeg|json|xml|txt)",
+        "source": "**/*.@(svg|png|webp|jpg|jpeg|ico)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
+            "value": "public, max-age=86400"
           }
         ]
       },
       {
-        "source": "/index.html",
+        "source": "**/*.@(html|txt|json|xml)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=0, must-revalidate"
           }
         ]
+      },
+      {
+        "regex": "^/[^.]*$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=0, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/_next/static/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
       }
-    ]
+    ],
+    "cleanUrls": true
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }
