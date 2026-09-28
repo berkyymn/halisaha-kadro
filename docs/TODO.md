@@ -321,8 +321,8 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ## Phase 26 — Arka plan kaldırma optimizasyonu
 
-- [x] `preloadBackgroundRemovalModel()` — `@imgly/background-removal` `preload()` API ile modeli app açılışında indir
-- [x] `AppBootstrapGate` idle callback'te `compressAllSavedPlayers` ile beraber preload çağrısı
+- [ ] `preloadBackgroundRemovalModel()` — kaldırıldı; model ilk kullanımda indirilir, app açılışında ~40MB yüklenmez
+- [x] `AppBootstrapGate` idle callback'te `compressAllSavedPlayers` migrate çağrısı
 - [x] `removeBackground()` data URL'yi direkt `ImageSource` olarak kabul eder — fetch+Blob+File dönüşümü kalktı
 - [x] Çıktı formatı: PNG → `image/webp` Q90 (daha küçük boyut, daha az sıkıştırma)
 - [x] CPU inference (GPU WebGPU/JSEP uyumsuzluğu nedeniyle devre dışı)

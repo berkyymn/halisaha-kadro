@@ -247,7 +247,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       data-team={team}
       data-slot-index={slotIndex}
       role="button"
-      aria-label={`${displayName} oyuncu kartı`}
+      aria-label={`${number ? `${number} ` : ""}${displayName} oyuncu kartı`}
       className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none ${
         isDragging
           ? "z-50 cursor-grabbing"

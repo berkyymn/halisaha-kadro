@@ -48,7 +48,7 @@ Tam regresyon için tüm maddeleri baştan sona çalıştır.
 | İşlem bitince | Arka plansız önizleme, WebP formatında |
 | Kaydet + sayfayı yenile | Cutout **kaybolmaz** (data URL olarak saklanır) |
 | CPU inference | WASM/ONNX ile CPU'da çalışır, GPU gerekmez |
-| App açılışında | Model idle callback ile arka planda preload edilir |
+| App açılışında | Model ön yüklenmez; ilk “Arka plan kaldır” kullanımında indirilir (sonrası tarayıcı önbelleğinden çalışır) |
 
 - [ ] Geçti
 
@@ -373,7 +373,8 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | İlk bundle | `html-to-image` ilk yüklemede çekilmez, sadece "Poster İndir"e tıklanınca indirilir |
 | Logo designer modal | `next/dynamic` ile lazy load edilir, ilk render’a dahil olmaz |
 | Modal Escape tuşu | Açık modal Escape ile kapanır (`busy` durumunda kapanmaz) |
-| Oyuncu kartı | Ekran okuyucu için `role="button"` ve `aria-label` içerir |
+| Oyuncu kartı | Ekran okuyucu için `role="button"` ve görünen numara+isimle eşleşen `aria-label` içerir |
+| Toolbar butonları | Yeterli renk kontrastı (`bg-green-700` / `text-zinc-400`) sağlanır |
 
 - [x] Geçti
 
@@ -444,6 +445,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-21 | Performans ve erişilebilirlik: arka plan kaldırma model preload’u kaldırıldı; oyuncu kartı `aria-label` görünen numara+isimle eşleştirildi; toolbar “Poster İndir”/tema/format/diziliş butonları renk kontrastı `bg-green-700`/`text-zinc-400` yapıldı | #3 + #22 + build/lint | Build/lint geçti; Lighthouse/PWA yeniden ölçümü bekliyor |
 
 ### Smoke audit özeti (2026-06-23)
 

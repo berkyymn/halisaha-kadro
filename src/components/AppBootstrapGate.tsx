@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressAllSavedPlayers } from "@/lib/imageCompress";
-import { preloadBackgroundRemovalModel } from "@/lib/backgroundRemoval";
 import {
   hasAppStoreHydrated,
   onAppStoreHydrated,
@@ -19,10 +18,6 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
   const { loading: authLoading } = useAuth();
   const remoteHydrating = useAppStore((s) => s.remoteHydrating);
   const [storeReady, setStoreReady] = useState(() => hasAppStoreHydrated());
-
-  useEffect(() => {
-    void preloadBackgroundRemovalModel();
-  }, []);
 
   useEffect(() => {
     if (storeReady) return;

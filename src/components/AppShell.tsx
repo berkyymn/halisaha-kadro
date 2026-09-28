@@ -157,7 +157,7 @@ export function AppShell() {
             type="button"
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 px-3 py-1.5 rounded text-xs font-semibold"
+            className="flex items-center gap-1.5 bg-green-700 hover:bg-green-800 disabled:opacity-50 px-3 py-1.5 rounded text-xs font-semibold"
           >
             <Download className="w-3.5 h-3.5" />
             {exporting ? "..." : "Poster İndir"}

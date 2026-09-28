@@ -24,7 +24,7 @@ export function PosterToolbar() {
     <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/90 px-4 py-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
         <div className="flex items-center gap-1.5">
-          <span className="text-zinc-500 font-semibold uppercase tracking-wide shrink-0">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wide shrink-0">
             Kadro
           </span>
           <div className="flex gap-1">
@@ -34,7 +34,7 @@ export function PosterToolbar() {
               onClick={() => setTeamMode("single")}
               className={`inline-flex items-center gap-1 h-7 px-2 rounded font-semibold transition-colors ${
                 teamMode === "single"
-                  ? "bg-green-600 text-white"
+                  ? "bg-green-700 text-white"
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
               }`}
               title="Tek takım kadrosu oluştur"
@@ -48,7 +48,7 @@ export function PosterToolbar() {
               onClick={() => setTeamMode("versus")}
               className={`inline-flex items-center gap-1 h-7 px-2 rounded font-semibold transition-colors ${
                 teamMode === "versus"
-                  ? "bg-green-600 text-white"
+                  ? "bg-green-700 text-white"
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
               }`}
               title="İki takım karşılaşma kadrosu oluştur"
@@ -62,7 +62,7 @@ export function PosterToolbar() {
         <div className="hidden sm:block h-5 w-px bg-zinc-800 shrink-0" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-zinc-500 font-semibold uppercase tracking-wide shrink-0">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wide shrink-0">
             Tema
           </span>
           <div className="flex flex-wrap gap-1">
@@ -76,7 +76,7 @@ export function PosterToolbar() {
                   onClick={() => setPosterTheme(theme.id)}
                   className={`h-7 px-2.5 rounded font-semibold whitespace-nowrap transition-colors ${
                     selected
-                      ? "bg-green-600 text-white"
+                      ? "bg-green-700 text-white"
                       : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                   }`}
                 >
@@ -90,7 +90,7 @@ export function PosterToolbar() {
         <div className="hidden sm:block h-5 w-px bg-zinc-800 shrink-0" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-zinc-500 font-semibold uppercase tracking-wide">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wide">
             Format
           </span>
           {([6, 7, 8] as SquadSize[]).map((size) => (
@@ -100,7 +100,7 @@ export function PosterToolbar() {
               onClick={() => setSquadSize(size)}
               className={`h-7 min-w-[2.5rem] px-2 rounded font-bold ${
                 squadSize === size
-                  ? "bg-green-600 text-white"
+                  ? "bg-green-700 text-white"
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
               }`}
             >
@@ -110,7 +110,7 @@ export function PosterToolbar() {
         </div>
 
         <label className="flex items-center gap-1.5">
-          <span className="text-zinc-500 shrink-0">Ev diziliş</span>
+          <span className="text-zinc-400 shrink-0">Ev diziliş</span>
           <select
             value={homeFormationId}
             onChange={(e) => setHomeFormation(e.target.value)}
@@ -126,7 +126,7 @@ export function PosterToolbar() {
 
         {teamMode === "versus" && (
           <label className="flex items-center gap-1.5">
-            <span className="text-zinc-500 shrink-0">Dep diziliş</span>
+            <span className="text-zinc-400 shrink-0">Dep diziliş</span>
             <select
               value={awayFormationId}
               onChange={(e) => setAwayFormation(e.target.value)}

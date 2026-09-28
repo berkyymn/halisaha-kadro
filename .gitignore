@@ -40,6 +40,9 @@ yarn-error.log*
 # firebase
 .firebase
 
+# lighthouse reports
+*.web.app-*.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
