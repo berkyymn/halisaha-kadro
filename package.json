@@ -11,7 +11,9 @@
     "deploy:hosting": "npm run build:clean && firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "dev:emulator": "NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true next dev",
-    "emulators": "firebase emulators:start --only auth,firestore,storage"
+    "emulators": "firebase emulators:start --only auth,firestore,storage",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
@@ -32,7 +34,8 @@
     "eslint": "^9",
     "eslint-config-next": "^16.3.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "browserslist": "4.28.8"
