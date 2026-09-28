@@ -77,7 +77,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Adım | Beklenen |
 |------|----------|
 | Sağ panel "Yedekler" görünür | Panel açık |
-| "Yeni yedek" | Düzenleme modalı açılır |
+| "Yeni oyuncu" | Düzenleme modalı açılır |
 | Yedek düzenle / sil | Çalışır |
 | Yedek kartını sürükle | Kart imleci takip eden kopyası görünür |
 
@@ -271,7 +271,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Misafir (giriş yapılmamış) modda header sağ taraf | "Yerel" rozeti görünür; tooltip "veriler sadece bu tarayıcıda saklanıyor" der |
 | Misafir modda "Giriş yap" butonu | Hâlâ görünür, tıklayınca auth modalı açılır |
 | Firebase yapılandırılmamışken (`configured === false`) | "Giriş yap" butonu görünmez; sadece sarı "Çevrimdışı" rozeti görünür |
-| Giriş yapmış kullanıcı "Çıkış yap" ikonuna tıklar | Onay modalı açılır; "tüm kadro verileri silinecek" mesajı görünür |
+| Giriş yapmış kullanıcı "Çıkış yap" ikonuna tıklar | Onay modalı açılır; "bu cihazdaki kadro kopyası silinecek, bulutta saklanmaya devam eder" mesajı görünür |
 | Çıkış onayında "İptal" | Modal kapanır, veri silinmez, oturum açık kalır |
 | Çıkış onayında "Çıkış yap" | Firebase oturumu kapanır, `localStorage` temizlenir, sayfa yenilenir, boş varsayılan kadro gelir |
 | Çıkış sonrası başka kullanıcı giriş yaparsa | Önceki kullanıcının yerel verisi bulut verisiyle karışmaz |
@@ -413,6 +413,211 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | GA4 kapalıyken (`NEXT_PUBLIC_GA_ID` boş) | Uygulama çalışmaya devam eder, hata vermez |
 
 - [x] Geçti
+
+---
+
+## 24. Oyuncu modalı klavye ve doğrulama (L1, H9, H11)
+
+**Dosyalar:** `src/components/PlayerEditModal.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| İsim alanında `Enter` | Kaydeder ve modal kapanır |
+| Numara alanında `Enter` | Kaydeder ve modal kapanır |
+| Numara 0 / 150 girip kaydet | 1–99 aralığına sıkıştırılır |
+| HEIC veya bozuk dosya seç | Kırmızı hata mesajı görünür, modal açık kalır, uygulama takılmaz |
+| 20MB üzeri görsel seç | "Görsel çok büyük" mesajı |
+
+- [ ] Geçti
+
+## 25. Tarafsız yedek forması (L3)
+
+**Dosyalar:** `src/components/BenchPanel.tsx`, `src/lib/jerseyOptions.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| Yedekler panelindeki kartlar | Gri/siyah/beyaz tarafsız forma, takım renkleri yok |
+| Yedek düzenleme modalı önizlemesi | Tarafsız forma |
+| Yedeği sahaya sürükle | Sahada girdiği takımın formasını alır |
+| Saha oyuncusunu yedeğe gönder | Yedekte tarafsız formaya döner |
+
+- [ ] Geçti
+
+## 26. Saat seçici (L4)
+
+**Dosyalar:** `src/components/PosterTimeField.tsx`, `src/components/MatchPoster.tsx`, `src/lib/posterSnapshot.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| Footer'daki saate / saat ikonuna tıkla | Tarayıcının saat seçicisi açılır |
+| Saat seç | Poster `SS:DD` formatında güncellenir |
+| Serbest metin yazma | Mümkün değil |
+| Eski kayıtta geçersiz saat ("abc") | Yüklemede varsayılan `21:00` olur |
+
+- [ ] Geçti
+
+## 27. Tek takımda diğer takım oyuncuları (L5)
+
+**Dosyalar:** `src/components/BenchPanel.tsx`, `src/components/PlayerOnPitch.tsx`, `src/store/useAppStore.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| İki takımda TAKIM B oyuncularına isim ver, Tek takım'a geç | Yedekler panelinde "TAKIM B kadrosu" grubu görünür, oyuncular listelenir |
+| Gruptan bir oyuncuyu sahadaki oyuncunun üstüne bırak | Yer değiştirirler; sahadaki oyuncu TAKIM B grubuna geçer |
+| Saha oyuncusunu TAKIM B kartının üstüne bırak | Yer değiştirirler |
+| Gruptaki oyuncuyu düzenle (kalem) | Modal açılır, kaydedince güncellenir |
+| İki takıma geri dön | TAKIM B kadrosu değişikliklerle birlikte sahada |
+| İki takım modunda | Grup görünmez |
+
+- [ ] Geçti
+
+## 28. Mobil kapı (L6)
+
+**Dosyalar:** `src/components/MobileGate.tsx`, `src/components/AppProviders.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| Telefon (375px, dokunmatik) ile aç | Uygulama yüklenmez; "Mobil uygulamamız yakında" ekranı ve PC'den kullanım mesajı |
+| Tablet (dokunmatik, fare yok) | Aynı ekran |
+| Masaüstü tarayıcı (dar pencere değil) | Uygulama normal açılır |
+| Mobilde `/gizlilik` | Gizlilik sayfası okunabilir (kapı yok) |
+
+- [ ] Geçti
+
+## 29. Posteri sıfırla (H2)
+
+| Adım | Beklenen |
+|------|----------|
+| Sıfırla ikonuna tıkla | Onay modalı açılır |
+| İptal | Hiçbir şey değişmez |
+| Sıfırla | Takımlar, oyuncular, başlık, pozisyonlar varsayılana döner; yedekler korunur; oyuncu kartına tıklayınca doğru isim/numara gelir |
+| Sayfayı yenile | Varsayılan kadro aynen gelir (oyuncular kayıp değil) |
+
+- [ ] Geçti
+
+## 30. Fotoğraf ve logo bulut kalıcılığı (H3, H5, H10)
+
+| Adım | Beklenen |
+|------|----------|
+| Giriş yapmış kullanıcı: fotoğraflı oyuncunun fotoğrafını kaldır, 15 sn bekle, yenile | Fotoğraf geri gelmez |
+| Arka planı kaldırılmış oyuncuya yeni fotoğraf seç (bg kaldırmadan) kaydet | Yeni fotoğraf görünür, eski cutout görünmez |
+| Şeffaf PNG logo yükle | Logo arka planı şeffaf kalır |
+| Logo yükle, 15 sn bekle, çıkış yap, tekrar giriş yap | Yüklenen logo geri gelir |
+
+- [ ] Geçti
+
+## 31. Giriş çatışması (L7) ve çıkış (H4)
+
+| Adım | Beklenen |
+|------|----------|
+| Misafirken kadroyu özelleştir, bulutta farklı kadrosu olan hesapla giriş yap | Çatışma modalı açılır |
+| "Bu cihazı kullan" | Yerel kadro + logo/forma buluta yazılır; başka cihazda yerel kadro görünür |
+| "Bulutu kullan" | Ekranda tamamen buluttaki kadro/logo/foto görünür |
+| "Birleştir" | Buluttaki kadro sahada; bu cihazdaki özel oyuncular yedeklere eklenir |
+| Değişiklik yap, hemen çıkış yap | Çıkış öncesi kayıt beklenir; tekrar girişte değişiklik bulutta |
+
+- [ ] Geçti
+
+## 32. Sürükleme performansı ve açılış (H1, H6, H8)
+
+| Adım | Beklenen |
+|------|----------|
+| Fotoğraflı kadroda oyuncu sürükle | Akıcı; sürükleme sırasında depolamaya yazma yok (yalnızca bırakınca) |
+| Giriş yapmış kullanıcıda uygulamayı aç, bir şey değiştirme | Bulut kaydı tetiklenmez (senk ikonu yeşil kalır) |
+| Poster İndir (küçük pencere) | Versus ~2400px, tek takım ~1600px genişliğinde PNG |
+
+- [ ] Geçti
+
+## 33. KVKK, gizlilik ve yayın (Y1–Y6)
+
+| Adım | Beklenen |
+|------|----------|
+| İlk ziyaret | Çerez/analitik banner'ı görünür; seçim yapılmadan GA çerezi yazılmaz |
+| "Reddet" | GA ölçümü kapalı kalır, banner kapanır, seçim hatırlanır |
+| "Kabul et" | GA ölçümü açılır |
+| Header / banner'daki "Gizlilik" linki | `/gizlilik` sayfası açılır |
+| `dist/index.html` | canonical / og:image `NEXT_PUBLIC_SITE_URL` domainini gösterir |
+| `firebase deploy` öncesi | `dist/dev` yüklenmez (firebase.json ignore) |
+
+- [ ] Geçti
+
+---
+
+## 34. Format değişimi ve kadro tutarlılığı (H14, H15)
+
+**Dosyalar:** `src/lib/rosterIntegrity.ts`, `src/store/useAppStore.ts`, `src/lib/posterSnapshot.ts`
+
+| Adım | Beklenen |
+|------|----------|
+| 7v7'de 7. oyuncuya isim ver, 6v6'ya geç | Oyuncu yedeklere iner; yer tutucu "Oyuncu 7"ler yedeğe inmez |
+| Sayfayı yenile, 7v7'ye geç | Oyuncu yedekten çıkıp aynı takımın 7. slotuna döner |
+| 8v8'de 7. ve 8. slota isim ver, 6v6'ya geç, sonra 7v7 ve 8v8 | Önce 7. slottaki, sonra 8. slottaki oyuncu yerine döner |
+| Yedekteki bu oyuncuyu elle sahaya al veya sil, sonra formatı büyüt | Kopya veya hayalet oyuncu oluşmaz; boş slot yer tutucuyla dolar |
+| Geri dönen oyuncunun forma numarası sahada kullanılıyorsa | İlk boş numarayı alır |
+| Kaptan format küçülünce yedeğe inerse | Kaptanlık düşer |
+| TAKIM B oyuncusu için aynı akış (iki takım modu) | Kendi takımına geri döner |
+| Sayfa açılırken (özellikle yavaş cihazda) | Kayıtlı kadro hiçbir zaman varsayılanla ezilmez (yükleme bitene kadar diske yazma kilitli) |
+
+- [x] Geçti (misafir modu, tarayıcıda doğrulandı)
+
+---
+
+## 35. Misafir modu genel tur (2026-09-28)
+
+| Adım | Beklenen |
+|------|----------|
+| Takım adına "beşiktaş" yaz | "BEŞİKTAŞ" (İ ile) |
+| Başlığa "derbi" yaz, Enter | Başlık "DERBİ" olarak kaydedilir, modal kapanır |
+| "Yeni oyuncu" → Escape | Yedeklerde yeni kart oluşmaz |
+| "Yeni oyuncu" → isim → Enter | Tek bir yedek kartı oluşur |
+| Yedek sil | Uygulama içi onay modalı; İptal hiçbir şey silmez |
+| Tab tuşuyla saha kartına gel, Enter | Oyuncu düzenleme modalı açılır |
+| Uzun saha adı (ör. KADIKÖY ARENA) 1280×720 ekranda | Footer'da kesilmeden görünür |
+| İki sekme açık, birinde saha adı değiştir | Diğer sekmede güncellenir |
+| 4 tema × 2 mod | Tüm arka planlar yüklenir, 404 yok |
+| Arka plan kaldır (ilk kez) | Model indirilir, sonuç WebP; fotoğraf dışarı gönderilmez |
+
+- [x] Geçti
+
+---
+
+## 36. Giriş yapmış kullanıcı — Firebase Emulator ile uçtan uca (2026-09-28)
+
+**Nasıl:** `npm run emulators` + `npm run dev:emulator` (test hesabı: `firebase/emulator-test-users.json`). Gerçek projeye hiçbir şey gitmez; `firebase/*.rules` birebir uygulanır.
+
+| Adım | Beklenen | Sonuç |
+|------|----------|-------|
+| Özelleştirilmiş misafir → yeni hesap (bulut boş) | Çatışma yok; kadro + logo/forma buluta yazılır | ✅ (H25 sonrası) |
+| Oyuncu fotoğrafı ekle | Storage'a yüklenir, Firestore'da yalnızca yol | ✅ |
+| Fotoğrafı kaldır | Yol ve Storage dosyası silinir, yenileyince geri gelmez | ✅ |
+| Logo yükle, hemen çıkış yap | Çıkış öncesi kayıt gönderilir | ✅ |
+| Tekrar giriş | Kadro, saha adı, yüklenen logo geri gelir; bulut ezilmez | ✅ (H23 sonrası) |
+| Değişiklik yap, 8 sn dolmadan yenile | Çatışma modalı yok; değişiklik buluta gider | ✅ (H27 sonrası) |
+| Misafir verisi + hesap: Bu cihazı kullan | Yerel kadro + branding buluta | ✅ |
+| Misafir verisi + hesap: Birleştir | Bulut kadrosu + misafir oyuncular yedekte | ✅ |
+| Misafir verisi + hesap: Bulutu kullan | Bulut birebir, logo/forma dahil; modal açıkken arkada veri değişmez | ✅ (H24, H28 sonrası) |
+| İki sekme aynı hesap | Değişiklik diğer sekmeye yenilemeden gelir | ✅ |
+| 7v7 → 6v6 | `formatOverflow` buluta yazılır, rules kabul eder | ✅ |
+| Her yazım | revision tam +1 (sıkılaştırılmış rules) | ✅ |
+
+- [x] Geçti (emülatör)
+
+---
+
+## 37. Forma numarası tekilliği (H29)
+
+**Dosyalar:** `src/lib/teamJerseyNumbers.ts`, `src/lib/rosterIntegrity.ts`, `src/store/useAppStore.ts`, `src/components/PlayerEditModal.tsx`
+
+| Adım | Beklenen |
+|------|----------|
+| İki takım modunda bir oyuncuya 9, aynı takımda başka oyuncuya 9 | Modal "9 numara X oyuncusunda; kaydedince 10 numara verilecek" der; ikinci oyuncu 10 olur |
+| 99 doluyken başka oyuncuya 99 | 1'den devam eder, ilk boş numara (ör. 1 kalecideyse 2) |
+| Takımlar arası sürükle-bırak, numara çakışıyor | Giren oyuncu bir yukarı kayar (ör. 9 → 10 dolu → 11) |
+| Yedekten sahaya giren oyuncunun numarası dolu | Bir yukarı kayar |
+| Tekrarlı numara içeren eski kayıt açılır | Önceki slot numarasını korur, sonrakiler bir yukarı kayar |
+| Farklı takımlarda aynı numara | Serbest (kural takım içi) |
+
+- [x] Geçti (tarayıcıda doğrulandı)
 
 ---
 
