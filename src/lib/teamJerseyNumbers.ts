@@ -1,12 +1,5 @@
 import type { Player, SquadSize, TeamConfig } from "@/types";
 
-export function getPlayerFromRegistry(
-  playerId: string,
-  registry: Record<string, Player>
-): Player | undefined {
-  return registry[playerId];
-}
-
 /** Forma numaraları used by players currently in a team's lineup. */
 export function collectTeamLineupNumbers(
   team: TeamConfig,

@@ -9,7 +9,6 @@ import {
 import { clearCloudPrepareCache } from "@/lib/cloudPoster";
 import { clearMediaUploadCache } from "@/lib/mediaSync";
 import { resetFirestoreWriteQueue } from "@/lib/firestoreWriteQueue";
-import { setBrandingFlushListener } from "@/lib/posterSyncEvents";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 type UseCloudSyncOptions = {
@@ -72,13 +71,6 @@ export function useCloudSync({
   useEffect(() => {
     cloudSyncManager.configureBranding(onBrandingSync ?? (async () => ({ ok: false })));
   }, [onBrandingSync]);
-
-  useEffect(() => {
-    setBrandingFlushListener(() => {
-      cloudSyncManager.requestBrandingFlush();
-    });
-    return () => setBrandingFlushListener(null);
-  }, []);
 
   useEffect(() => {
     cloudSyncManager.setForeignTabSyncHandler(onForeignTabSync ?? null);

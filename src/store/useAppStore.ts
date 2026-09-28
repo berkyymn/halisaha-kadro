@@ -232,7 +232,6 @@ interface AppStore {
     options?: { replace?: boolean }
   ) => void;
   appendPlayersToBench: (players: Player[]) => void;
-  setMode: (mode: AppMode) => void;
   setTeamMode: (mode: "single" | "versus") => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
   setSquadSize: (size: SquadSize) => void;
@@ -252,7 +251,6 @@ interface AppStore {
       clearPhoto?: boolean;
     }
   ) => void;
-  clearSlot: (team: "home" | "away", slotIndex: number) => void;
   setCaptain: (team: "home" | "away", slotIndex: number | null) => void;
   updatePlayer: (id: string, data: Partial<Player>) => void;
   applyCompressedPlayers: (
@@ -273,7 +271,6 @@ interface AppStore {
   }) => void;
   resetPitchPositions: (team?: "home" | "away") => void;
   resetGuestSession: () => void;
-  setPlayerCardSize: (size: number) => void;
   setTeamLogoDisplaySize: (size: number) => void;
   setPosterTheme: (theme: PosterThemeId) => void;
   setLogoDesignerTeam: (team: "home" | "away" | null) => void;
@@ -475,19 +472,6 @@ export const useAppStore = create<AppStore>()(
         });
       },
 
-      setMode: (mode) => {
-        set((s) => ({
-          mode,
-          players: rebuildActivePlayers(
-            s.savedPlayers,
-            s.benchPlayerIds,
-            s.homeTeam,
-            s.awayTeam,
-            s.squadSize
-          ),
-        }));
-      },
-
       setTeamMode: (teamMode) => {
         trackEvent("team_mode_changed", { team_mode: teamMode });
         set({ teamMode });
@@ -617,38 +601,6 @@ export const useAppStore = create<AppStore>()(
         const playerId = padPlayerIds(t.playerIds, get().squadSize)[slotIndex];
         if (!playerId || playerId === "") return;
         set({ [key]: { ...t, captainId: playerId } });
-      },
-
-      clearSlot: (team, slotIndex) => {
-        const s = get();
-        const key = team === "home" ? "homeTeam" : "awayTeam";
-        const otherKey = team === "home" ? "awayTeam" : "homeTeam";
-        const ids = padPlayerIds(s[key].playerIds, s.squadSize);
-        const playerId = ids[slotIndex];
-        if (!playerId) return;
-
-        ids[slotIndex] = "";
-        const wasCaptain = s[key].captainId === playerId;
-        const usedElsewhere =
-          padPlayerIds(s[otherKey].playerIds, s.squadSize).includes(playerId) ||
-          ids.some((id) => id === playerId);
-
-        set((state) => {
-          const players = { ...state.players };
-          const onBench = state.benchPlayerIds.includes(playerId);
-          if (!usedElsewhere && !onBench) {
-            delete players[playerId];
-          }
-          return {
-            players,
-            [key]: {
-              ...s[key],
-              playerIds: ids,
-              ...(wasCaptain ? { captainId: undefined } : {}),
-            },
-          };
-        });
-        get().applyFormations();
       },
 
       updatePlayer: (id, data) =>
@@ -812,14 +764,6 @@ export const useAppStore = create<AppStore>()(
         });
         get().applyFormations({ resetHome: true, resetAway: true });
       },
-
-      setPlayerCardSize: (size) =>
-        set({
-          playerCardSize: Math.max(
-            MIN_PLAYER_CARD_SIZE,
-            Math.min(MAX_PLAYER_CARD_SIZE, Math.round(size))
-          ),
-        }),
 
       setTeamLogoDisplaySize: (size) => {
         trackEvent("logo_display_size_changed", { size });

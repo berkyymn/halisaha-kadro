@@ -272,10 +272,6 @@ class CloudSyncManager {
     return !this.hasPendingSync();
   }
 
-  requestBrandingFlush() {
-    this.markDirty();
-  }
-
   private hasPendingSync(): boolean {
     const revisions = { ...useAppStore.getState().syncRevisions };
     return hasUnsyncedRevisions(revisions, this.lastSyncedRevisions);
