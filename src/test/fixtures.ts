@@ -1,6 +1,7 @@
 import { defaultAwayTeam, defaultHomeTeam } from "@/lib/defaults";
 import { EMPTY_FORMAT_OVERFLOW, type RosterState } from "@/lib/rosterIntegrity";
 import type { Player, SquadSize, TeamConfig } from "@/types";
+import { buildPosterSnapshot, createDefaultMatchInfo, type PosterSnapshot } from "@/lib/posterSnapshot";
 
 /** Okunabilir id'li oyuncu: p("h1", "Ali", 1) */
 export function p(id: string, name: string, number: number, extra: Partial<Player> = {}): Player {
@@ -45,4 +46,33 @@ export function names(state: RosterState, side: "home" | "away"): string[] {
 export function numbers(state: RosterState, side: "home" | "away"): number[] {
   const team = side === "home" ? state.homeTeam : state.awayTeam;
   return team.playerIds.map((id) => state.savedPlayers[id]?.number ?? -1);
+}
+
+/** Varsayılan (dokunulmamış) poster snapshot'ı; override ile özelleştirilir. */
+export function testSnapshot(overrides: Partial<PosterSnapshot> = {}): PosterSnapshot {
+  const roster = rosterState();
+  return {
+    ...buildPosterSnapshot({
+      ...roster,
+      teamMode: "versus",
+      mode: "guest",
+      players: roster.savedPlayers,
+      matchInfo: createDefaultMatchInfo(),
+      homeFormationId: "7-3-2-1",
+      awayFormationId: "7-3-2-1",
+      pitchPlayers: [],
+      singlePitchPlayers: [],
+      playerCardSize: 100,
+      teamLogoDisplaySize: 150,
+      posterTheme: "derby-night",
+    }),
+    ...overrides,
+  };
+}
+
+/** İlk oyuncuya isim vererek "özelleştirilmiş" snapshot üretir. */
+export function renamePlayer(snapshot: PosterSnapshot, name: string, slot = 0): void {
+  const id = snapshot.homeTeam.playerIds[slot];
+  snapshot.savedPlayers[id] = { ...snapshot.savedPlayers[id], name };
+  snapshot.localUpdatedAt = snapshot.localUpdatedAt ?? "2026-09-28T10:00:00.000Z";
 }
