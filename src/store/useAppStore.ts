@@ -1,7 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import { persist, createJSONStorage, type PersistOptions } from "zustand/middleware";
+import {
+  persist,
+  createJSONStorage,
+  type PersistOptions,
+  type StateStorage,
+} from "zustand/middleware";
 import { trackEvent } from "@/lib/analytics";
 import {
   getDefaultFormationId,
@@ -9,7 +14,6 @@ import {
 } from "@/lib/formations";
 import { getFormationSlotCount } from "@/lib/formationEngine";
 import { DEFAULT_POSTER_THEME, normalizePosterTheme } from "@/lib/posterThemes";
-import type { DragIntent } from "@/lib/dragIntent";
 import { defaultTitleStyleForTheme } from "@/lib/posterTitleStyles";
 import { normalizeTeamLogo, clampLogoDisplaySize } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
@@ -20,8 +24,13 @@ import {
   rebuildActivePlayers,
   sanitizeBenchIds,
   buildPersistedPlayerRegistry,
+  isCustomizedPlayer,
 } from "@/lib/playerPool";
-import { resolveSameTeamJerseyConflicts } from "@/lib/teamJerseyNumbers";
+import {
+  collectTeamLineupNumbers,
+  resolveJerseyNumber,
+  resolveSameTeamJerseyConflicts,
+} from "@/lib/teamJerseyNumbers";
 import { DEFAULT_LOGO_DISPLAY_SIZE, MAX_PLAYER_CARD_SIZE, MIN_PLAYER_CARD_SIZE } from "@/types";
 import type {
   AppMode,
@@ -51,8 +60,33 @@ import { maxIsoTimestamp } from "@/lib/brandingSnapshot";
 import { bumpSyncRevisions, DEFAULT_SYNC_REVISIONS } from "@/lib/syncRevisionBump";
 import type { SyncRevisions } from "@/lib/syncRevisions";
 import { indexedDBStorage } from "@/lib/indexedDBStorage";
+import {
+  EMPTY_FORMAT_OVERFLOW,
+  normalizeRoster,
+  pruneFormatOverflow,
+  resizeSquad,
+  type FormatOverflow,
+} from "@/lib/rosterIntegrity";
 
 let appStoreHydrated = false;
+
+/**
+ * Diske yazma kilidi. zustand persist, depolamadan okuma (async) bitmeden
+ * yapılan her set()'i de diske yazar; bu sırada state henüz varsayılan
+ * kadrodur ve kayıtlı veriyi ezer (ör. auth durumu IndexedDB'den önce
+ * gelip setRemoteHydrating çağırırsa). Okuma sürerken yazılar yok sayılır.
+ */
+let persistWritesEnabled = false;
+let migratedDuringHydration = false;
+
+const guardedStorage: StateStorage = {
+  getItem: (name) => indexedDBStorage.getItem(name),
+  setItem: (name, value) => {
+    if (!persistWritesEnabled) return;
+    return indexedDBStorage.setItem(name, value);
+  },
+  removeItem: (name) => indexedDBStorage.removeItem(name),
+};
 const appStoreHydrationWaiters = new Set<() => void>();
 
 export function hasAppStoreHydrated(): boolean {
@@ -107,6 +141,66 @@ function autoAssignLineup(
   });
 }
 
+function samePitchPlayers(a: PitchPlayer[], b: PitchPlayer[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((pp, i) => {
+    const other = b[i];
+    return (
+      pp.team === other.team &&
+      pp.slotIndex === other.slotIndex &&
+      pp.playerId === other.playerId &&
+      pp.x === other.x &&
+      pp.y === other.y
+    );
+  });
+}
+
+type PlayerPhotoInput = {
+  cutoutUrl?: string;
+  photoSource?: string;
+  photoCrop?: PhotoCrop;
+  clearPhoto?: boolean;
+};
+
+/**
+ * Modal kaydından gelen fotoğraf alanlarını oyuncu patch'ine çevirir.
+ * - clearPhoto: tüm yerel + bulut (Storage yolu) medya alanları temizlenir;
+ *   aksi halde bulutta yol kalır ve fotoğraf yenilemede geri gelir.
+ * - photoSource verildiyse fotoğraf seti bütün olarak değişir: cutout yoksa
+ *   eski cutout da (ve Storage yolu) kaldırılır.
+ */
+function buildPlayerPhotoPatch(
+  existing: Player | undefined,
+  data: PlayerPhotoInput
+): Partial<Player> {
+  if (data.clearPhoto) {
+    return {
+      avatarUrl: undefined,
+      photoSource: undefined,
+      photoCrop: undefined,
+      cutoutUrl: undefined,
+      photoUrl: undefined,
+      cutoutStoragePath: undefined,
+      photoSourceStoragePath: undefined,
+    };
+  }
+  const patch: Partial<Player> = {};
+  if (data.photoCrop !== undefined) patch.photoCrop = data.photoCrop;
+  if (data.photoSource !== undefined) {
+    patch.photoSource = data.photoSource;
+    patch.cutoutUrl = data.cutoutUrl;
+    if (!data.cutoutUrl) patch.cutoutStoragePath = undefined;
+    if (data.photoSource !== existing?.photoSource) {
+      patch.avatarUrl = undefined;
+      patch.photoUrl = undefined;
+      patch.didCompress = true;
+    }
+  } else if (data.cutoutUrl !== undefined) {
+    patch.cutoutUrl = data.cutoutUrl;
+  }
+  return patch;
+}
+
 interface AppStore {
   teamMode: "single" | "versus";
   mode: AppMode;
@@ -117,6 +211,7 @@ interface AppStore {
   players: Record<string, Player>;
   savedPlayers: Record<string, Player>;
   benchPlayerIds: string[];
+  formatOverflow: FormatOverflow;
   homeFormationId: string;
   awayFormationId: string;
   pitchPlayers: PitchPlayer[];
@@ -131,7 +226,12 @@ interface AppStore {
 
   setRemoteHydrating: (value: boolean) => void;
   getPosterSnapshot: () => PosterSnapshot;
-  hydrateFromSnapshot: (snapshot: PosterSnapshot, updatedAt?: string) => void;
+  hydrateFromSnapshot: (
+    snapshot: PosterSnapshot,
+    updatedAt?: string,
+    options?: { replace?: boolean }
+  ) => void;
+  appendPlayersToBench: (players: Player[]) => void;
   setMode: (mode: AppMode) => void;
   setTeamMode: (mode: "single" | "versus") => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
@@ -157,7 +257,8 @@ interface AppStore {
   updatePlayer: (id: string, data: Partial<Player>) => void;
   applyCompressedPlayers: (
     players: Record<string, Player>,
-    savedPlayers: Record<string, Player>
+    savedPlayers: Record<string, Player>,
+    options?: { photosChanged?: boolean }
   ) => void;
   movePitchPlayer: (
     team: "home" | "away",
@@ -198,8 +299,6 @@ interface AppStore {
     benchPlayerId: string
   ) => void;
   moveSlotToBench: (team: "home" | "away", slotIndex: number) => void;
-  dragIntent: DragIntent;
-  setDragIntent: (intent: DragIntent) => void;
   swapPlayers: (
     team1: "home" | "away",
     slotIndex1: number,
@@ -240,6 +339,7 @@ export const useAppStore = create<AppStore>()(
           "players",
           "savedPlayers",
           "benchPlayerIds",
+          "formatOverflow",
           "homeFormationId",
           "awayFormationId",
           "pitchPlayers",
@@ -288,6 +388,7 @@ export const useAppStore = create<AppStore>()(
         players: initialRoster.players,
         savedPlayers: initialRoster.players,
         benchPlayerIds: [],
+        formatOverflow: EMPTY_FORMAT_OVERFLOW,
         homeFormationId: getDefaultFormationId(7),
         awayFormationId: getDefaultFormationId(7),
         pitchPlayers: [],
@@ -297,7 +398,6 @@ export const useAppStore = create<AppStore>()(
         posterTheme: DEFAULT_POSTER_THEME,
         logoDesignerTeam: null,
         remoteHydrating: false,
-        dragIntent: { kind: "idle" },
         localUpdatedAt: undefined,
         syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
 
@@ -305,20 +405,26 @@ export const useAppStore = create<AppStore>()(
 
       getPosterSnapshot: () => buildPosterSnapshot(get()),
 
-      hydrateFromSnapshot: (snapshot, updatedAt) => {
+      hydrateFromSnapshot: (snapshot, updatedAt, options) => {
         const parsed = parsePosterSnapshot(snapshot);
         if (!parsed) return;
         const current = get();
+        // replace: yerel veriyle hiç birleştirmeden gelen snapshot'ı uygula
+        // ("Bulutu kullan"). Aksi halde LWW + yerel medya koruma.
         const finalized = finalizePosterSnapshot(
-          mergePosterSnapshot(current, parsed, {
-            remoteDocUpdatedAt: updatedAt,
-          })
+          options?.replace
+            ? { ...current, ...parsed, players: parsed.savedPlayers }
+            : mergePosterSnapshot(current, parsed, {
+                remoteDocUpdatedAt: updatedAt,
+              })
         );
-        const resolvedUpdatedAt = maxIsoTimestamp(
-          current.localUpdatedAt,
-          parsed.localUpdatedAt,
-          updatedAt
-        );
+        const resolvedUpdatedAt = options?.replace
+          ? maxIsoTimestamp(parsed.localUpdatedAt, updatedAt)
+          : maxIsoTimestamp(
+              current.localUpdatedAt,
+              parsed.localUpdatedAt,
+              updatedAt
+            );
         realSet(
           {
             teamMode: finalized.teamMode,
@@ -330,6 +436,7 @@ export const useAppStore = create<AppStore>()(
             players: finalized.players,
             savedPlayers: finalized.savedPlayers,
             benchPlayerIds: finalized.benchPlayerIds,
+            formatOverflow: finalized.formatOverflow ?? EMPTY_FORMAT_OVERFLOW,
             homeFormationId: finalized.homeFormationId,
             awayFormationId: finalized.awayFormationId,
             pitchPlayers: finalized.pitchPlayers,
@@ -342,6 +449,30 @@ export const useAppStore = create<AppStore>()(
           },
           false
         );
+      },
+
+      appendPlayersToBench: (incoming) => {
+        if (incoming.length === 0) return;
+        set((s) => {
+          const savedPlayers = { ...s.savedPlayers };
+          const benchPlayerIds = [...s.benchPlayerIds];
+          for (const player of incoming) {
+            if (savedPlayers[player.id]) continue;
+            savedPlayers[player.id] = player;
+            benchPlayerIds.push(player.id);
+          }
+          return {
+            savedPlayers,
+            benchPlayerIds,
+            players: rebuildActivePlayers(
+              savedPlayers,
+              benchPlayerIds,
+              s.homeTeam,
+              s.awayTeam,
+              s.squadSize
+            ),
+          };
+        });
       },
 
       setMode: (mode) => {
@@ -368,49 +499,17 @@ export const useAppStore = create<AppStore>()(
         })),
 
       setSquadSize: (size) => {
+        const s = get();
+        // Format değişimi kadro verisini asla kaybetmez: çıkan özel oyuncular
+        // yedeğe iner, format büyüyünce kendi takımlarına geri döner.
+        const resized = resizeSquad(s, size);
+        if (!resized) return;
         trackEvent("squad_size_changed", { squad_size: size });
         const formationId = getDefaultFormationId(size);
-        set((s) => {
-          const homeFilled = fillEmptyRosterSlots(
-            size,
-            padPlayerIds(s.homeTeam.playerIds, size),
-            s.savedPlayers
-          );
-          const awayFilled = fillEmptyRosterSlots(
-            size,
-            padPlayerIds(s.awayTeam.playerIds, size),
-            { ...s.savedPlayers, ...homeFilled.players }
-          );
-          const savedPlayers = {
-            ...s.savedPlayers,
-            ...homeFilled.players,
-            ...awayFilled.players,
-          };
-          const homeTeam = { ...s.homeTeam, playerIds: homeFilled.playerIds };
-          const awayTeam = { ...s.awayTeam, playerIds: awayFilled.playerIds };
-          const benchPlayerIds = sanitizeBenchIds(
-            s.benchPlayerIds,
-            homeTeam,
-            awayTeam,
-            size
-          );
-
-          return {
-            squadSize: size,
-            homeFormationId: formationId,
-            awayFormationId: formationId,
-            savedPlayers,
-            benchPlayerIds,
-            homeTeam,
-            awayTeam,
-            players: rebuildActivePlayers(
-              savedPlayers,
-              benchPlayerIds,
-              homeTeam,
-              awayTeam,
-              size
-            ),
-          };
+        set({
+          ...resized,
+          homeFormationId: formationId,
+          awayFormationId: formationId,
         });
         get().applyFormations({ resetHome: true, resetAway: true });
       },
@@ -462,6 +561,17 @@ export const useAppStore = create<AppStore>()(
         const ids = padPlayerIds(t.playerIds, s.squadSize);
         let playerId = ids[slotIndex];
         const name = data.name ?? "";
+        // Takımda aynı numara olamaz: doluysa bir yukarı (99 → 1).
+        const registry = { ...s.savedPlayers, ...s.players };
+        const takenNumbers = collectTeamLineupNumbers(
+          { ...t, playerIds: ids },
+          s.squadSize,
+          registry,
+          playerId || undefined
+        );
+        const requestedNumber =
+          data.number ?? (playerId ? registry[playerId]?.number : undefined) ?? slotIndex + 1;
+        const number = resolveJerseyNumber(requestedNumber, takenNumbers);
 
         if (!playerId) {
           if (
@@ -475,7 +585,7 @@ export const useAppStore = create<AppStore>()(
           const player: Player = {
             id: playerId,
             name,
-            number: data.number ?? slotIndex + 1,
+            number,
             photoSource: data.photoSource,
             cutoutUrl: data.cutoutUrl,
             photoCrop: data.photoCrop,
@@ -489,19 +599,9 @@ export const useAppStore = create<AppStore>()(
         } else {
           const patch: Partial<Player> = {
             ...(data.name !== undefined ? { name } : {}),
-            ...(data.number !== undefined ? { number: data.number } : {}),
+            ...(data.number !== undefined ? { number } : {}),
+            ...buildPlayerPhotoPatch(s.players[playerId] ?? s.savedPlayers[playerId], data),
           };
-          if (data.clearPhoto) {
-            patch.avatarUrl = undefined;
-            patch.photoSource = undefined;
-            patch.photoCrop = undefined;
-            patch.cutoutUrl = undefined;
-            patch.photoUrl = undefined;
-          } else {
-            if (data.photoSource !== undefined) patch.photoSource = data.photoSource;
-            if (data.cutoutUrl !== undefined) patch.cutoutUrl = data.cutoutUrl;
-            if (data.photoCrop !== undefined) patch.photoCrop = data.photoCrop;
-          }
           get().updatePlayer(playerId, patch);
         }
         get().applyFormations();
@@ -553,14 +653,23 @@ export const useAppStore = create<AppStore>()(
 
       updatePlayer: (id, data) =>
         set((s) => {
-          const updated = { ...s.players[id], ...data };
+          const updated = {
+            ...(s.savedPlayers[id] ?? {}),
+            ...s.players[id],
+            ...data,
+            id,
+          } as Player;
           const players = { ...s.players, [id]: updated };
           const savedPlayers = { ...s.savedPlayers, [id]: updated };
           return { players, savedPlayers };
         }),
 
-      applyCompressedPlayers: (players, savedPlayers) =>
-        set({ players, savedPlayers }),
+      applyCompressedPlayers: (players, savedPlayers, options) =>
+        // Yalnızca "tarandı" işareti değiştiyse kullanıcı düzenlemesi sayılmaz
+        // (zaman damgası/revision değişmez); fotoğraf küçüldüyse buluta gitmeli.
+        options?.photosChanged
+          ? set({ players, savedPlayers })
+          : realSet({ players, savedPlayers }),
 
       movePitchPlayer: (team, slotIndex, x, y) => {
         trackEvent("player_repositioned", { team, slot_index: slotIndex });
@@ -650,7 +759,14 @@ export const useAppStore = create<AppStore>()(
           return pp;
         });
 
-        set(
+        // Aynı dizilim tekrar yazılırsa localUpdatedAt/revision artar ve
+        // her açılışta gereksiz bir bulut kaydı tetiklenir.
+        if (samePitchPlayers(currentPositions, merged)) return;
+
+        // Dizilim, kadro/formasyondan türetilen veridir; kullanıcı düzenlemesi
+        // sayılmaz. realSet: localUpdatedAt/revision değişmez. Aksi halde yeni
+        // açılan boş kadro "buluttan daha yeni" görünüp girişte bulutu ezer.
+        realSet(
           isSingle
             ? { singlePitchPlayers: merged }
             : { pitchPlayers: merged }
@@ -662,18 +778,37 @@ export const useAppStore = create<AppStore>()(
         const roster = buildDefaultRoster(s.squadSize);
         const homeTeam = { ...defaultHomeTeam, playerIds: roster.homePlayerIds };
         const awayTeam = { ...defaultAwayTeam, playerIds: roster.awayPlayerIds };
+        // Yedek havuzu "kayıtlı ortak havuz" olduğu için korunur; saha oyuncuları yenilenir.
+        const benchPlayers: Record<string, Player> = {};
+        for (const id of s.benchPlayerIds) {
+          const player = s.players[id] ?? s.savedPlayers[id];
+          if (player) benchPlayers[id] = player;
+        }
+        const savedPlayers = { ...benchPlayers, ...roster.players };
+        const benchPlayerIds = s.benchPlayerIds.filter((id) => benchPlayers[id]);
+        const defaultFormationId = getDefaultFormationId(s.squadSize);
         set({
           homeTeam,
           awayTeam,
-          pitchPlayers: [],
-          matchInfo: createDefaultMatchInfo(),
+          savedPlayers,
+          benchPlayerIds,
+          formatOverflow: EMPTY_FORMAT_OVERFLOW,
           players: rebuildActivePlayers(
-            s.savedPlayers,
-            s.benchPlayerIds,
+            savedPlayers,
+            benchPlayerIds,
             homeTeam,
             awayTeam,
             s.squadSize
           ),
+          homeFormationId: defaultFormationId,
+          awayFormationId: defaultFormationId,
+          pitchPlayers: [],
+          singlePitchPlayers: [],
+          teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
+          matchInfo: normalizeMatchInfo({
+            ...createDefaultMatchInfo(),
+            titleStyleId: defaultTitleStyleForTheme(s.posterTheme),
+          }),
         });
         get().applyFormations({ resetHome: true, resetAway: true });
       },
@@ -734,18 +869,8 @@ export const useAppStore = create<AppStore>()(
         const patch: Partial<Player> = {
           ...(data.name !== undefined ? { name: data.name } : {}),
           ...(data.number !== undefined ? { number: data.number } : {}),
+          ...buildPlayerPhotoPatch(existing, data),
         };
-        if (data.clearPhoto) {
-          patch.avatarUrl = undefined;
-          patch.photoSource = undefined;
-          patch.photoCrop = undefined;
-          patch.cutoutUrl = undefined;
-          patch.photoUrl = undefined;
-        } else {
-          if (data.photoSource !== undefined) patch.photoSource = data.photoSource;
-          if (data.cutoutUrl !== undefined) patch.cutoutUrl = data.cutoutUrl;
-          if (data.photoCrop !== undefined) patch.photoCrop = data.photoCrop;
-        }
         get().updatePlayer(playerId, patch);
       },
 
@@ -770,8 +895,12 @@ export const useAppStore = create<AppStore>()(
             state.squadSize
           );
 
+          const formatOverflow = pruneFormatOverflow(
+            state.formatOverflow,
+            benchPlayerIds
+          );
           if (onField) {
-            return { benchPlayerIds };
+            return { benchPlayerIds, formatOverflow };
           }
 
           const savedPlayers = { ...state.savedPlayers };
@@ -779,6 +908,7 @@ export const useAppStore = create<AppStore>()(
 
           return {
             benchPlayerIds,
+            formatOverflow,
             savedPlayers,
             players: rebuildActivePlayers(
               savedPlayers,
@@ -807,7 +937,11 @@ export const useAppStore = create<AppStore>()(
           let benchPlayerIds = state.benchPlayerIds.filter(
             (id) => id !== benchPlayerId
           );
-          if (outgoingId && outgoingId !== benchPlayerId) {
+          // Yer tutucu ("Oyuncu 3") yedeği kirletmez; yalnızca özel oyuncular yedeğe iner.
+          const outgoingIsCustom = isCustomizedPlayer(
+            state.players[outgoingId] ?? state.savedPlayers[outgoingId]
+          );
+          if (outgoingId && outgoingId !== benchPlayerId && outgoingIsCustom) {
             if (!benchPlayerIds.includes(outgoingId)) {
               benchPlayerIds = [...benchPlayerIds, outgoingId];
             }
@@ -843,6 +977,7 @@ export const useAppStore = create<AppStore>()(
 
           return {
             benchPlayerIds,
+            formatOverflow: pruneFormatOverflow(state.formatOverflow, benchPlayerIds),
             savedPlayers,
             players: rebuildActivePlayers(
               savedPlayers,
@@ -855,67 +990,48 @@ export const useAppStore = create<AppStore>()(
               ...updatedTeam,
               captainId: wasCaptain ? benchPlayerId : t.captainId,
             },
-            dragIntent: { kind: "idle" } as const,
           };
         });
         get().applyFormations();
       },
 
       moveSlotToBench: (team, slotIndex) => {
+        const current = get();
+        const key = team === "home" ? "homeTeam" : "awayTeam";
+        const playerId = padPlayerIds(current[key].playerIds, current.squadSize)[
+          slotIndex
+        ];
+        const player = playerId
+          ? current.players[playerId] ?? current.savedPlayers[playerId]
+          : undefined;
+        // Yer tutucuyu yedeğe göndermek anlamsız: slot yine yer tutucuyla dolar.
+        if (!playerId || !isCustomizedPlayer(player)) return;
         trackEvent("player_sent_to_bench", { team, slot_index: slotIndex });
         set((state) => {
-          const key = team === "home" ? "homeTeam" : "awayTeam";
-          const t = state[key];
-          const ids = padPlayerIds(t.playerIds, state.squadSize);
-          const playerId = ids[slotIndex];
-          if (!playerId) return state;
-
+          const ids = padPlayerIds(state[key].playerIds, state.squadSize);
           ids[slotIndex] = "";
-          let benchPlayerIds = state.benchPlayerIds;
-          if (!benchPlayerIds.includes(playerId)) {
-            benchPlayerIds = [...benchPlayerIds, playerId];
-          }
-
-          const updatedTeam = {
-            ...t,
-            playerIds: ids,
-            ...(t.captainId === playerId ? { captainId: undefined } : {}),
-          };
-          const updatedHome =
-            team === "home" ? updatedTeam : state.homeTeam;
-          const updatedAway =
-            team === "away" ? updatedTeam : state.awayTeam;
-
-          const sanitizedBench = sanitizeBenchIds(
-            benchPlayerIds,
-            updatedHome,
-            updatedAway,
-            state.squadSize
-          );
-
           const savedPlayers = { ...state.savedPlayers };
-          if (state.players[playerId]) {
-            savedPlayers[playerId] = state.players[playerId];
-          }
-
-          return {
-            benchPlayerIds: sanitizedBench,
-            savedPlayers,
-            players: rebuildActivePlayers(
-              savedPlayers,
-              sanitizedBench,
-              updatedHome,
-              updatedAway,
-              state.squadSize
-            ),
-            [key]: updatedTeam,
-            dragIntent: { kind: "idle" } as const,
+          if (state.players[playerId]) savedPlayers[playerId] = state.players[playerId];
+          const updatedTeam = {
+            ...state[key],
+            playerIds: ids,
+            ...(state[key].captainId === playerId ? { captainId: undefined } : {}),
           };
+          // Boşalan slot hemen yer tutucuyla dolar (çalışırken de kadro değişmezleri geçerli).
+          const roster = normalizeRoster({
+            squadSize: state.squadSize,
+            homeTeam: team === "home" ? updatedTeam : state.homeTeam,
+            awayTeam: team === "away" ? updatedTeam : state.awayTeam,
+            savedPlayers,
+            benchPlayerIds: state.benchPlayerIds.includes(playerId)
+              ? state.benchPlayerIds
+              : [...state.benchPlayerIds, playerId],
+            formatOverflow: state.formatOverflow,
+          });
+          return roster;
         });
         get().applyFormations();
       },
-
-      setDragIntent: (intent) => set({ dragIntent: intent }),
 
       swapPlayers: (team1, slotIndex1, team2, slotIndex2) => {
         trackEvent("players_swapped", {
@@ -974,18 +1090,6 @@ export const useAppStore = create<AppStore>()(
           const playersRegistry = { ...state.players };
           const savedPlayersRegistry = { ...state.savedPlayers };
 
-          // Jersey number conflict resolution helper
-          const getNextFreeNumber = (startNum: number, usedNumbers: Set<number>): number => {
-            let num = startNum;
-            let checked = 0;
-            while (usedNumbers.has(num) && checked < 100) {
-              num = num + 1;
-              if (num > 99) num = 1;
-              checked++;
-            }
-            return num;
-          };
-
           const collectTeamNumbersExcluding = (
             teamConfig: TeamConfig,
             excludeId: string
@@ -1008,7 +1112,7 @@ export const useAppStore = create<AppStore>()(
               if (p1) {
                 const usedInTeam2 = collectTeamNumbersExcluding(t2, id1);
                 if (usedInTeam2.has(p1.number)) {
-                  const nextNum = getNextFreeNumber(p1.number + 1, usedInTeam2);
+                  const nextNum = resolveJerseyNumber(p1.number, usedInTeam2);
                   const updatedP1 = { ...p1, number: nextNum };
                   playersRegistry[id1] = updatedP1;
                   savedPlayersRegistry[id1] = updatedP1;
@@ -1022,7 +1126,7 @@ export const useAppStore = create<AppStore>()(
               if (p2) {
                 const usedInTeam1 = collectTeamNumbersExcluding(t1, id2);
                 if (usedInTeam1.has(p2.number)) {
-                  const nextNum = getNextFreeNumber(p2.number + 1, usedInTeam1);
+                  const nextNum = resolveJerseyNumber(p2.number, usedInTeam1);
                   const updatedP2 = { ...p2, number: nextNum };
                   playersRegistry[id2] = updatedP2;
                   savedPlayersRegistry[id2] = updatedP2;
@@ -1050,7 +1154,6 @@ export const useAppStore = create<AppStore>()(
             awayTeam: finalAwayTeam,
             players: playersRegistry,
             savedPlayers: savedPlayersRegistry,
-            dragIntent: { kind: "idle" },
           };
         });
 
@@ -1059,9 +1162,10 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 33,
-      storage: createJSONStorage(() => indexedDBStorage),
+      version: 34,
+      storage: createJSONStorage(() => guardedStorage),
       migrate: (persisted: unknown, version: number): AppStore => {
+        migratedDuringHydration = true;
         let state = persisted as Record<string, unknown>;
         if (version < 2) {
           const home = withLogo(state.homeTeam as TeamConfig);
@@ -1400,6 +1504,10 @@ export const useAppStore = create<AppStore>()(
             },
           };
         }
+        if (version < 34) {
+          // formatOverflow eklendi (format küçülünce yedeğe inen oyuncular).
+          state = { ...state, formatOverflow: EMPTY_FORMAT_OVERFLOW };
+        }
         return state as unknown as AppStore;
       },
       merge: (persisted: unknown, current: AppStore): AppStore => {
@@ -1416,7 +1524,16 @@ export const useAppStore = create<AppStore>()(
         ...buildPosterSnapshot(s),
         syncRevisions: s.syncRevisions,
       }),
-      onRehydrateStorage: () => (state: AppStore | undefined, error: unknown) => {
+      onRehydrateStorage: () => {
+        // Hem ilk yüklemede hem sekmeler arası rehydrate'te okuma bitene kadar yazma yok.
+        persistWritesEnabled = false;
+        return (state: AppStore | undefined, error: unknown) => {
+        persistWritesEnabled = true;
+        if (migratedDuringHydration) {
+          migratedDuringHydration = false;
+          // Kilit açıkken göç etmiş veriyi bir kez diske yaz.
+          queueMicrotask(() => useAppStore.setState({}));
+        }
         markAppStoreHydrated();
         if (error || !state) return;
         const finalized = finalizePosterSnapshot({
@@ -1425,6 +1542,7 @@ export const useAppStore = create<AppStore>()(
           players: state.players,
           savedPlayers: state.savedPlayers ?? {},
           benchPlayerIds: state.benchPlayerIds ?? [],
+          formatOverflow: state.formatOverflow ?? EMPTY_FORMAT_OVERFLOW,
           matchInfo: state.matchInfo,
           squadSize: state.squadSize,
           homeTeam: state.homeTeam,
@@ -1439,6 +1557,7 @@ export const useAppStore = create<AppStore>()(
           localUpdatedAt: state.localUpdatedAt,
         });
         Object.assign(state, finalized);
+        };
       },
     } as PersistOptions<AppStore>
   )

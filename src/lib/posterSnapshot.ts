@@ -2,10 +2,14 @@ import { normalizePosterTheme } from "@/lib/posterThemes";
 import { DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
 import { normalizeTeamLogo } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
-import { buildPersistedPlayerRegistry, rebuildActivePlayers, sanitizeBenchIds } from "@/lib/playerPool";
-import { fillEmptyRosterSlots } from "@/lib/defaultRoster";
-import { padPlayerIds } from "@/lib/defaults";
-import { todayDisplayDate } from "@/lib/matchDate";
+import { buildPersistedPlayerRegistry } from "@/lib/playerPool";
+import {
+  EMPTY_FORMAT_OVERFLOW,
+  normalizeRoster,
+  parseFormatOverflow,
+  type FormatOverflow,
+} from "@/lib/rosterIntegrity";
+import { DEFAULT_MATCH_TIME, normalizeMatchTime, todayDisplayDate } from "@/lib/matchDate";
 import { DEFAULT_LOGO_DISPLAY_SIZE } from "@/types";
 import { mergeSavedPlayersPreservingLocalPhotos } from "@/lib/playerPhotos";
 import { mergeTeamLogoPreservingLocal, shouldPreferLocalTeamBranding } from "@/lib/teamLogoCloud";
@@ -29,6 +33,8 @@ export type PosterSnapshot = {
   mode: AppMode;
   savedPlayers: Record<string, Player>;
   benchPlayerIds: string[];
+  /** Format küçülünce yedeğe inen oyuncular (takım başına yığın) */
+  formatOverflow: FormatOverflow;
   matchInfo: MatchInfo;
   squadSize: SquadSize;
   homeTeam: TeamConfig;
@@ -49,7 +55,7 @@ export function createDefaultMatchInfo(): MatchInfo {
     titleLine2: "GECESİ",
     ...DEFAULT_TITLE_STYLE,
     venue: "HALI SAHA",
-    time: "21:00",
+    time: DEFAULT_MATCH_TIME,
     date: todayDisplayDate(),
   };
 }
@@ -69,6 +75,7 @@ export function normalizeMatchInfo(info: Partial<MatchInfo> | undefined): MatchI
     titleShadow: info.titleShadow ?? DEFAULT_TITLE_STYLE.titleShadow,
     titleRotation: info.titleRotation ?? DEFAULT_TITLE_STYLE.titleRotation,
     titleMaxWidth: info.titleMaxWidth ?? DEFAULT_TITLE_STYLE.titleMaxWidth,
+    time: normalizeMatchTime(info.time),
   };
 }
 
@@ -86,6 +93,7 @@ export type PosterSnapshotSource = {
   players: Record<string, Player>;
   savedPlayers: Record<string, Player>;
   benchPlayerIds: string[];
+  formatOverflow?: FormatOverflow;
   matchInfo: MatchInfo;
   squadSize: SquadSize;
   homeTeam: TeamConfig;
@@ -114,6 +122,7 @@ export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapsho
       source.squadSize
     ),
     benchPlayerIds: source.benchPlayerIds,
+    formatOverflow: source.formatOverflow ?? EMPTY_FORMAT_OVERFLOW,
     matchInfo: source.matchInfo,
     squadSize: source.squadSize,
     homeTeam: source.homeTeam,
@@ -212,56 +221,22 @@ export function mergePosterSnapshot(
 export function finalizePosterSnapshot(
   partial: PosterSnapshotSource
 ): PosterSnapshotSource {
-  const matchInfo = normalizeMatchInfo(partial.matchInfo);
-  const homeTeam = withLogo(partial.homeTeam);
-  const awayTeam = withLogo(partial.awayTeam);
-  const posterTheme = normalizePosterTheme(partial.posterTheme);
-  const teamLogoDisplaySize =
-    partial.teamLogoDisplaySize || DEFAULT_LOGO_DISPLAY_SIZE;
-  const benchPlayerIds = partial.benchPlayerIds ?? [];
-  let savedPlayers = partial.savedPlayers ?? {};
-
-  const homeFilled = fillEmptyRosterSlots(
-    partial.squadSize,
-    padPlayerIds(homeTeam.playerIds, partial.squadSize),
-    savedPlayers
-  );
-  const awayFilled = fillEmptyRosterSlots(
-    partial.squadSize,
-    padPlayerIds(awayTeam.playerIds, partial.squadSize),
-    homeFilled.players
-  );
-  savedPlayers = {
-    ...savedPlayers,
-    ...homeFilled.players,
-    ...awayFilled.players,
-  };
-
-  const normalizedHome = { ...homeTeam, playerIds: homeFilled.playerIds };
-  const normalizedAway = { ...awayTeam, playerIds: awayFilled.playerIds };
-  const sanitizedBench = sanitizeBenchIds(
-    benchPlayerIds,
-    normalizedHome,
-    normalizedAway,
-    partial.squadSize
-  );
+  const roster = normalizeRoster({
+    squadSize: partial.squadSize,
+    homeTeam: withLogo(partial.homeTeam),
+    awayTeam: withLogo(partial.awayTeam),
+    savedPlayers: partial.savedPlayers ?? {},
+    benchPlayerIds: partial.benchPlayerIds ?? [],
+    formatOverflow: parseFormatOverflow(partial.formatOverflow),
+  });
 
   return {
     ...partial,
-    matchInfo,
-    homeTeam: normalizedHome,
-    awayTeam: normalizedAway,
-    posterTheme,
-    teamLogoDisplaySize,
-    benchPlayerIds: sanitizedBench,
-    savedPlayers,
-    players: rebuildActivePlayers(
-      savedPlayers,
-      sanitizedBench,
-      normalizedHome,
-      normalizedAway,
-      partial.squadSize
-    ),
+    ...roster,
+    matchInfo: normalizeMatchInfo(partial.matchInfo),
+    posterTheme: normalizePosterTheme(partial.posterTheme),
+    teamLogoDisplaySize:
+      partial.teamLogoDisplaySize || DEFAULT_LOGO_DISPLAY_SIZE,
   };
 }
 
@@ -275,6 +250,7 @@ export function parsePosterSnapshot(raw: unknown): PosterSnapshot | null {
     mode: data.mode ?? "guest",
     savedPlayers: data.savedPlayers ?? {},
     benchPlayerIds: data.benchPlayerIds ?? [],
+    formatOverflow: parseFormatOverflow(data.formatOverflow),
     matchInfo: normalizeMatchInfo(data.matchInfo),
     squadSize: (data.squadSize as SquadSize) ?? 7,
     homeTeam: data.homeTeam,

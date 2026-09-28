@@ -179,13 +179,15 @@ export function needsGoldGradient(style: LogoBorderStyle): boolean {
 }
 
 export function normalizeTeamLogo(
-  raw: Partial<TeamLogo>,
+  rawInput: Partial<TeamLogo> | null | undefined,
   fallbackShortName = "?"
 ): TeamLogo {
+  // Eksik veri (ör. bulutta branding yok) çökme yerine varsayılan logoya düşer.
+  const raw: Partial<TeamLogo> = rawInput ?? {};
   const initials =
     raw.initials ||
     raw.letter ||
-    fallbackShortName.slice(0, 2).toUpperCase() ||
+    fallbackShortName.slice(0, 2).toLocaleUpperCase("tr-TR") ||
     "?";
 
   const shape = (raw.shape as LogoShape) ?? "shield";
@@ -244,12 +246,15 @@ export function normalizeTeamLogo(
     secondaryColor: raw.secondaryColor ?? "#111827",
     accentColor: raw.accentColor ?? "#dc2626",
     icon,
-    initials: initials.slice(0, 3).toUpperCase(),
+    initials: initials.slice(0, 3).toLocaleUpperCase("tr-TR"),
     showInitials: raw.showInitials !== false,
     showIcon,
     teamName: raw.teamName ?? fallbackShortName,
     showTeamName: false,
     textColor: raw.textColor ?? raw.iconColor ?? "#ffffff",
     displaySize: clampLogoDisplaySize(raw.displaySize),
+    // Yüklenen logonun Storage yolu korunmalı; aksi halde buluttan okunurken
+    // görsel URL'si çözülemez ve logo kaybolur.
+    ...(mode === "upload" && raw.storagePath ? { storagePath: raw.storagePath } : {}),
   };
 }

@@ -125,7 +125,7 @@ export function randomizeTeamLogo(
     icon: showIcon ? icon : "none",
     showIcon,
     showInitials: Math.random() > 0.25,
-    initials: shortName.slice(0, 2).toUpperCase() || "??",
+    initials: shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "??",
     teamName: shortName,
     showTeamName: false,
   };

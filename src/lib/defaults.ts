@@ -25,7 +25,7 @@ function buildPresetLogo(presetId: string, shortName: string): TeamLogo {
     secondaryColor: "#111827",
     accentColor: "#e5e7eb",
     icon: "none",
-    initials: shortName.slice(0, 2).toUpperCase() || "?",
+    initials: shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "?",
     showInitials: false,
     showIcon: false,
     teamName: shortName,

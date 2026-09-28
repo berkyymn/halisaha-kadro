@@ -27,6 +27,7 @@ const ROSTER_STORE_KEYS = new Set([
   "players",
   "savedPlayers",
   "benchPlayerIds",
+  "formatOverflow",
   "squadSize",
 ]);
 

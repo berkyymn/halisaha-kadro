@@ -7,15 +7,52 @@ const DB_VERSION = 1;
 const STORE_NAME = "persist";
 export const LEGACY_LOCAL_STORAGE_KEY = "halisaha-kadro";
 
+/** IndexedDB takılırsa (Safari hatası, başka sekmede silme vb.) localStorage'a düş. */
+const IDB_TIMEOUT_MS = 4_000;
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`IndexedDB zaman aşımı: ${label}`)),
+      IDB_TIMEOUT_MS
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+/** Tek, paylaşılan bağlantı. Sürüm değişimi/silme isteğinde kapatılır ki diğer sekmeleri kilitlemesin. */
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+  const opening = new Promise<IDBDatabase>((resolve, reject) => {
     if (typeof window === "undefined" || !("indexedDB" in window)) {
       reject(new Error("IndexedDB kullanılamıyor"));
       return;
     }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error ?? new Error("IndexedDB açılamadı"));
-    request.onsuccess = () => resolve(request.result);
+    request.onblocked = () => reject(new Error("IndexedDB başka bir sekme tarafından kilitli"));
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = null;
+      };
+      db.onclose = () => {
+        dbPromise = null;
+      };
+      resolve(db);
+    };
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -23,6 +60,11 @@ function openDB(): Promise<IDBDatabase> {
       }
     };
   });
+  dbPromise = withTimeout(opening, "açılış").catch((error) => {
+    dbPromise = null;
+    throw error;
+  });
+  return dbPromise;
 }
 
 async function idbRequest<T>(
@@ -30,13 +72,21 @@ async function idbRequest<T>(
   operation: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, mode);
-    const store = tx.objectStore(STORE_NAME);
-    const req = operation(store);
+  const run = new Promise<T>((resolve, reject) => {
+    let tx: IDBTransaction;
+    try {
+      tx = db.transaction(STORE_NAME, mode);
+    } catch (error) {
+      // Bağlantı kapanmışsa bir sonraki çağrı yeniden açsın.
+      dbPromise = null;
+      reject(error);
+      return;
+    }
+    const req = operation(tx.objectStore(STORE_NAME));
     req.onerror = () => reject(req.error ?? new Error("IndexedDB işlemi başarısız"));
     req.onsuccess = () => resolve(req.result);
   });
+  return withTimeout(run, mode);
 }
 
 async function idbGet(key: string): Promise<string | undefined> {
@@ -88,6 +138,24 @@ const fallbackStorage: StateStorage = {
   removeItem: async (name) => removeLocalStorageItem(name),
 };
 
+function snapshotTimestamp(raw: string | null): string {
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw) as { state?: { localUpdatedAt?: unknown } };
+    const at = parsed?.state?.localUpdatedAt;
+    return typeof at === "string" ? at : "";
+  } catch {
+    return "";
+  }
+}
+
+function pickNewerSnapshot(idbValue: string, localValue: string | null): string {
+  if (!localValue || localValue === idbValue) return idbValue;
+  return snapshotTimestamp(localValue) > snapshotTimestamp(idbValue)
+    ? localValue
+    : idbValue;
+}
+
 async function migrateLegacyLocalStorage(key: string): Promise<string | null> {
   const legacy = getLocalStorageItem(LEGACY_LOCAL_STORAGE_KEY);
   if (!legacy) return null;
@@ -104,7 +172,11 @@ export const indexedDBStorage: StateStorage = {
   getItem: async (name) => {
     try {
       const value = await idbGet(name);
-      if (value !== undefined) return value;
+      if (value !== undefined) {
+        // IDB yazımı bir kez başarısız olup yalnızca localStorage'a düştüyse
+        // eski IDB kopyası yeni veriyi ezmesin: hangisi daha güncelse o.
+        return pickNewerSnapshot(value, getLocalStorageItem(name));
+      }
       const migrated = await migrateLegacyLocalStorage(name);
       return migrated;
     } catch {

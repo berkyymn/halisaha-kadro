@@ -1,6 +1,6 @@
 "use client";
 
-import { removeBackground as imglyRemoveBackground, preload as imglyPreload } from "@imgly/background-removal";
+import { removeBackground as imglyRemoveBackground } from "@imgly/background-removal";
 
 export type BackgroundRemovalProgress = {
   label: string;
@@ -12,38 +12,11 @@ export type BackgroundRemovalOptions = {
   model?: "isnet_quint8" | "isnet_fp16" | "isnet";
 };
 
-type PreloadState = "idle" | "loading" | "ready" | "error";
-
-let preloadState: PreloadState = "idle";
-let preloadPromise: Promise<void> | null = null;
-
-export function getPreloadState(): PreloadState {
-  return preloadState;
-}
+/** Model ilk başarılı kullanımda indirilir; sonrası tarayıcı önbelleğinden gelir. */
+let modelReady = false;
 
 export function isModelReady(): boolean {
-  return preloadState === "ready";
-}
-
-export async function preloadBackgroundRemovalModel(): Promise<void> {
-  if (preloadState === "ready" || preloadState === "loading") {
-    if (preloadPromise) return preloadPromise;
-    return;
-  }
-
-  preloadState = "loading";
-  preloadPromise = imglyPreload({ model: "isnet_quint8", device: "cpu" })
-    .then(() => {
-      preloadState = "ready";
-      preloadPromise = null;
-    })
-    .catch((err) => {
-      console.warn("[BG-REMOVAL] Model preload failed:", err);
-      preloadState = "error";
-      preloadPromise = null;
-    });
-
-  return preloadPromise;
+  return modelReady;
 }
 
 export async function removeBackground(
@@ -66,5 +39,6 @@ export async function removeBackground(
         }
       : undefined,
   });
+  modelReady = true;
   return URL.createObjectURL(blob);
 }

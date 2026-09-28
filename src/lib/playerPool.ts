@@ -1,4 +1,15 @@
 import type { Player, SquadSize, TeamConfig } from "@/types";
+import { hasPlayerPhoto } from "@/lib/playerPhotos";
+
+const DEFAULT_PLAYER_NAME = /^(Oyuncu|Yedek) \d+$/;
+
+/** Varsayılan yer tutucu değil, kullanıcının emek verdiği oyuncu mu? (isim veya fotoğraf) */
+export function isCustomizedPlayer(player: Player | undefined): boolean {
+  if (!player) return false;
+  if (hasPlayerPhoto(player)) return true;
+  const name = player.name?.trim() ?? "";
+  return name.length > 0 && !DEFAULT_PLAYER_NAME.test(name);
+}
 
 export function collectLineupPlayerIds(
   homeTeam: TeamConfig,
@@ -61,4 +72,20 @@ export function sanitizeBenchIds(
 ): string[] {
   const onField = collectLineupPlayerIds(homeTeam, awayTeam, squadSize);
   return benchPlayerIds.filter((id) => id && !onField.has(id));
+}
+
+/**
+ * Tek takım modunda rakip takım posterde görünmez; oyuncuları yedekler
+ * panelinde ayrı grupta listelenir. Oyuncu bu gruptaysa rakip slot index'i.
+ */
+export function findHiddenAwaySlot(
+  state: {
+    teamMode: "single" | "versus";
+    awayTeam: TeamConfig;
+    squadSize: SquadSize;
+  },
+  playerId: string
+): number {
+  if (state.teamMode !== "single" || !playerId) return -1;
+  return state.awayTeam.playerIds.slice(0, state.squadSize).indexOf(playerId);
 }
