@@ -114,13 +114,13 @@ Sıra önemli: önce testler (refactor'ların güvenlik ağı), sonra refactor'l
 | Yayın | Önce 3–5 kişilik pilot grup |
 
 ## İş listesi
-- [ ] **R1** Otomatik test altyapısı (Vitest): kadro kuralları, forma numarası, snapshot birleştirme, branding, göçler; ardından emülatör entegrasyon testleri
-- [ ] **R2** Ufak temizlikler: kullanılmayan `setMode`, `setPlayerCardSize`, `playerCardSize`, `posterSyncEvents`, `clearSlot`, `fingerprintPosterData/Branding`…
+- [x] **R1** Otomatik test altyapısı (Vitest, 36 test, GitHub Actions CI) — emülatör entegrasyon testleri R5 ile: kadro kuralları, forma numarası, snapshot birleştirme, branding, göçler; ardından emülatör entegrasyon testleri
+- [x] **R2** Ufak temizlikler (persist edilen `playerCardSize` R3'te göçle kalkacak): kullanılmayan `setMode`, `setPlayerCardSize`, `playerCardSize`, `posterSyncEvents`, `clearSlot`, `fingerprintPosterData/Branding`…
 - [ ] **R3** Store refactor: tek oyuncu kaydı (`players`/`savedPlayers` birleşimi), aksiyonların konu bazlı ayrılması, eski göçlerin sıkıştırılması
 - [ ] **R4** Bulut veri modeli sadeleştirme: tek parça doküman yazımı (data+branding ayrımı ve 4 revision türü kalkar), net okuma/yazma katmanı
 - [ ] **R5** AuthContext refactor: açık durum makinesi (idle → loading → conflict → synced), yarış durumlarına dayanıklı; UI yalnızca durumu okur
 - [ ] **R6** Hata takibi (Sentry, EU bölgesi) + sürüm/kaynak haritası; gizlilik metnine eklenmesi
 - [ ] **R7** Kotalar: kadro/yedek üst sınırı (toplam 30 kayıtlı oyuncu), Firestore rules'ta liste boyutu, Storage dosya limiti 1 MB; GCP bütçe uyarısı (kullanıcı)
 - [ ] **R8** Uygulama içi hesap silme (Firestore + Storage + Auth, yeniden kimlik doğrulamalı)
-- [ ] **R9** JPEG poster çıktısı
+- [x] **R9** JPEG poster çıktısı (%92, 2400×1500 ≈ 0,7 MB; önce PNG 5,6 MB)
 - [ ] **R10** Safari/Firefox kontrolü, pilot grup geri bildirimleri

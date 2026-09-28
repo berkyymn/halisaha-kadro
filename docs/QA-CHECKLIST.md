@@ -181,7 +181,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 | Adım | Beklenen |
 |------|----------|
-| "Poster İndir" | `halisaha-kadro.png` iner |
+| "Poster İndir" | `halisaha-kadro.jpg` iner (JPEG %92, ~1 MB; iki takım 2400×1500, tek takım 1600×2000) |
 | İndirilen görsel | Ekrandaki posterle uyumlu, bozuk değil |
 
 - [ ] Geçti
@@ -524,7 +524,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 |------|----------|
 | Fotoğraflı kadroda oyuncu sürükle | Akıcı; sürükleme sırasında depolamaya yazma yok (yalnızca bırakınca) |
 | Giriş yapmış kullanıcıda uygulamayı aç, bir şey değiştirme | Bulut kaydı tetiklenmez (senk ikonu yeşil kalır) |
-| Poster İndir (küçük pencere) | Versus ~2400px, tek takım ~1600px genişliğinde PNG |
+| Poster İndir (küçük pencere) | Versus 2400×1500, tek takım 1600×2000 JPEG |
 
 - [ ] Geçti
 
