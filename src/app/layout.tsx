@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist } from "next/font/google";
-import { AppProviders } from "@/components/AppProviders";
+import { SITE_URL } from "@/lib/siteUrl";
+import { ANALYTICS_CONSENT_KEY, GA_ID } from "@/lib/analytics";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import "./globals.css";
 
 const geist = Geist({
@@ -14,16 +16,10 @@ const bebas = Bebas_Neue({
   subsets: ["latin"],
 });
 
-const rawSiteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://halisahakadro.app";
-const siteUrl = /^https?:\/\//i.test(rawSiteUrl)
-  ? rawSiteUrl
-  : `https://${rawSiteUrl}`;
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Halı Saha Kadro",
     template: "%s | Halı Saha Kadro",
@@ -53,7 +49,10 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
   alternates: {
@@ -91,7 +90,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#14532d",
+  themeColor: "#09090b",
   width: "device-width",
   initialScale: 1,
 };
@@ -103,29 +102,38 @@ export default function RootLayout({
     <html lang="tr" className={`${geist.variable} ${bebas.variable} h-full`}>
       <head>
         {GA_ID && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_ID}', {
-                    page_title: document.title,
-                    page_location: window.location.href,
-                  });
-                `,
-              }}
-            />
-          </>
+          <script
+            // Consent Mode: varsayılan "denied"; gtag.js yalnızca kullanıcı
+            // daha önce onay verdiyse yüklenir (KVKK açık rıza).
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                var consent = null;
+                try { consent = localStorage.getItem('${ANALYTICS_CONSENT_KEY}'); } catch (e) {}
+                gtag('consent', 'default', {
+                  analytics_storage: consent === 'granted' ? 'granted' : 'denied',
+                  ad_storage: 'denied',
+                  ad_user_data: 'denied',
+                  ad_personalization: 'denied'
+                });
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}', { anonymize_ip: true });
+                if (consent === 'granted') {
+                  var s = document.createElement('script');
+                  s.async = true;
+                  s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_ID}';
+                  s.setAttribute('data-gtag-loader', 'true');
+                  document.head.appendChild(s);
+                }
+              `,
+            }}
+          />
         )}
       </head>
       <body className="h-full antialiased font-sans overflow-hidden">
-        <AppProviders>{children}</AppProviders>
+        {children}
+        <ConsentBanner />
       </body>
     </html>
   );

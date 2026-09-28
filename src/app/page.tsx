@@ -1,5 +1,13 @@
+import { AppProviders } from "@/components/AppProviders";
 import { AppShell } from "@/components/AppShell";
+import { MobileGate } from "@/components/MobileGate";
 
 export default function Home() {
-  return <AppShell />;
+  return (
+    <MobileGate>
+      <AppProviders>
+        <AppShell />
+      </AppProviders>
+    </MobileGate>
+  );
 }
