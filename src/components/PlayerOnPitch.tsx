@@ -13,6 +13,8 @@ import {
 } from "@/lib/dragIntent";
 import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { findBenchDropTarget } from "@/lib/dropTargets";
+import { findHiddenAwaySlot, isCustomizedPlayer } from "@/lib/playerPool";
+import { useAppStore } from "@/store/useAppStore";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import { PlayerDragPreview } from "./PlayerDragPreview";
@@ -92,6 +94,7 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
   const effectiveY = isDragging ? dragPos.y : positionY;
 
   const slotRules: SlotRules = getSlotRules(movementPolicy, isGoalkeeper);
+  const canSendToBench = slotRules.canDropToBench && isCustomizedPlayer(player);
 
   const handleClick = useCallback(() => {
     onEdit(team, slotIndex);
@@ -168,7 +171,9 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       pendingSwapTarget.current = swapTarget;
 
       let target: DropTarget | null = null;
-      if (benchTarget) {
+      if (benchTarget?.type === "bench-area" && !canSendToBench) {
+        // Yer tutucu yedeğe gönderilemez; "ÇIKAN" işareti gösterme.
+      } else if (benchTarget) {
         target =
           benchTarget.type === "bench-card"
             ? { type: "bench-card", playerId: benchTarget.benchPlayerId }
@@ -198,8 +203,16 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       const benchTarget = findBenchDropTarget(clientX, clientY);
       if (benchTarget) {
         if (benchTarget.type === "bench-card") {
-          assignBenchToSlot(team, slotIndex, benchTarget.benchPlayerId);
-        } else if (slotRules.canDropToBench) {
+          const hiddenAwaySlot = findHiddenAwaySlot(
+            useAppStore.getState(),
+            benchTarget.benchPlayerId
+          );
+          if (hiddenAwaySlot >= 0) {
+            swapPlayers(team, slotIndex, "away", hiddenAwaySlot);
+          } else {
+            assignBenchToSlot(team, slotIndex, benchTarget.benchPlayerId);
+          }
+        } else if (canSendToBench) {
           moveSlotToBench(team, slotIndex);
         }
         setDragIntent({ kind: "idle" });
@@ -247,8 +260,15 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       data-team={team}
       data-slot-index={slotIndex}
       role="button"
+      tabIndex={0}
       aria-label={`${number ? `${number} ` : ""}${displayName} oyuncu kartı`}
-      className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none ${
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:rounded-xl ${
         isDragging
           ? "z-50 cursor-grabbing"
           : isGoalkeeper

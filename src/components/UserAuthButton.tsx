@@ -28,6 +28,7 @@ export function UserAuthButton() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [unsyncedWarning, setUnsyncedWarning] = useState(false);
 
   if (loading && configured) {
     return (
@@ -88,14 +89,24 @@ export function UserAuthButton() {
             ? "Buluta kaydedilmek üzere bekliyor"
             : "Bulut kaydı güncel");
 
-  const handleConfirmSignOut = async () => {
+  const handleConfirmSignOut = async (force = false) => {
     setSigningOut(true);
     try {
-      await signOut();
+      const result = await signOut({ force });
+      if (!result.ok) {
+        setUnsyncedWarning(true);
+        setSigningOut(false);
+        return;
+      }
       trackEvent("sign_out");
     } catch {
       setSigningOut(false);
     }
+  };
+
+  const closeConfirm = () => {
+    setConfirmOpen(false);
+    setUnsyncedWarning(false);
   };
 
   return (
@@ -140,7 +151,7 @@ export function UserAuthButton() {
 
       <ModalShell
         open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
+        onClose={closeConfirm}
         busy={signingOut}
         panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
       >
@@ -148,7 +159,7 @@ export function UserAuthButton() {
           <h3 className="text-sm font-semibold text-white">Çıkış yap</h3>
           <button
             type="button"
-            onClick={() => setConfirmOpen(false)}
+            onClick={closeConfirm}
             disabled={signingOut}
             className="text-zinc-500 hover:text-white disabled:opacity-50"
           >
@@ -157,13 +168,25 @@ export function UserAuthButton() {
         </div>
         <div className="p-5 space-y-4">
           <p className="text-sm text-zinc-300 leading-relaxed">
-            Oturumunuz kapatılacak ve bu cihazdaki tüm kadro verileri
-            silinecek. Devam etmek istiyor musunuz?
+            Oturumunuz kapatılacak ve bu cihazdaki kadro kopyası silinecek.
+            Kadronuz bulut hesabınızda saklanmaya devam eder.
           </p>
+          {signingOut && !unsyncedWarning && (
+            <p className="text-xs text-sky-300/90">
+              Son değişiklikler buluta kaydediliyor…
+            </p>
+          )}
+          {unsyncedWarning && (
+            <p className="text-xs text-amber-300 bg-amber-950/40 border border-amber-900/50 rounded-lg px-3 py-2 leading-relaxed" role="alert">
+              Son değişiklikler buluta kaydedilemedi. Şimdi çıkarsan bu
+              değişiklikler kaybolur. İnternet bağlantını kontrol edip tekrar
+              deneyebilir ya da yine de çıkabilirsin.
+            </p>
+          )}
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setConfirmOpen(false)}
+              onClick={closeConfirm}
               disabled={signingOut}
               className="flex-1 h-10 rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
             >
@@ -171,7 +194,7 @@ export function UserAuthButton() {
             </button>
             <button
               type="button"
-              onClick={handleConfirmSignOut}
+              onClick={() => void handleConfirmSignOut(unsyncedWarning)}
               disabled={signingOut}
               className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-sm font-semibold text-white flex items-center justify-center gap-2"
             >
@@ -180,7 +203,7 @@ export function UserAuthButton() {
               ) : (
                 <LogOut className="w-4 h-4" />
               )}
-              Çıkış yap
+              {unsyncedWarning ? "Yine de çık" : "Çıkış yap"}
             </button>
           </div>
         </div>

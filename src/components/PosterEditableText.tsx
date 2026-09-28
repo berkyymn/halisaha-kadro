@@ -9,6 +9,7 @@ export function PosterEditableText({
   align = "center",
   variant = "default",
   onBlur,
+  maxLength = 32,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -18,6 +19,7 @@ export function PosterEditableText({
   align?: "left" | "center" | "right";
   variant?: "default" | "title" | "footer" | "footerAccent";
   onBlur?: () => void;
+  maxLength?: number;
 }) {
   const alignClass =
     align === "left"
@@ -45,6 +47,10 @@ export function PosterEditableText({
       className={`poster-editable ${variantClass} ${alignClass} ${className}`}
       style={style}
       spellCheck={false}
+      maxLength={maxLength}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
     />
   );
 }

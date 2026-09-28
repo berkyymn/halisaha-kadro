@@ -10,6 +10,7 @@ import {
 import { useAutoCardSize } from "@/hooks/useAutoCardSize";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { useAppStore } from "@/store/useAppStore";
+import { useDragStore } from "@/store/useDragStore";
 import { PlayerOnPitch, type SlotPosition } from "./PlayerOnPitch";
 import { getPitchMovementPolicy } from "@/lib/pitchInteraction";
 import {
@@ -36,11 +37,11 @@ export function PitchPlayerLayer({
   const players = useAppStore((s) => s.players);
   const pitchPlayers = useAppStore((s) => s.pitchPlayers);
   const singlePitchPlayers = useAppStore((s) => s.singlePitchPlayers);
-  const dragIntent = useAppStore((s) => s.dragIntent);
+  const dragIntent = useDragStore((s) => s.dragIntent);
   const applyFormations = useAppStore((s) => s.applyFormations);
 
   const movePitchPlayer = useAppStore((s) => s.movePitchPlayer);
-  const setDragIntent = useAppStore((s) => s.setDragIntent);
+  const setDragIntent = useDragStore((s) => s.setDragIntent);
   const swapPlayers = useAppStore((s) => s.swapPlayers);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
   const moveSlotToBench = useAppStore((s) => s.moveSlotToBench);

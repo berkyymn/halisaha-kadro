@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
 
 import { useAppStore } from "@/store/useAppStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { useGuestTabSync } from "@/hooks/useGuestTabSync";
 import { trackEvent } from "@/lib/analytics";
 import { BenchPanel } from "./BenchPanel";
@@ -16,6 +17,10 @@ const LogoDesignerModal = dynamic(
 import { MatchPoster } from "./MatchPoster";
 import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
+import { ModalShell } from "./ModalShell";
+
+/** Çıktı genişliği ekrandaki poster boyutundan bağımsız sabit tutulur. */
+const EXPORT_WIDTH = { versus: 2400, single: 1600 } as const;
 
 const PlayerEditModal = dynamic(
   () =>
@@ -25,6 +30,8 @@ const PlayerEditModal = dynamic(
 
 export function AppShell() {
   useGuestTabSync();
+  const { user } = useAuth();
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const resetGuestSession = useAppStore((s) => s.resetGuestSession);
   const players = useAppStore((s) => s.players);
@@ -88,18 +95,22 @@ export function AppShell() {
     setExporting(true);
     try {
       const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
+      const targetWidth = EXPORT_WIDTH[teamMode];
+      const pixelRatio = Math.max(2, targetWidth / Math.max(1, el.offsetWidth));
+      const dataUrl = await toPng(el, { pixelRatio, cacheBust: true });
       const link = document.createElement("a");
       link.download = "halisaha-kadro.png";
       link.href = dataUrl;
       link.click();
       trackEvent("poster_downloaded");
     } catch {
-      alert("Görsel indirilemedi.");
+      alert(
+        "Poster indirilemedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse fotoğrafları yeniden yükleyin."
+      );
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [teamMode]);
 
   const handleEditPlayer = useCallback(
     (team: "home" | "away", slotIndex: number) => setEditing({ team, slotIndex }),
@@ -127,6 +138,15 @@ export function AppShell() {
   const editPlayer = editCtx?.playerId
     ? players[editCtx.playerId] ?? savedPlayers[editCtx.playerId]
     : undefined;
+  const squadSize = useAppStore((s) => s.squadSize);
+  const teammateNumbers = editCtx
+    ? editCtx.teamConfig.playerIds
+        .slice(0, squadSize)
+        .filter((id) => id && id !== editCtx.playerId)
+        .map((id) => players[id] ?? savedPlayers[id])
+        .filter((p): p is NonNullable<typeof p> => Boolean(p))
+        .map((p) => ({ number: p.number, name: p.name }))
+    : [];
   const isCaptain =
     Boolean(editCtx?.playerId) &&
     editCtx?.teamConfig.captainId === editCtx?.playerId;
@@ -138,16 +158,24 @@ export function AppShell() {
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
       <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
-        <h1 className="text-sm font-black tracking-wide">⚽ Halı Saha Kadro</h1>
+        <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
+          <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
+          Halı Saha Kadro
+        </h1>
         <div className="flex items-center gap-2">
+          <a
+            href="/gizlilik"
+            target="_blank"
+            rel="noopener"
+            className="hidden md:inline text-[11px] text-zinc-500 hover:text-zinc-300"
+          >
+            Gizlilik
+          </a>
           <UserAuthButton />
           <div className="hidden sm:block h-5 w-px bg-zinc-800" />
           <button
             type="button"
-            onClick={() => {
-              trackEvent("guest_session_reset");
-              resetGuestSession();
-            }}
+            onClick={() => setResetConfirmOpen(true)}
             className="p-1.5 text-zinc-500 hover:text-white"
             title="Posteri sıfırla"
           >
@@ -171,7 +199,7 @@ export function AppShell() {
         className="flex-1 flex min-h-0 min-w-0"
         style={{ background: mainBg }}
       >
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0">
+        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size]">
           <MatchPoster
             onEditPlayer={handleEditPlayer}
             onLogoClick={handleLogoClick}
@@ -179,6 +207,43 @@ export function AppShell() {
         </div>
         <BenchPanel />
       </main>
+
+      <ModalShell
+        open={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
+      >
+        <div className="px-5 py-3.5 border-b border-zinc-800">
+          <h3 className="text-sm font-semibold text-white">Poster sıfırlansın mı?</h3>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-zinc-300 leading-relaxed">
+            Takımlar, sahadaki oyuncular (fotoğraflar dahil), logolar, başlık ve
+            saha bilgileri varsayılana döner. Yedek havuzun korunur.
+            {user ? " Bu değişiklik bulut kaydına da yansır." : ""}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setResetConfirmOpen(false)}
+              className="flex-1 h-10 rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-200 hover:bg-zinc-700"
+            >
+              İptal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent("guest_session_reset");
+                resetGuestSession();
+                setResetConfirmOpen(false);
+              }}
+              className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-semibold text-white"
+            >
+              Sıfırla
+            </button>
+          </div>
+        </div>
+      </ModalShell>
 
       {editing && editCtx && (
         <PlayerEditModal
@@ -198,6 +263,7 @@ export function AppShell() {
           variant={editing.team === "home" ? "light" : "dark"}
           source="lineup"
           team={editing.team}
+          teammateNumbers={teammateNumbers}
         />
       )}
 
@@ -220,7 +286,7 @@ export function AppShell() {
                 activeTeam.logo.mode === "generated"
                   ? {
                       ...activeTeam.logo,
-                      initials: shortName.slice(0, 2).toUpperCase() || "?",
+                      initials: shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "?",
                     }
                   : activeTeam.logo,
             });

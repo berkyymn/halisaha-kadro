@@ -73,9 +73,10 @@ export function LogoDesignerModal({
     try {
       const rawUrl = await fileToDataUrl(file);
       const imageUrl = await compressDataUrl(rawUrl, {
-        maxEdge: 220,
-        quality: 0.8,
-        kind: "photo",
+        maxEdge: 320,
+        quality: 0.9,
+        // WebP: şeffaf PNG logoların arka planı korunur (JPEG siyaha boyuyordu).
+        kind: "cutout",
       });
       trackEvent("logo_uploaded");
       onLogoChange({ ...logo, mode: "upload", presetId: undefined, imageUrl });
@@ -92,7 +93,7 @@ export function LogoDesignerModal({
     const preset = LOGO_IMAGE_PRESETS.find((p) => p.id === presetId);
     onLogoChange({
       ...base,
-      initials: shortName.slice(0, 2).toUpperCase() || base.initials,
+      initials: shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || base.initials,
       teamName: shortName,
     });
     if (preset) onJerseyChange({ ...preset.jersey });
@@ -147,9 +148,10 @@ export function LogoDesignerModal({
           <div className="mt-3 flex gap-2 items-center">
             <input
               value={shortName}
-              onChange={(e) => onTeamNameChange(e.target.value.toUpperCase())}
+              onChange={(e) => onTeamNameChange(e.target.value.toLocaleUpperCase("tr-TR"))}
               onBlur={() => trackEvent("team_name_changed", { team: teamSide })}
               placeholder={teamSide === "home" ? "TAKIM A" : "TAKIM B"}
+              maxLength={18}
               className="flex-1 min-w-0 h-9 bg-zinc-800 border border-zinc-600 rounded-lg px-2.5 text-sm text-white font-bold uppercase tracking-wide focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/30"
             />
             <button

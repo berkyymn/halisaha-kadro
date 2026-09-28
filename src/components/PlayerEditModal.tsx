@@ -19,13 +19,24 @@ import {
   getPhotoDisplayStyle,
   getPhotoImgClassName,
 } from "@/lib/imageCompress";
-import { PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
+import { loadImage, PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
 import { removeBackground, isModelReady } from "@/lib/backgroundRemoval";
+import { resolveJerseyNumber } from "@/lib/teamJerseyNumbers";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import type { JerseyConfig, PhotoCrop, Player } from "@/types";
 import { PlayerAvatar } from "./PlayerAvatar";
 
 const DEFAULT_CROP: PhotoCrop = { scale: 1, panX: 0, panY: 0 };
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
+
+function clampJerseyNumber(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(99, Math.round(value)));
+}
+
+function isEnterSubmit(e: React.KeyboardEvent): boolean {
+  return e.key === "Enter" && !e.nativeEvent.isComposing;
+}
 
 interface PlayerEditModalProps {
   open: boolean;
@@ -49,6 +60,8 @@ interface PlayerEditModalProps {
   defaultPlayerName?: string;
   source?: "lineup" | "bench";
   team?: "home" | "away";
+  /** Aynı takımdaki diğer oyuncuların numaraları (tekrar uyarısı için) */
+  teammateNumbers?: { number: number; name: string }[];
 }
 
 export function PlayerEditModal({ open, ...props }: PlayerEditModalProps) {
@@ -75,6 +88,7 @@ function PlayerEditModalBody({
   defaultPlayerName,
   source = "lineup",
   team,
+  teammateNumbers = [],
 }: Omit<PlayerEditModalProps, "open">) {
   const [name, setName] = useState(
     () =>
@@ -100,6 +114,7 @@ function PlayerEditModalBody({
   const [bgError, setBgError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,16 +125,43 @@ function PlayerEditModalBody({
       busy: removingBg || saving,
     });
 
-  const hasPhoto = Boolean(photoSource);
+  const hasPhoto = Boolean(photoSource || cutoutUrl);
+  const typedNumber = clampJerseyNumber(number);
+  const numberOwner = teammateNumbers.find((t) => t.number === typedNumber);
+  const resolvedNumber = numberOwner
+    ? resolveJerseyNumber(
+        typedNumber,
+        new Set(teammateNumbers.map((t) => t.number))
+      )
+    : typedNumber;
   const displaySrc = cutoutUrl || photoSource;
   const isCutout = Boolean(cutoutUrl);
 
   const handleFile = async (file: File) => {
     clearPickingFile();
+    setPhotoError(null);
     const hadPhotoBefore = Boolean(
-      player?.photoSource || player?.photoUrl
+      player?.photoSource || player?.photoUrl || player?.cutoutUrl
     );
-    const url = await fileToDataUrl(file);
+    if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) {
+      setPhotoError(
+        "HEIC fotoğraflar desteklenmiyor. Lütfen JPG veya PNG bir fotoğraf seçin."
+      );
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("Görsel çok büyük (en fazla 20 MB).");
+      return;
+    }
+    let url: string;
+    try {
+      url = await fileToDataUrl(file);
+      // Tarayıcının açamadığı formatları kaydetmeden önce yakala.
+      await loadImage(url);
+    } catch {
+      setPhotoError("Bu görsel açılamadı. Farklı bir JPG veya PNG deneyin.");
+      return;
+    }
     setPhotoSource(url);
     setCutoutUrl(null);
     setBeforeCutout(undefined);
@@ -191,8 +233,9 @@ function PlayerEditModalBody({
   }, []);
 
   const handleSave = async () => {
-    if (saving) return;
+    if (saving || removingBg) return;
     setSaving(true);
+    setPhotoError(null);
     try {
       let finalPhoto = photoSource ?? undefined;
       let finalCutout = cutoutUrl ?? undefined;
@@ -204,7 +247,7 @@ function PlayerEditModalBody({
       }
       onSave({
         name: name.trim(),
-        number,
+        number: clampJerseyNumber(number),
         photoSource: finalPhoto,
         cutoutUrl: finalCutout,
         photoCrop: crop,
@@ -214,9 +257,18 @@ function PlayerEditModalBody({
         trackEvent("player_edited", { source, team: team ?? "" });
       }
       onClose();
+    } catch (err) {
+      console.error("Player save failed:", err);
+      setPhotoError("Fotoğraf işlenemedi. Farklı bir görsel seçip tekrar deneyin.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEnterKey = (e: React.KeyboardEvent) => {
+    if (!isEnterSubmit(e)) return;
+    e.preventDefault();
+    void handleSave();
   };
 
   const previewPlayer: Player = {
@@ -275,6 +327,8 @@ function PlayerEditModalBody({
                   const n = parseInt(e.target.value, 10);
                   if (Number.isFinite(n)) setNumber(n);
                 }}
+                onBlur={() => setNumber((n) => clampJerseyNumber(n))}
+                onKeyDown={handleEnterKey}
                 className="no-spinner w-14 h-11 bg-zinc-800/80 border border-zinc-700 rounded-xl text-center text-xl font-black text-white focus:outline-none focus:border-green-500/70 focus:ring-1 focus:ring-green-500/30"
                 aria-label="Numara"
               />
@@ -283,9 +337,18 @@ function PlayerEditModalBody({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ad Soyad"
                 autoFocus
+                maxLength={24}
+                enterKeyHint="done"
+                onKeyDown={handleEnterKey}
                 className="flex-1 min-w-0 h-11 bg-zinc-800/80 border border-zinc-700 rounded-xl px-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-green-500/70 focus:ring-1 focus:ring-green-500/30"
               />
             </div>
+            {numberOwner && (
+              <p className="text-[11px] text-amber-300/90 px-1 leading-snug" role="status">
+                {typedNumber} numara {numberOwner.name || "başka bir oyuncu"} oyuncusunda;
+                kaydedince {resolvedNumber} numara verilecek.
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button
@@ -322,7 +385,7 @@ function PlayerEditModalBody({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -331,6 +394,11 @@ function PlayerEditModalBody({
                 e.target.value = "";
               }}
             />
+            {photoError && (
+              <p className="text-[11px] text-red-400/90 px-1 leading-snug" role="alert">
+                {photoError}
+              </p>
+            )}
           </div>
 
           {hasPhoto && (
@@ -423,7 +491,8 @@ function PlayerEditModalBody({
                 <button
                   type="button"
                   onClick={handleRemoveBg}
-                  disabled={removingBg}
+                  disabled={removingBg || !photoSource}
+                  title={!photoSource ? "Arka planı kaldırmak için orijinal fotoğrafı yeniden seçin" : undefined}
                   className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg bg-zinc-800/80 text-[11px] text-zinc-300 hover:bg-zinc-700 disabled:opacity-40 ring-1 ring-zinc-700/80"
                 >
                   <Scissors className="w-3 h-3" />

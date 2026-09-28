@@ -5,6 +5,7 @@ import { Loader2, X } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
@@ -112,7 +113,35 @@ function AuthModalBody({
     }
   };
 
+  const handlePasswordReset = async () => {
+    resetFeedback();
+    if (!email.trim()) {
+      setError("Şifre sıfırlama bağlantısı için e-posta adresini yaz.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const auth = getFirebaseAuth();
+      auth.languageCode = "tr";
+      await sendPasswordResetEmail(auth, email.trim());
+      trackEvent("password_reset_requested");
+      setMessage(
+        "Bu e-posta ile bir hesap varsa şifre sıfırlama bağlantısı gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et."
+      );
+    } catch (err) {
+      setError(mapAuthError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = tab === "login" ? handleLogin : handleRegister;
+  const submitOnEnter = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing && !busy) {
+      e.preventDefault();
+      void submit();
+    }
+  };
 
   return (
     <div
@@ -213,8 +242,8 @@ function AuthModalBody({
               </div>
 
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Giriş yaptığında kadro ve poster ayarların Firebase&apos;de
-                saklanır; başka cihazdan veya mobil uygulamadan devam edebilirsin.
+                Giriş yaptığında kadro ve poster ayarların hesabında saklanır;
+                başka bir bilgisayardan kaldığın yerden devam edebilirsin.
               </p>
 
               <label className="block">
@@ -242,10 +271,22 @@ function AuthModalBody({
                   }
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={submitOnEnter}
                   className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white"
                   placeholder="••••••"
                 />
               </label>
+
+              {tab === "login" && (
+                <button
+                  type="button"
+                  onClick={() => void handlePasswordReset()}
+                  disabled={busy}
+                  className="-mt-2 text-[11px] font-medium text-zinc-400 hover:text-white underline underline-offset-2 disabled:opacity-50"
+                >
+                  Şifremi unuttum
+                </button>
+              )}
 
               {tab === "register" && (
                 <label className="block">
@@ -257,6 +298,7 @@ function AuthModalBody({
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={submitOnEnter}
                     className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white"
                     placeholder="••••••"
                   />
@@ -291,6 +333,19 @@ function AuthModalBody({
                   "Kayıt ol"
                 )}
               </button>
+
+              <p className="text-[10px] text-zinc-500 leading-relaxed text-center">
+                Devam ederek{" "}
+                <a
+                  href="/gizlilik"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-zinc-300 underline underline-offset-2"
+                >
+                  Gizlilik ve KVKK Aydınlatma Metni
+                </a>
+                &apos;ni okuduğunu kabul edersin.
+              </p>
             </>
           )}
         </div>
