@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/errorReporting";
 import {
   isFirebaseStorageConfigured,
   playerCutoutStoragePath,
@@ -5,10 +6,8 @@ import {
   resolveStorageDownloadUrl,
   teamLogoStoragePath,
   uploadDataUrlToStorage,
-  deleteStorageObject,
 } from "@/lib/firebase/storage";
 import type { Player, TeamLogo } from "@/types";
-import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 class _MediaUploadCache {
   private _cache = new Map<string, string>();
@@ -61,6 +60,7 @@ async function uploadIfDataUrl(
   } catch (error) {
     // Storage is optional; a failed media upload must not block poster data.
     console.warn("Storage media upload failed:", path, error);
+    reportError(error, "cloud-media", { level: "warning", extra: { op: "upload" } });
     return undefined;
   }
 }
@@ -155,6 +155,7 @@ export async function hydratePlayerPhotosFromStorage(
         }
       } catch (error) {
         console.warn("Storage player media hydrate failed:", id, error);
+        reportError(error, "cloud-media", { level: "warning", extra: { op: "hydrate-player" } });
       }
     })
   );
@@ -169,6 +170,7 @@ export async function hydrateLogoFromStorage(logo: TeamLogo): Promise<TeamLogo> 
     return { ...logo, imageUrl };
   } catch (error) {
     console.warn("Storage logo hydrate failed:", error);
+    reportError(error, "cloud-media", { level: "warning", extra: { op: "hydrate-logo" } });
     return logo;
   }
 }
@@ -177,34 +179,3 @@ export function clearMediaUploadCache() {
   _uploadCache.reset();
 }
 
-function storagePaths(snapshot: PosterSnapshot): Set<string> {
-  const paths = new Set<string>();
-  for (const player of Object.values(snapshot.savedPlayers)) {
-    if (player.cutoutStoragePath) paths.add(player.cutoutStoragePath);
-    if (player.photoSourceStoragePath) paths.add(player.photoSourceStoragePath);
-  }
-  for (const logo of [snapshot.homeTeam.logo, snapshot.awayTeam.logo]) {
-    if (logo?.storagePath) paths.add(logo.storagePath);
-  }
-  return paths;
-}
-
-export async function cleanupOrphanedMedia(
-  previous: PosterSnapshot | null,
-  next: PosterSnapshot
-): Promise<void> {
-  if (!isFirebaseStorageConfigured() || !previous) return;
-  const nextPaths = storagePaths(next);
-  const orphaned = [...storagePaths(previous)].filter(
-    (path) => !nextPaths.has(path)
-  );
-  await Promise.all(
-    orphaned.map(async (path) => {
-      try {
-        await deleteStorageObject(path);
-      } catch (error) {
-        console.warn("Storage orphan cleanup failed:", path, error);
-      }
-    })
-  );
-}

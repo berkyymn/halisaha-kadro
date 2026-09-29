@@ -1,5 +1,7 @@
 # Sync Refactor Regression Checklist
 
+> **Tarihsel belge (2026-09-28):** Buradaki modüller (`cloudSyncManager`, `firestoreWriteQueue`, `syncRevisions`…) R4/R5 ile kaldırıldı. Güncel senkron sözleşmesi: `docs/IMPLEMENTATION.md` F11; güncel testler: `docs/QA-CHECKLIST.md` §40.
+
 Her cloud-sync refactor phase'i sonrası bu maddelerin tamamını manuel test et.
 **Amaç:** Phase'ler arası sync regresyonu yakalamak.
 

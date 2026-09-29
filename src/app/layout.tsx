@@ -3,6 +3,7 @@ import { Bebas_Neue, Geist } from "next/font/google";
 import { SITE_URL } from "@/lib/siteUrl";
 import { ANALYTICS_CONSENT_KEY, GA_ID } from "@/lib/analytics";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { ErrorReportingInit } from "@/components/ErrorReportingInit";
 import "./globals.css";
 
 const geist = Geist({
@@ -132,6 +133,7 @@ export default function RootLayout({
         )}
       </head>
       <body className="h-full antialiased font-sans overflow-hidden">
+        <ErrorReportingInit />
         {children}
         <ConsentBanner />
       </body>

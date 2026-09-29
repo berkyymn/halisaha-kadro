@@ -1,4 +1,5 @@
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
+import { hasUsableUploadLogo } from "@/lib/teamLogoCloud";
 import { isCustomizedPlayer } from "@/lib/playerPool";
 
 export { isCustomizedPlayer };
@@ -236,4 +237,49 @@ export function collectLocalPlayersForMerge(
     result.push(rest);
   }
   return result;
+}
+
+const PHOTO_FIELDS = ["photoSource", "cutoutUrl", "avatarUrl", "photoUrl", "photoCrop"] as const;
+
+/**
+ * Bulut kopyasına sığmadığı için atlanan medyayı bu cihazdaki kopyadan geri
+ * koyar: fotoğrafsız bulut oyuncusuna yerel fotoğraf, yüklenmiş logosu
+ * düşürülmüş takıma yerel logo. Yalnızca doküman "atlandı" işareti taşıyorsa
+ * çağrılır; bilerek silinen fotoğraf geri gelmez. Değişiklik yoksa `cloud`
+ * nesnesinin kendisi döner.
+ */
+export function restoreOmittedMedia(
+  local: PosterSnapshot,
+  cloud: PosterSnapshot,
+  omitted: { photos: boolean; logos: boolean }
+): PosterSnapshot {
+  let changed = false;
+  let savedPlayers = cloud.savedPlayers;
+  if (omitted.photos) {
+    savedPlayers = { ...cloud.savedPlayers };
+    for (const [id, remote] of Object.entries(cloud.savedPlayers)) {
+      const mine = local.savedPlayers[id];
+      if (!mine || hasPlayerPhoto(remote) || !hasPlayerPhoto(mine)) continue;
+      const restored: Player = { ...remote };
+      for (const field of PHOTO_FIELDS) {
+        if (mine[field] !== undefined) Object.assign(restored, { [field]: mine[field] });
+      }
+      savedPlayers[id] = restored;
+      changed = true;
+    }
+  }
+  const restoreLogo = (remote: TeamLogo, mine: TeamLogo): TeamLogo => {
+    if (!omitted.logos || hasUsableUploadLogo(remote) || !hasUsableUploadLogo(mine)) return remote;
+    changed = true;
+    return mine;
+  };
+  const homeLogo = restoreLogo(cloud.homeTeam.logo, local.homeTeam.logo);
+  const awayLogo = restoreLogo(cloud.awayTeam.logo, local.awayTeam.logo);
+  if (!changed) return cloud;
+  return {
+    ...cloud,
+    savedPlayers,
+    homeTeam: { ...cloud.homeTeam, logo: homeLogo },
+    awayTeam: { ...cloud.awayTeam, logo: awayLogo },
+  };
 }

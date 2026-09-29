@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/app";
 import { trackEvent } from "@/lib/analytics";
-import { mapAuthError } from "@/lib/cloudPoster";
+import { mapAuthError } from "@/lib/cloud/errors";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import { useAuth } from "@/contexts/AuthContext";
 

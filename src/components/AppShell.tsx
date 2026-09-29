@@ -1,5 +1,6 @@
 "use client";
 
+import { reportError } from "@/lib/errorReporting";
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, RotateCcw } from "lucide-react";
@@ -21,6 +22,7 @@ import { ModalShell } from "./ModalShell";
 
 /** Çıktı genişliği ekrandaki poster boyutundan bağımsız sabit tutulur. */
 const EXPORT_WIDTH = { versus: 2400, single: 1600 } as const;
+const EXPORT_JPEG_QUALITY = 0.92;
 
 const PlayerEditModal = dynamic(
   () =>
@@ -94,16 +96,24 @@ export function AppShell() {
     if (!el) return;
     setExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
+      const { toJpeg } = await import("html-to-image");
       const targetWidth = EXPORT_WIDTH[teamMode];
       const pixelRatio = Math.max(2, targetWidth / Math.max(1, el.offsetWidth));
-      const dataUrl = await toPng(el, { pixelRatio, cacheBust: true });
+      // JPEG %92: posterde saydamlık yok; gözle kayıp yok, ~1 MB (PNG ~5 MB).
+      // WhatsApp'ta daha hızlı gider ve ikinci kez sert sıkıştırılmaz.
+      const dataUrl = await toJpeg(el, {
+        pixelRatio,
+        cacheBust: true,
+        quality: EXPORT_JPEG_QUALITY,
+        backgroundColor: "#09090b",
+      });
       const link = document.createElement("a");
-      link.download = "halisaha-kadro.png";
+      link.download = "halisaha-kadro.jpg";
       link.href = dataUrl;
       link.click();
       trackEvent("poster_downloaded");
-    } catch {
+    } catch (err) {
+      reportError(err, "export", { extra: { teamMode } });
       alert(
         "Poster indirilemedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse fotoğrafları yeniden yükleyin."
       );

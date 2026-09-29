@@ -51,15 +51,13 @@ import {
   buildPosterSnapshot,
   createDefaultMatchInfo,
   finalizePosterSnapshot,
-  mergePosterSnapshot,
   normalizeMatchInfo,
   parsePosterSnapshot,
   type PosterSnapshot,
 } from "@/lib/posterSnapshot";
-import { maxIsoTimestamp } from "@/lib/brandingSnapshot";
-import { bumpSyncRevisions, DEFAULT_SYNC_REVISIONS } from "@/lib/syncRevisionBump";
-import type { SyncRevisions } from "@/lib/syncRevisions";
 import { indexedDBStorage } from "@/lib/indexedDBStorage";
+import { createId } from "@/lib/id";
+import { MAX_BENCH_PLAYERS } from "@/lib/limits";
 import {
   EMPTY_FORMAT_OVERFLOW,
   normalizeRoster,
@@ -120,7 +118,6 @@ function withLogo(team: TeamConfig): TeamConfig {
     logo: normalizeTeamLogo(team.logo, team.shortName),
   };
 }
-
 
 function autoAssignLineup(
   team: TeamConfig,
@@ -220,19 +217,17 @@ interface AppStore {
   teamLogoDisplaySize: number;
   posterTheme: PosterThemeId;
   logoDesignerTeam: "home" | "away" | null;
-  remoteHydrating: boolean;
   localUpdatedAt?: string;
-  syncRevisions: SyncRevisions;
+  /**
+   * Kullanıcı düzenlemesi sayacı (persist). Bulut senkronu "bekleyen değişiklik
+   * var mı" kararını buna göre verir; türetilmiş/otomatik değişiklikler artırmaz.
+   */
+  editVersion: number;
 
-  setRemoteHydrating: (value: boolean) => void;
   getPosterSnapshot: () => PosterSnapshot;
-  hydrateFromSnapshot: (
-    snapshot: PosterSnapshot,
-    updatedAt?: string,
-    options?: { replace?: boolean }
-  ) => void;
+  /** Bulut kadrosunu birebir uygular; kullanıcı düzenlemesi sayılmaz (editVersion değişmez). */
+  applyCloudSnapshot: (snapshot: PosterSnapshot) => void;
   appendPlayersToBench: (players: Player[]) => void;
-  setMode: (mode: AppMode) => void;
   setTeamMode: (mode: "single" | "versus") => void;
   setMatchInfo: (info: Partial<MatchInfo>) => void;
   setSquadSize: (size: SquadSize) => void;
@@ -252,7 +247,6 @@ interface AppStore {
       clearPhoto?: boolean;
     }
   ) => void;
-  clearSlot: (team: "home" | "away", slotIndex: number) => void;
   setCaptain: (team: "home" | "away", slotIndex: number | null) => void;
   updatePlayer: (id: string, data: Partial<Player>) => void;
   applyCompressedPlayers: (
@@ -273,7 +267,6 @@ interface AppStore {
   }) => void;
   resetPitchPositions: (team?: "home" | "away") => void;
   resetGuestSession: () => void;
-  setPlayerCardSize: (size: number) => void;
   setTeamLogoDisplaySize: (size: number) => void;
   setPosterTheme: (theme: PosterThemeId) => void;
   setLogoDesignerTeam: (team: "home" | "away" | null) => void;
@@ -359,11 +352,7 @@ export const useAppStore = create<AppStore>()(
           ...(hasPosterChanges
             ? {
                 localUpdatedAt: new Date().toISOString(),
-                syncRevisions: bumpSyncRevisions(
-                  prev.syncRevisions,
-                  prev,
-                  nextState as Record<string, unknown>
-                ),
+                editVersion: (prev.editVersion ?? 0) + 1,
               }
             : {}),
         };
@@ -397,58 +386,37 @@ export const useAppStore = create<AppStore>()(
         teamLogoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE,
         posterTheme: DEFAULT_POSTER_THEME,
         logoDesignerTeam: null,
-        remoteHydrating: false,
         localUpdatedAt: undefined,
-        syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
-
-      setRemoteHydrating: (value) => set({ remoteHydrating: value }),
+        editVersion: 0,
 
       getPosterSnapshot: () => buildPosterSnapshot(get()),
 
-      hydrateFromSnapshot: (snapshot, updatedAt, options) => {
+      applyCloudSnapshot: (snapshot) => {
         const parsed = parsePosterSnapshot(snapshot);
         if (!parsed) return;
-        const current = get();
-        // replace: yerel veriyle hiç birleştirmeden gelen snapshot'ı uygula
-        // ("Bulutu kullan"). Aksi halde LWW + yerel medya koruma.
-        const finalized = finalizePosterSnapshot(
-          options?.replace
-            ? { ...current, ...parsed, players: parsed.savedPlayers }
-            : mergePosterSnapshot(current, parsed, {
-                remoteDocUpdatedAt: updatedAt,
-              })
-        );
-        const resolvedUpdatedAt = options?.replace
-          ? maxIsoTimestamp(parsed.localUpdatedAt, updatedAt)
-          : maxIsoTimestamp(
-              current.localUpdatedAt,
-              parsed.localUpdatedAt,
-              updatedAt
-            );
-        realSet(
-          {
-            teamMode: finalized.teamMode,
-            mode: finalized.mode,
-            matchInfo: finalized.matchInfo,
-            squadSize: finalized.squadSize,
-            homeTeam: finalized.homeTeam,
-            awayTeam: finalized.awayTeam,
-            players: finalized.players,
-            savedPlayers: finalized.savedPlayers,
-            benchPlayerIds: finalized.benchPlayerIds,
-            formatOverflow: finalized.formatOverflow ?? EMPTY_FORMAT_OVERFLOW,
-            homeFormationId: finalized.homeFormationId,
-            awayFormationId: finalized.awayFormationId,
-            pitchPlayers: finalized.pitchPlayers,
-            singlePitchPlayers: finalized.singlePitchPlayers,
-            playerCardSize: finalized.playerCardSize,
-            teamLogoDisplaySize: finalized.teamLogoDisplaySize,
-            posterTheme: finalized.posterTheme,
-            logoDesignerTeam: null,
-            localUpdatedAt: resolvedUpdatedAt,
-          },
-          false
-        );
+        const finalized = finalizePosterSnapshot({ ...parsed, players: parsed.savedPlayers });
+        // realSet: editVersion artmaz; bu bir kullanıcı düzenlemesi değildir.
+        realSet({
+          teamMode: finalized.teamMode,
+          mode: finalized.mode,
+          matchInfo: finalized.matchInfo,
+          squadSize: finalized.squadSize,
+          homeTeam: finalized.homeTeam,
+          awayTeam: finalized.awayTeam,
+          players: finalized.players,
+          savedPlayers: finalized.savedPlayers,
+          benchPlayerIds: finalized.benchPlayerIds,
+          formatOverflow: finalized.formatOverflow ?? EMPTY_FORMAT_OVERFLOW,
+          homeFormationId: finalized.homeFormationId,
+          awayFormationId: finalized.awayFormationId,
+          pitchPlayers: finalized.pitchPlayers,
+          singlePitchPlayers: finalized.singlePitchPlayers,
+          playerCardSize: finalized.playerCardSize,
+          teamLogoDisplaySize: finalized.teamLogoDisplaySize,
+          posterTheme: finalized.posterTheme,
+          logoDesignerTeam: null,
+          localUpdatedAt: parsed.localUpdatedAt,
+        });
       },
 
       appendPlayersToBench: (incoming) => {
@@ -473,19 +441,6 @@ export const useAppStore = create<AppStore>()(
             ),
           };
         });
-      },
-
-      setMode: (mode) => {
-        set((s) => ({
-          mode,
-          players: rebuildActivePlayers(
-            s.savedPlayers,
-            s.benchPlayerIds,
-            s.homeTeam,
-            s.awayTeam,
-            s.squadSize
-          ),
-        }));
       },
 
       setTeamMode: (teamMode) => {
@@ -581,7 +536,7 @@ export const useAppStore = create<AppStore>()(
             data.number === undefined
           )
             return;
-          playerId = crypto.randomUUID();
+          playerId = createId();
           const player: Player = {
             id: playerId,
             name,
@@ -617,38 +572,6 @@ export const useAppStore = create<AppStore>()(
         const playerId = padPlayerIds(t.playerIds, get().squadSize)[slotIndex];
         if (!playerId || playerId === "") return;
         set({ [key]: { ...t, captainId: playerId } });
-      },
-
-      clearSlot: (team, slotIndex) => {
-        const s = get();
-        const key = team === "home" ? "homeTeam" : "awayTeam";
-        const otherKey = team === "home" ? "awayTeam" : "homeTeam";
-        const ids = padPlayerIds(s[key].playerIds, s.squadSize);
-        const playerId = ids[slotIndex];
-        if (!playerId) return;
-
-        ids[slotIndex] = "";
-        const wasCaptain = s[key].captainId === playerId;
-        const usedElsewhere =
-          padPlayerIds(s[otherKey].playerIds, s.squadSize).includes(playerId) ||
-          ids.some((id) => id === playerId);
-
-        set((state) => {
-          const players = { ...state.players };
-          const onBench = state.benchPlayerIds.includes(playerId);
-          if (!usedElsewhere && !onBench) {
-            delete players[playerId];
-          }
-          return {
-            players,
-            [key]: {
-              ...s[key],
-              playerIds: ids,
-              ...(wasCaptain ? { captainId: undefined } : {}),
-            },
-          };
-        });
-        get().applyFormations();
       },
 
       updatePlayer: (id, data) =>
@@ -813,14 +736,6 @@ export const useAppStore = create<AppStore>()(
         get().applyFormations({ resetHome: true, resetAway: true });
       },
 
-      setPlayerCardSize: (size) =>
-        set({
-          playerCardSize: Math.max(
-            MIN_PLAYER_CARD_SIZE,
-            Math.min(MAX_PLAYER_CARD_SIZE, Math.round(size))
-          ),
-        }),
-
       setTeamLogoDisplaySize: (size) => {
         trackEvent("logo_display_size_changed", { size });
         set({ teamLogoDisplaySize: clampLogoDisplaySize(size) });
@@ -841,8 +756,10 @@ export const useAppStore = create<AppStore>()(
       setLogoDesignerTeam: (team) => set({ logoDesignerTeam: team }),
 
       addPlayerToBench: (data) => {
+        // Kota: yeni yedek oluşturma sınırı (sunucu kuralları ayrıca sınırlar).
+        if (get().benchPlayerIds.length >= MAX_BENCH_PLAYERS) return "";
         trackEvent("bench_player_added");
-        const playerId = crypto.randomUUID();
+        const playerId = createId();
         const count = get().benchPlayerIds.length;
         const player: Player = {
           id: playerId,
@@ -1162,7 +1079,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 34,
+      version: 35,
       storage: createJSONStorage(() => guardedStorage),
       migrate: (persisted: unknown, version: number): AppStore => {
         migratedDuringHydration = true;
@@ -1413,7 +1330,6 @@ export const useAppStore = create<AppStore>()(
         if (version < 28) {
           state = {
             ...state,
-            syncRevisions: { ...DEFAULT_SYNC_REVISIONS },
           };
           const squadSize = (state.squadSize as SquadSize) || 7;
           const homeTeam = state.homeTeam as TeamConfig;
@@ -1508,21 +1424,27 @@ export const useAppStore = create<AppStore>()(
           // formatOverflow eklendi (format küçülünce yedeğe inen oyuncular).
           state = { ...state, formatOverflow: EMPTY_FORMAT_OVERFLOW };
         }
+        if (version < 35) {
+          // 4 alanlı syncRevisions yerine tek editVersion sayacı.
+          const { syncRevisions, ...rest } = state;
+          void syncRevisions;
+          state = { ...rest, editVersion: 0 };
+        }
         return state as unknown as AppStore;
       },
+      // Kalıcı depodaki hâl her zaman kazanır (kendi kaydımız); normalizasyon
+      // onRehydrateStorage → finalizePosterSnapshot ile yapılır.
       merge: (persisted: unknown, current: AppStore): AppStore => {
-        const saved = persisted as Partial<PosterSnapshot> & {
-          syncRevisions?: SyncRevisions;
-        };
+        const saved = (persisted ?? {}) as Partial<PosterSnapshot> & { editVersion?: number };
         return {
           ...current,
-          ...mergePosterSnapshot(current, saved),
-          syncRevisions: saved.syncRevisions ?? current.syncRevisions,
+          ...saved,
+          editVersion: typeof saved.editVersion === "number" ? saved.editVersion : 0,
         } as AppStore;
       },
       partialize: (s: AppStore): Partial<AppStore> => ({
         ...buildPosterSnapshot(s),
-        syncRevisions: s.syncRevisions,
+        editVersion: s.editVersion,
       }),
       onRehydrateStorage: () => {
         // Hem ilk yüklemede hem sekmeler arası rehydrate'te okuma bitene kadar yazma yok.

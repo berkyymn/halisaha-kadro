@@ -3,11 +3,24 @@
 import { Users, Cloud, Merge, AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/ModalShell";
 import type { ConflictSummary } from "@/lib/loginConflict";
+import type { ConflictChoice, ConflictReason } from "@/lib/cloud/syncController";
 
-export type LoginConflictChoice = "local" | "cloud" | "merge";
+export type LoginConflictChoice = ConflictChoice;
+
+const COPY: Record<ConflictReason, { title: string; body: string }> = {
+  "guest-data": {
+    title: "Hesabında başka bir kadro var",
+    body: "Bu cihazdaki kadro ile buluttaki kadro birbirinden farklı. Hangisini kullanmak istediğini seç:",
+  },
+  "concurrent-edit": {
+    title: "Kadro başka bir yerde de değişti",
+    body: "Bu cihazdaki kaydedilmemiş değişiklikler varken bulut kadron başka bir cihazda ya da sekmede güncellendi. Hangisini kullanmak istediğini seç:",
+  },
+};
 
 type LoginConflictModalProps = {
   open: boolean;
+  reason?: ConflictReason;
   busy?: boolean;
   error?: string | null;
   localSummary: ConflictSummary;
@@ -80,6 +93,7 @@ function SummaryCard({
 
 export function LoginConflictModal({
   open,
+  reason = "guest-data",
   busy = false,
   error = null,
   localSummary,
@@ -96,16 +110,11 @@ export function LoginConflictModal({
     >
       <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-400" />
-        <h3 className="text-sm font-semibold text-white">
-          Hesabında başka bir kadro var
-        </h3>
+        <h3 className="text-sm font-semibold text-white">{COPY[reason].title}</h3>
       </div>
 
       <div className="p-5 space-y-4">
-        <p className="text-sm text-zinc-300 leading-relaxed">
-          Bu cihazdaki kadro ile buluttaki kadro birbirinden farklı. Hangisini
-          kullanmak istediğini seç:
-        </p>
+        <p className="text-sm text-zinc-300 leading-relaxed">{COPY[reason].body}</p>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <SummaryCard

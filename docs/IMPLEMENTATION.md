@@ -49,15 +49,15 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
                             │ useAppStore()
 ┌───────────────────────────▼─────────────────────────────────┐
 │  State (src/store/useAppStore.ts)                             │
-│  All poster mutations; persist v32; syncRevisions           │
+│  All poster mutations; persist v35; editVersion counter     │
 └───────────────────────────┬─────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
         ▼                   ▼                   ▼
 ┌───────────────┐  ┌────────────────┐  ┌───────────────────┐
 │ Domain lib/   │  │ Snapshot lib/  │  │ Cloud lib/        │
-│ formations,   │  │ posterSnapshot │  │ cloudPoster,      │
-│ logos, photos │  │ brandingSnap.  │  │ cloudSyncManager  │
+│ formations,   │  │ posterSnapshot │  │ lib/cloud/*       │
+│ logos, photos │  │ brandingSnap.  │  │ SyncController    │
 └───────────────┘  └────────────────┘  └───────────────────┘
         │                   │                   │
         └───────────────────┴───────────────────┘
@@ -71,7 +71,7 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
 1. **UI components** read/write store; avoid duplicating business logic in components.
 2. **Domain logic** lives in `src/lib/` — pure functions, no React.
 3. **Serialization** (build/parse/merge snapshots) lives in `posterSnapshot.ts` and `brandingSnapshot.ts`.
-4. **Cloud I/O** only through `cloudPoster.ts`, `mediaSync.ts`, `AuthContext.tsx`, `cloudSyncManager.ts`.
+4. **Cloud I/O** only through `src/lib/cloud/posterRepository.ts` (+ `mediaSync.ts` for uploads). Sync decisions only in `src/lib/cloud/syncController.ts`; `AuthContext.tsx` just starts/stops it and renders its state.
 5. **Never** persist blob URLs; use **data URLs** locally, **Storage paths** in cloud.
 
 ---
@@ -83,8 +83,8 @@ page.tsx
 └── MobileGate            → phones/tablets get "Mobil uygulamamız yakında"; app never boots
     └── AppProviders
 AppProviders
-├── AuthProvider          → Firebase auth, cloud load/push, syncPhase
-├── AppBootstrapGate      → waits: store hydrate + auth + !remoteHydrating
+├── AuthProvider          → Firebase auth; starts/stops SyncController; exposes `sync` state; renders LoginConflictModal
+├── AppBootstrapGate      → waits: store hydrate + auth + first cloud load (`sync.phase === "loading" && !sync.error`)
 │   └── idle: compressAllSavedPlayers() once
 └── AuthModal
 
@@ -97,10 +97,10 @@ AppShell
 ```
 
 **Hydration order:**
-1. Zustand rehydrates from `localStorage` (`halisaha-kadro`, persist v32)
+1. Zustand rehydrates from IndexedDB/localStorage (`halisaha-kadro`, persist v35)
 2. `onRehydrateStorage` runs `finalizePosterSnapshot`
-3. If user signed in, `AuthContext.loadCloudPoster` fetches Firestore doc
-4. `hydrateFromSnapshot` merges cloud into local (LWW via `localUpdatedAt`)
+3. If user signed in, `SyncController.start(uid)` fetches `posters/{uid}` and decides (see F11): adopt cloud, keep local and save, or open a conflict
+4. Cloud data enters the store only via `applyCloudSnapshot` (replace, no `editVersion` bump)
 5. `AppBootstrapGate` hides loading screen when all ready
 
 ---
@@ -120,18 +120,18 @@ AppShell
 
 ### 5.2 App store shape (`useAppStore`)
 
-**Persisted poster fields** (via `partialize` → `buildPosterSnapshot` + `syncRevisions`):
+**Persisted poster fields** (via `partialize` → `buildPosterSnapshot` + `editVersion`):
 
 - `mode`, `matchInfo`, `squadSize`, `homeTeam`, `awayTeam`
 - `teamMode` (`single` | `versus`)
 - `savedPlayers`, `benchPlayerIds`, `homeFormationId`, `awayFormationId`
 - `pitchPlayers`, `playerCardSize`, `photoScalePercent`, `teamLogoDisplaySize`, `posterTheme`
-- `localUpdatedAt`, `syncRevisions`
+- `localUpdatedAt`, `editVersion`
 
 **Runtime-only** (not in snapshot):
 
 - `players` — active registry rebuilt from lineup + bench
-- `logoDesignerTeam`, `remoteHydrating`
+- `logoDesignerTeam`
 - Drag preview state lives in a **separate** store `src/store/useDragStore.ts` (`dragIntent`). It must not live in `useAppStore`: every `useAppStore` set() makes the persist middleware serialize the whole poster (photos included) to IndexedDB + localStorage.
 
 ### 5.3 PosterSnapshot (`src/lib/posterSnapshot.ts`)
@@ -142,59 +142,12 @@ Canonical serialized poster document. Functions:
 |----------|------|
 | `buildPosterSnapshot(source)` | Store → snapshot; prunes `savedPlayers` to lineup+bench IDs only |
 | `parsePosterSnapshot(raw)` | Validate/deserialize |
-| `mergePosterSnapshot(current, saved, opts)` | LWW merge for cloud/local conflict |
 | `finalizePosterSnapshot(partial)` | Normalize teams, fill empty slots, rebuild `players` |
 | `normalizeMatchInfo` | Always use when touching `matchInfo` |
 
-### 5.4 Sync revisions (`src/lib/syncRevisions.ts`)
+### 5.4 Edit counter (`editVersion`)
 
-```ts
-type SyncRevisions = {
-  branding: number;  // logo, jersey, teamLogoDisplaySize
-  roster: number;    // players, bench, squad, playerIds
-  layout: number;    // formations, pitch, theme, matchInfo, card sizes
-  media: number;     // photo/cutout changes
-};
-```
-
-Bumped in store `set()` wrapper via `syncRevisionBump.ts`. Cloud sync uses revisions (not full JSON diff) to decide what to flush.
-
-### 5.5 Firestore document (`posters/{userId}`)
-
-```ts
-{
-  data: PosterSnapshot;           // slim teams in cloud (no logo/jersey in data.homeTeam)
-  branding?: TeamBrandingSnapshot; // logo + jersey + teamLogoDisplaySize
-  updatedAt: string;              // ISO — data write time
-  brandingUpdatedAt?: string;      // ISO — branding write time
-  revision?: number;               // transaction revision / stale-write guard
-  photosOmitted?: boolean;
-  logosOmitted?: boolean;
-}
-```
-
-**Branding snapshot** (`src/lib/brandingSnapshot.ts`):
-
-```ts
-type TeamBrandingSnapshot = {
-  home: { logo, jersey, atmosphereColor };
-  away: { logo, jersey, atmosphereColor };
-  teamLogoDisplaySize: number;
-  revision: number;
-};
-```
-
-On load: `mergeCloudBrandingIntoSnapshot(data, branding, brandingUpdatedAt)` applies branding when newer than `data.localUpdatedAt`.
-
-### 5.6 Firebase Storage paths (`src/lib/firebase/storage.ts`)
-
-```
-users/{uid}/players/{playerId}/cutout.webp
-users/{uid}/players/{playerId}/source.jpg
-users/{uid}/logos/{side}.webp   // home | away
-```
-
-`mediaSync.ts` uploads data URLs before cloud save and hydrates download URLs on fetch.
+A single monotonic counter in the store. The `set()` wrapper increments it (and `localUpdatedAt`) whenever a poster key changes; `applyCloudSnapshot` does **not**. The sync layer compares it with the last synced marker (`halisaha-synced:{uid}` → `{editVersion, revision}`) to know whether there are unsaved local edits. Replaces the old 4-domain `syncRevisions` (removed in persist v35).
 
 ---
 
@@ -350,7 +303,7 @@ Substitutions are **drag-and-drop only**:
 |---|---|
 | **UI** | `AuthModal.tsx`, `UserAuthButton.tsx` |
 | **Context** | `AuthContext.tsx` |
-| **Lib** | `firebase/client.ts`, `firebase/app.ts`, `cloudPoster.mapAuthError` |
+| **Lib** | `firebase/client.ts`, `firebase/app.ts`, `cloud/errors.mapAuthError` |
 | **Env** | `NEXT_PUBLIC_FIREBASE_*` in `.env.local` |
 | **Rules** | `firebase/firestore.rules` — user can only RW `posters/{ownUid}` |
 
@@ -358,32 +311,32 @@ Substitutions are **drag-and-drop only**:
 
 | | |
 |---|---|
-| **Hook** | `useCloudSync.ts` |
-| **Manager** | `cloudSyncManager.ts` — single flush, debounce 8s, max wait 45s, lifecycle flush 15s gap |
-| **Queue** | `firestoreWriteQueue.ts` — 12s gap, 5s priority, max 4 writes/min, 120s exhausted cooldown |
-| **IO** | `cloudPoster.ts` — `saveUserPoster` (data only), `saveUserBranding` (branding only) |
+| **Decisions** | `src/lib/cloud/syncController.ts` — pure state machine, no React/Firebase imports; unit-tested with `src/test/fakeCloud.ts` |
+| **Wiring** | `src/lib/cloud/syncRuntime.ts` — the one controller instance (repository + store adapter + `browserSyncMeta` + `reportError`) |
+| **IO** | `src/lib/cloud/posterRepository.ts` — `fetchPoster`, `savePoster` (transaction, revision +1), `subscribePoster`, `deleteOrphanedMedia` |
+| **Document** | `src/lib/cloud/cloudDocument.ts` — parse (incl. legacy `branding` field) / slim for cloud / Storage path diff |
+| **Meta** | `src/lib/cloud/syncMeta.ts` — `halisaha-local-owner`, `halisaha-synced:{uid}` in localStorage |
 | **Media** | `mediaSync.ts`, `firebase/storage.ts` |
-| **UI** | `PosterToolbar` shows sync phase; `AuthContext.syncPhase` |
-| **QA** | §7b, §11 |
+| **UI** | `UserAuthButton` via `describeSyncIndicator` (`cloud/syncIndicator.ts`); `LoginConflictModal` (reason `guest-data` / `concurrent-edit`) |
+| **QA** | §7b, §11, §36, §40 |
 
-**Flush decision:**
-- Branding-only dirty → `saveUserBranding` (~5KB, priority queue)
-- Data dirty → `saveUserPoster`; if branding also dirty, branding save follows
-- `resource-exhausted` → cooldown, coalesced retry
+**States:** `idle` (no user) → `loading` (fetch, retry with backoff on network errors) → `conflict` (user must choose) or `ready` (saving/pending/error/notice flags) ; `error` = unreadable document.
 
-**Durability and realtime:** `cloudSyncOutbox.ts` localStorage’da kullanıcı/revision sync niyetini tutar; `onSnapshot` uzak revision değişikliklerini bildirir. `BroadcastChannel` yalnızca aynı browser sekmeleri için optimizasyondur.
+**Initial decision (`decideInitial`):**
+- Device owner is this user: no unsaved edits or local == cloud → adopt cloud. Unsaved edits and cloud revision unchanged since last sync → keep local and save. Otherwise → `concurrent-edit` conflict.
+- Device not owned by this user (guest data): local untouched or equal → adopt cloud. Otherwise → `guest-data` conflict.
+- No document → write local as revision 1. Legacy document → adopted and rewritten once (legacy fields deleted).
+- Adopting a document flagged `photosOmitted`/`logosOmitted` keeps this device's copies of the omitted media (`policy.restoreOmittedMedia`); without the flag the cloud wins (a deliberate removal elsewhere is respected).
 
-**Server revision:** Data ve branding writes transaction içinde mevcut `revision` değerini kontrol edip bir artırır. Beklenen revision farklıysa stale write `failed-precondition` ile reddedilir ve istemci güncel cloud snapshot’ını yeniden okur.
+**Saving:** debounce 2.5s, max wait 15s, one write in flight; retry 3s→60s backoff; `resource-exhausted` → 30s cooldown. `failed-precondition` (revision mismatch) → refetch and decide again (may become `concurrent-edit`).
 
-**Outbox:** Outbox yalnızca `userId`, revision’lar ve enqueue zamanını tutar; snapshot local persist’te bulunduğu için medya/base64 verisi ikinci kez saklanmaz. Native istemci aynı sözleşmeyi platformun kalıcı storage’ı ile uygulamalıdır.
+**Realtime:** `onSnapshot` on `posters/{uid}`. Changes with revision ≤ known are echoes and ignored; newer ones are applied when there are no unsaved edits, otherwise → `concurrent-edit` conflict. Nothing is overwritten silently.
 
-**Media cleanup:** Başarılı bir cloud write sonrasında önceki snapshot’ta olup yeni snapshot’ta referans edilmeyen Storage path’leri client-side silinir. Hesap silme ve client’in uzun süre çalışmadığı orphan senaryoları için ileride server-side cleanup gerekir.
+**Lifecycle:** `visibilitychange(hidden)` / `pagehide` → `flushInBackground()`. Sign-out → `flushNow(20s)`; on failure the user must confirm "Yine de çık". Account deletion → `waitForIdle()` → `stop()` before deleting data.
 
-**Sync baseline:** `applyCloudRow` always calls `markPosterSnapshotSynced` after cloud load to set `lastSyncedRevisions`. Pending repush detection uses `localSnapshot.localUpdatedAt > row.updatedAt` (not fingerprint comparison, which fails against split-branding slim `data` snapshots without logo/jersey).
+**Media cleanup:** after a successful save, Storage paths referenced by the previous cloud snapshot but not the new one are deleted (`orphanedStoragePaths`).
 
-**Regression guard:** `docs/SYNC-REFACTOR-CHECKLIST.md` — her sync refactor phase sonrası çalıştır.
-
-### F12 — Image compression bootstrap
+## F12 — Image compression bootstrap
 
 | | |
 |---|---|
@@ -396,7 +349,7 @@ One-time migration-style compression of legacy large data URLs in localStorage. 
 
 | | |
 |---|---|
-| **Lib** | `imageCompress.ts`, `cloudPoster.ts` |
+| **Lib** | `imageCompress.ts`, `mediaSync.ts` |
 
 || Parameter | Before | After |
 ||-----------|--------|-------|
@@ -428,16 +381,16 @@ The black side margins outside the 4:5 poster are filled with a very subtle radi
 All poster mutations go through wrapped `set()`:
 
 - Updates `localUpdatedAt` when poster keys change
-- Bumps `syncRevisions` via `bumpSyncRevisions()`
+- Increments `editVersion`
 
-`hydrateFromSnapshot` uses `realSet` directly (no revision bump).
+`applyCloudSnapshot` and internal normalizations (formation fixes, `applyCompressedPlayers` when only the `didCompress` flag changed) use `realSet` directly — they are not user edits and must not trigger a save. Compressed photos do go through `set()` so the smaller images reach the cloud.
 
-### 7.2 Persist middleware (v32)
+### 7.2 Persist middleware (v35)
 
 | Hook | Responsibility |
 |------|----------------|
-| `partialize` | `buildPosterSnapshot(s)` + `syncRevisions` |
-| `merge` | `mergePosterSnapshot` + restore `syncRevisions` |
+| `partialize` | `buildPosterSnapshot(s)` + `editVersion` |
+| `merge` | `{...current, ...saved, editVersion}` (local persisted copy wins; cloud merging is the SyncController's job) |
 | `onRehydrateStorage` | `finalizePosterSnapshot`, mark `hasAppStoreHydrated()` |
 | `migrate` | Only forward migrations; agents adding fields must bump version and add `migrate` block |
 
@@ -483,11 +436,11 @@ Follow this order:
 ```
 1. types/index.ts          — new fields if needed
 2. src/lib/                — pure logic, normalization
-3. useAppStore.ts          — actions; decide syncRevisions domain
+3. useAppStore.ts          — actions (poster keys bump editVersion automatically)
 4. posterSnapshot.ts       — if field must persist / sync
 5. brandingSnapshot.ts     — only if branding-domain
 6. components/             — UI
-7. cloudPoster.ts          — only if cloud shape changes
+7. lib/cloud/cloudDocument.ts — only if cloud shape changes
 8. docs/QA-CHECKLIST.md    — new § with test steps
 9. npm run build && npm run lint
 ```
@@ -496,10 +449,8 @@ Follow this order:
 
 | Change type | Touch |
 |-------------|-------|
-| Logo/jersey/size | `branding` revision → `saveUserBranding` |
-| Roster/bench/player names | `roster` revision → `saveUserPoster` |
-| Theme/formation/layout | `layout` revision |
-| Photos | `media` revision + consider Storage upload in `mediaSync` |
+| Anything persisted | goes into the single cloud document automatically (via `buildPosterSnapshot`) |
+| Photos / uploaded logos | Storage path fields + `mediaSync` upload; `cloudDocument.storagePathsOf` for cleanup |
 | New persisted field | persist version bump + migrate |
 
 ---
@@ -544,8 +495,8 @@ Follow this order:
 
 | Area | Files |
 |------|-------|
-| Snapshot | `posterSnapshot.ts`, `brandingSnapshot.ts`, `snapshotFingerprint.ts` |
-| Sync | `cloudSyncManager.ts`, `cloudPoster.ts`, `firestoreWriteQueue.ts`, `syncRevisions.ts`, `syncRevisionBump.ts`, `mediaSync.ts`, `posterSyncEvents.ts` |
+| Snapshot | `posterSnapshot.ts`, `brandingSnapshot.ts`, `loginConflict.ts` (customized/equivalent/merge policy) |
+| Sync | `cloud/syncController.ts`, `cloud/syncRuntime.ts`, `cloud/posterRepository.ts`, `cloud/cloudDocument.ts`, `cloud/syncMeta.ts`, `cloud/syncIndicator.ts`, `cloud/errors.ts`, `mediaSync.ts` |
 | Players | `playerPool.ts`, `playerPhotos.ts`, `defaultRoster.ts`, `teamJerseyNumbers.ts` |
 | Formations | `formations.ts`, `formationEngine.ts` |
 | Logo/jersey | `logoUtils.ts`, `logoPresets.ts`, `logoImagePresets.ts`, `logoRandomize.ts`, `jerseyOptions.ts`, `teamLogoCloud.ts` |
@@ -559,8 +510,7 @@ Follow this order:
 
 | File | Role |
 |------|------|
-| `AuthContext.tsx` | Auth state, cloud load/push, sync status |
-| `useCloudSync.ts` | Wires cloudSyncManager to AuthContext |
+| `AuthContext.tsx` | Auth state, starts/stops SyncController, sign-out, account deletion |
 | `useModalBackdrop.ts` | Modal dismiss + file picker guards |
 | `usePosterMetrics.ts` | Poster container dimensions for layout |
 | `usePlayerDrag.ts` | Shared drag interaction hook for pitch/bench cards |
@@ -599,8 +549,8 @@ Current sync contract:
 - Product scope intentionally supports one poster per user; poster history and multi-poster collections are out of scope.
 - Firestore stores poster metadata and Storage paths; binary media belongs in Storage.
 - Local Zustand state is the editing source of truth and is persisted before cloud sync.
-- Cloud writes are debounced/coalesced and use a transaction revision guard; conflicts are rejected and reloaded instead of silently overwriting a newer revision.
-- Failed/pending sync intent is kept in the browser outbox; native clients must implement the same intent contract with platform storage.
+- Cloud writes are debounced/coalesced and use a transaction revision guard (+1); a mismatch is refetched and, if both sides changed, shown to the user as a conflict instead of silently overwriting.
+- Unsaved-edit detection is `editVersion` vs the synced marker `{editVersion, revision}` per user; native clients must implement the same marker with platform storage.
 - Storage and browser lifecycle failures must not prevent poster metadata from being saved.
 - Initial retryable cloud read failures use bounded exponential retry; non-retryable errors remain visible to the user.
 - This contract is shared-schema compatible with a future native mobile client; browser-only coordination is advisory.
@@ -613,10 +563,8 @@ Does the feature change what gets saved locally?
 └─ Yes → Update store + posterSnapshot
          Does it sync to cloud?
          ├─ No  → local-only field in partialize (rare)
-         └─ Yes → Which syncRevisions domain?
-                  ├─ branding → brandingSnapshot + saveUserBranding path
-                  ├─ media    → mediaSync if binary
-                  └─ other    → saveUserPoster data path
+         └─ Yes → Nothing extra: the whole snapshot is one cloud document.
+                  Binary media? → Storage path + mediaSync upload.
 ```
 
 ## 15. Launch hardening (2026-09-28)
@@ -629,16 +577,18 @@ Does the feature change what gets saved locally?
 | Site URL | `src/lib/siteUrl.ts` ← `NEXT_PUBLIC_SITE_URL`; drives metadataBase, `app/robots.ts`, `app/sitemap.ts`. |
 | Photos | `buildPlayerPhotoPatch` in the store: clearing a photo also clears `cutoutStoragePath` / `photoSourceStoragePath`; a new `photoSource` replaces the whole photo set (old cutout removed). |
 | Logos | `normalizeTeamLogo` keeps `storagePath` for `upload` logos; `hasUsableUploadLogo` accepts data URL, https download URL or storage path. Uploaded logos are WebP (transparency kept). |
-| Login conflict | local → full save incl. branding; cloud → `hydrateFromSnapshot(..., { replace: true })`; merge → cloud replace + `appendPlayersToBench(collectLocalPlayersForMerge())`. Modal stays open on error. |
-| Sign out | `flushCloudSyncNow()` before wiping local data; on failure the user must confirm "Yine de çık". |
+| Login conflict | `SyncController.resolveConflict`: local → save local over cloud revision; cloud → `applyCloudSnapshot`; merge → cloud + `appendPlayersToBench(collectLocalPlayersForMerge())` then save. Modal stays open on error. |
+| Sign out | `controller.flushNow()` before wiping local data; on failure the user must confirm "Yine de çık". |
 | Single-team mode | Customized away players are listed in the bench panel ("{Takım B} kadrosu"); drag between them and home slots uses cross-team `swapPlayers` (`findHiddenAwaySlot`). |
 | Bench jersey | `NEUTRAL_BENCH_JERSEY` for bench cards/preview/modal. |
 | Match time | `PosterTimeField` (native time picker); `normalizeMatchTime` in `normalizeMatchInfo`. |
 | Roster integrity | `src/lib/rosterIntegrity.ts`: `normalizeRoster` (used by `finalizePosterSnapshot`) enforces slot count, no duplicate players, valid bench, captain in lineup, valid `formatOverflow`. `resizeSquad` handles 6v6/7v7/8v8: customized overflow players go to bench and are pushed on the team's `formatOverflow` stack (persist v34); growing pops them back. Placeholders are dropped. |
 | Persist write lock | `guardedStorage` in the store ignores writes until `onRehydrateStorage` finishes (initial load and tab-sync rehydrate). Migrated data is written once after unlock. |
 | Export | Fixed output width: versus 2400px, single 1600px. |
+| Error tracking | `src/lib/errorReporting.ts` is the only Sentry touchpoint: `initErrorReporting` (skips localhost, errors only, no PII, console breadcrumbs dropped), `reportError(err, area, {level})`, `setErrorReportingUser(uid)`. `AppErrorBoundary` wraps the page. DSN: `NEXT_PUBLIC_SENTRY_DSN`; release: `NEXT_PUBLIC_RELEASE` (next.config). Transient/retryable errors → warning; user mistakes (e.g. HEIC) are not reported. |
+| IDs | `createId()` (`src/lib/id.ts`) instead of `crypto.randomUUID` (missing in insecure contexts / old Safari). |
 | Deploy | `npm run deploy:hosting` (clean build + hosting). `firebase.json` ignores `dev/**` and source maps; `cleanUrls: true`. Rules: `npm run deploy:rules`. |
 
 ---
 
-*Last aligned with persist v32, drag-and-drop visual parity, goalkeeper bench swap, and planned drag refactor.*
+*Last aligned with persist v35 and the SyncController cloud layer (R4/R5).*

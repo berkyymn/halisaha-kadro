@@ -551,6 +551,19 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` H14–H29, T1; QA §34–§37.
 - [x] Firebase Emulator Suite (`npm run emulators`, `npm run dev:emulator`) ile giriş yapmış kullanıcı akışları uçtan uca test edildi
 - [x] Gerçek hesapla canlı duman testi (kullanıcı)
 
+## Phase 38 — Faz 5: kalite, bulut katmanı yeniden yazımı (2026-09-28)
+
+Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.md` F11.
+
+- [x] R1 Vitest + CI; R2 ölü kod temizliği; R6 Sentry; R7 kotalar + kurallar; R8 uygulama içi hesap silme; R9 JPEG indirme
+- [x] R4 Tek parça bulut dokümanı (`src/lib/cloud/cloudDocument.ts`, `posterRepository.ts`); eski `branding` alanı okunur ve ilk yazımda silinir
+- [x] R5 `SyncController` durum makinesi (`src/lib/cloud/syncController.ts`) + 21 birim testi; `AuthContext` yalnızca bağlar
+- [x] Persist v35: `syncRevisions` → tek `editVersion` sayacı; `applyCloudSnapshot` sayacı artırmaz
+- [x] Eski senkron modülleri kaldırıldı: `cloudSyncManager`, `useCloudSync`, `firestoreWriteQueue`, `cloudSyncOutbox`, `syncRevisions`, `syncRevisionBump`, `cloudPoster`, `snapshotFingerprint` ve LWW birleştirme yardımcıları
+- [x] Emülatörde uçtan uca: ilk giriş, otomatik kayıt, yenileme, iki sekme, eşzamanlı düzenleme çatışması, birleştir, eski doküman göçü, hesap silme
+- [ ] R3 Store refactor (tek oyuncu kaydı, `playerCardSize` göçle kalkacak)
+- [ ] R10 Safari/Firefox + pilot geri bildirimi (kullanıcı)
+
 ---
 
 ## Cross-cutting constraints (applied across phases)
@@ -569,9 +582,9 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` H14–H29, T1; QA §34–§37.
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v34** |
-| Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`) + `syncRevisions` |
-| Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, `revision`, optional omit flags |
+| localStorage key | `halisaha-kadro` persist **v35** |
+| Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`, `formatOverflow`) + `editVersion` |
+| Firestore doc | `data` (logo/forma dahil), `updatedAt`, `revision`, omit flags (eski `branding`/`brandingUpdatedAt` ilk yazımda silinir) |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |
 
 ---

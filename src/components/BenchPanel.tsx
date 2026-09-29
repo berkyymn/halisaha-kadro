@@ -21,6 +21,7 @@ import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import { PlayerDragPreview } from "./PlayerDragPreview";
 import type { JerseyConfig, Player } from "@/types";
 import { NEUTRAL_BENCH_JERSEY } from "@/lib/jerseyOptions";
+import { MAX_BENCH_PLAYERS } from "@/lib/limits";
 import { findPitchSlotTarget } from "@/lib/dropTargets";
 import { findHiddenAwaySlot, isCustomizedPlayer } from "@/lib/playerPool";
 import {
@@ -143,6 +144,8 @@ export function BenchPanel() {
   const setDragIntent = useDragStore((s) => s.setDragIntent);
 
   const benchCardSize = useAutoCardSize();
+
+  const benchFull = benchPlayerIds.length >= MAX_BENCH_PLAYERS;
 
   const benchEntries = benchPlayerIds.map((benchId) => ({
     benchId,
@@ -371,10 +374,17 @@ export function BenchPanel() {
         </div>
 
         <div className="shrink-0 p-2 border-t border-zinc-800">
+          {benchFull && (
+            <p className="mb-1.5 text-center text-[10px] text-zinc-500">
+              Yedek havuzu dolu ({MAX_BENCH_PLAYERS} oyuncu). Yeni eklemek için
+              birini sil.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => setCreatingBench(true)}
-            className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200"
+            disabled={benchFull}
+            className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:hover:bg-zinc-800 text-xs font-semibold text-zinc-200"
           >
             <Plus className="w-3.5 h-3.5" />
             Yeni oyuncu

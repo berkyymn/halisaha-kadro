@@ -6,10 +6,10 @@ service firebase.storage {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Uygulamanın ürettiği görseller en fazla birkaç yüz KB; 5 MB güvenli üst sınır.
+    // Uygulamanın ürettiği görseller 100–300 KB; 1 MB güvenli üst sınır.
     function validImage() {
       return request.resource.contentType.matches('image/(jpeg|png|webp)')
-        && request.resource.size < 5 * 1024 * 1024;
+        && request.resource.size < 1024 * 1024;
     }
 
     match /users/{userId}/players/{playerId}/{mediaFile} {
@@ -24,6 +24,12 @@ service firebase.storage {
       allow create, update: if isOwner(userId)
         && logoFile in ['home.webp', 'away.webp']
         && validImage();
+    }
+
+    // Hesap silme: kullanıcı kendi klasöründeki her şeyi listeleyip silebilir
+    // (eski/sahipsiz dosyalar dahil). Yazma yukarıdaki kurallarla sınırlı.
+    match /users/{userId}/{allPaths=**} {
+      allow list, delete: if isOwner(userId);
     }
 
     // Tanımlı olmayan her yol kapalı.

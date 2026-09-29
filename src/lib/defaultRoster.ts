@@ -1,7 +1,8 @@
 import type { Player, SquadSize } from "@/types";
+import { createId } from "@/lib/id";
 
 export function createDefaultPlayer(slotIndex: number): Player {
-  const id = crypto.randomUUID();
+  const id = createId();
   return {
     id,
     name: `Oyuncu ${slotIndex + 1}`,
