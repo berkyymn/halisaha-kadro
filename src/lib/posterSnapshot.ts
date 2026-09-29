@@ -11,8 +11,6 @@ import {
 } from "@/lib/rosterIntegrity";
 import { DEFAULT_MATCH_TIME, normalizeMatchTime, todayDisplayDate } from "@/lib/matchDate";
 import { DEFAULT_LOGO_DISPLAY_SIZE } from "@/types";
-import { mergeSavedPlayersPreservingLocalPhotos } from "@/lib/playerPhotos";
-import { mergeTeamLogoPreservingLocal, shouldPreferLocalTeamBranding } from "@/lib/teamLogoCloud";
 import type {
   AppMode,
   MatchInfo,
@@ -135,85 +133,6 @@ export function buildPosterSnapshot(source: PosterSnapshotSource): PosterSnapsho
     teamLogoDisplaySize: source.teamLogoDisplaySize,
     posterTheme: source.posterTheme,
     localUpdatedAt: source.localUpdatedAt,
-  };
-}
-
-function mergeTeamConfig(
-  local: TeamConfig,
-  remote: TeamConfig,
-  side: "home" | "away",
-  forceLocal = false,
-  preferLocalBrandingWhenBothCustomized = false
-): TeamConfig {
-  if (forceLocal) {
-    return local;
-  }
-  const logo = mergeTeamLogoPreservingLocal(
-    local.logo,
-    remote.logo,
-    side,
-    preferLocalBrandingWhenBothCustomized
-  );
-  const preferLocalBranding = shouldPreferLocalTeamBranding(local, remote, side);
-  return {
-    ...remote,
-    logo,
-    jersey: preferLocalBranding ? local.jersey : remote.jersey,
-    atmosphereColor: preferLocalBranding
-      ? local.atmosphereColor
-      : remote.atmosphereColor,
-  };
-}
-
-export type MergePosterSnapshotOptions = {
-  remoteDocUpdatedAt?: string;
-};
-
-export function mergePosterSnapshot(
-  current: PosterSnapshotSource,
-  saved: Partial<PosterSnapshot>,
-  options?: MergePosterSnapshotOptions
-): PosterSnapshotSource {
-  const localTime = current.localUpdatedAt || "";
-  const remoteTime =
-    saved.localUpdatedAt || options?.remoteDocUpdatedAt || "";
-  const preferLocal = Boolean(localTime && (!remoteTime || localTime > remoteTime));
-  const preferLocalBrandingWhenBothCustomized = preferLocal;
-
-  if (preferLocal) {
-    return current;
-  }
-
-  return {
-    ...current,
-    ...saved,
-    localUpdatedAt: remoteTime || current.localUpdatedAt,
-    savedPlayers: saved.savedPlayers
-      ? mergeSavedPlayersPreservingLocalPhotos(
-          current.savedPlayers ?? {},
-          saved.savedPlayers
-        )
-      : current.savedPlayers,
-    homeTeam: saved.homeTeam
-      ? mergeTeamConfig(
-          current.homeTeam,
-          saved.homeTeam,
-          "home",
-          preferLocal,
-          preferLocalBrandingWhenBothCustomized
-        )
-      : current.homeTeam,
-    awayTeam: saved.awayTeam
-      ? mergeTeamConfig(
-          current.awayTeam,
-          saved.awayTeam,
-          "away",
-          preferLocal,
-          preferLocalBrandingWhenBothCustomized
-        )
-      : current.awayTeam,
-    posterTheme: normalizePosterTheme(saved.posterTheme ?? current.posterTheme),
-    matchInfo: normalizeMatchInfo(saved.matchInfo ?? current.matchInfo),
   };
 }
 

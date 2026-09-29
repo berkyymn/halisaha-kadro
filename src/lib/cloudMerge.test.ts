@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildBrandingSnapshot,
-  mergeCloudBrandingIntoSnapshot,
-  slimTeamConfigForCloud,
-} from "@/lib/brandingSnapshot";
+import { slimTeamConfigForCloud } from "@/lib/brandingSnapshot";
 import { buildPosterSnapshot, createDefaultMatchInfo, type PosterSnapshot } from "@/lib/posterSnapshot";
 import { finalizePosterSnapshot, parsePosterSnapshot } from "@/lib/posterSnapshot";
 import { collectLocalPlayersForMerge, hasMeaningfulLocalChanges } from "@/lib/loginConflict";
@@ -39,27 +35,6 @@ function slimCloud(snap: PosterSnapshot): PosterSnapshot {
     awayTeam: slimTeamConfigForCloud(snap.awayTeam) as PosterSnapshot["awayTeam"],
   };
 }
-
-describe("mergeCloudBrandingIntoSnapshot", () => {
-  it("regresyon: data branding'den yeni olsa da slim takımlara branding uygulanır", () => {
-    const local = snapshot();
-    local.homeTeam = { ...local.homeTeam, jersey: { ...local.homeTeam.jersey, primaryColor: "#123456" } };
-    const branding = buildBrandingSnapshot({ ...local, players: local.savedPlayers });
-    const cloud = slimCloud({ ...local, localUpdatedAt: "2026-09-28T12:00:00.000Z" });
-    const merged = mergeCloudBrandingIntoSnapshot(cloud, branding, "2026-09-28T10:00:00.000Z");
-    expect(merged.homeTeam.jersey.primaryColor).toBe("#123456");
-    // ve finalize çökmez
-    expect(() => finalizePosterSnapshot({ ...merged, players: merged.savedPlayers })).not.toThrow();
-  });
-
-  it("eski format (tam takım) + daha yeni data: data'daki branding korunur", () => {
-    const data = snapshot({ localUpdatedAt: "2026-09-28T12:00:00.000Z" });
-    const branding = buildBrandingSnapshot({ ...data, players: data.savedPlayers });
-    branding.home.jersey = { ...branding.home.jersey, primaryColor: "#ffffff" };
-    const merged = mergeCloudBrandingIntoSnapshot(data, branding, "2026-09-28T10:00:00.000Z");
-    expect(merged.homeTeam.jersey.primaryColor).not.toBe("#ffffff");
-  });
-});
 
 describe("normalizeTeamLogo", () => {
   it("eksik logoda çökmez", () => {

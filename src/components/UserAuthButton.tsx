@@ -15,15 +15,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { ModalShell } from "@/components/ModalShell";
 import { AccountModal } from "@/components/AccountModal";
+import { describeSyncIndicator, type SyncIndicator } from "@/lib/cloud/syncIndicator";
+
+const TONE_CLASS: Record<SyncIndicator["tone"], string> = {
+  ok: "text-green-400 bg-green-950/30",
+  busy: "text-sky-400 bg-sky-950/30",
+  warn: "text-amber-400 bg-amber-950/30",
+  error: "text-red-400 bg-red-950/40 cursor-help",
+};
 
 export function UserAuthButton() {
   const {
     configured,
     user,
     loading,
-    syncStatus,
-    syncPhase,
-    syncError,
+    sync,
     openAuthModal,
     signOut,
   } = useAuth();
@@ -80,17 +86,8 @@ export function UserAuthButton() {
   }
 
   const email = user.email ?? "Hesap";
-  const syncTitle =
-    syncError ??
-    (syncStatus === "loading"
-      ? "Bulut verisi yükleniyor"
-      : syncPhase === "cooldown"
-        ? "Bulut kaydı geçici olarak beklemede"
-        : syncPhase === "syncing"
-          ? "Buluta kaydediliyor"
-          : syncPhase === "pending"
-            ? "Buluta kaydedilmek üzere bekliyor"
-            : "Bulut kaydı güncel");
+  const indicator = describeSyncIndicator(sync);
+  const syncTitle = indicator.label;
 
   const handleConfirmSignOut = async (force = false) => {
     setSigningOut(true);
@@ -116,21 +113,11 @@ export function UserAuthButton() {
     <>
       <div className="flex items-center gap-1.5 shrink-0">
         <span
-          className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${
-            syncStatus === "error"
-              ? "text-red-400 bg-red-950/40 cursor-help"
-              : syncPhase === "cooldown"
-                ? "text-amber-400 bg-amber-950/30"
-                : syncStatus === "loading" ||
-                    syncPhase === "syncing" ||
-                    syncPhase === "pending"
-                  ? "text-sky-400 bg-sky-950/30"
-                  : "text-green-400 bg-green-950/30"
-          }`}
+          className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${TONE_CLASS[indicator.tone]}`}
           title={syncTitle}
           aria-label={syncTitle}
         >
-          {syncStatus === "loading" || syncPhase === "syncing" ? (
+          {indicator.spinning ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Cloud className="w-3.5 h-3.5" />

@@ -44,12 +44,24 @@ import {
 export type ConflictReason = "guest-data" | "concurrent-edit";
 export type ConflictChoice = "local" | "cloud" | "merge";
 
+/** Bulut yazımında boyut/Storage nedeniyle atlanan medya (doküman işaretleri). */
+export type OmittedMedia = { photos: boolean; logos: boolean };
+
 export type SyncConflict = {
   reason: ConflictReason;
   local: PosterSnapshot;
   cloud: PosterSnapshot;
   cloudRevision: number;
   cloudUpdatedAt: string;
+  cloudOmitted: OmittedMedia;
+};
+
+type AdoptableDoc = {
+  snapshot: PosterSnapshot;
+  revision: number;
+  legacy?: boolean;
+  photosOmitted?: boolean;
+  logosOmitted?: boolean;
 };
 
 export type SyncState =
@@ -82,6 +94,11 @@ export interface SyncPolicy {
   isCustomized(snapshot: PosterSnapshot): boolean;
   equivalent(a: PosterSnapshot, b: PosterSnapshot): boolean;
   mergeExtras(local: PosterSnapshot, cloud: PosterSnapshot): Player[];
+  /**
+   * Bulut kopyasında atlanmış fotoğraf/logoları yerel kopyadan geri koyar.
+   * Hiçbir şey geri konmadıysa `cloud` nesnesinin kendisini döndürmelidir.
+   */
+  restoreOmittedMedia(local: PosterSnapshot, cloud: PosterSnapshot, omitted: OmittedMedia): PosterSnapshot;
 }
 
 export type SyncTiming = {
@@ -291,16 +308,30 @@ export class SyncController {
     }
   }
 
-  /** Bulutu birebir uygular ve senkron noktası olarak işaretler. */
-  private adoptCloud(doc: { snapshot: PosterSnapshot; revision: number; legacy?: boolean }): void {
+  /**
+   * Bulutu uygular ve senkron noktası olarak işaretler. Bulut yazımında
+   * atlanmış medya (işaretli dokümanda) bu cihazdaki kopyadan korunur;
+   * aksi halde sayfa yenilenince cihazdaki fotoğraflar da kaybolurdu.
+   */
+  private adoptCloud(doc: AdoptableDoc): void {
     const uid = this.uid!;
-    this.deps.local.applyCloud(doc.snapshot);
+    const omitted = { photos: Boolean(doc.photosOmitted), logos: Boolean(doc.logosOmitted) };
+    const applied =
+      omitted.photos || omitted.logos
+        ? this.deps.policy.restoreOmittedMedia(this.deps.local.snapshot(), doc.snapshot, omitted)
+        : doc.snapshot;
+    this.deps.local.applyCloud(applied);
     this.knownRevision = doc.revision;
     this.lastCloud = doc.snapshot;
     this.deps.meta.setSynced(uid, { editVersion: this.deps.local.editVersion(), revision: doc.revision });
     // Eski biçimdeki doküman bir kez yeni biçimde yazılır.
     this.forceSave = Boolean(doc.legacy);
-    this.enterReady();
+    this.enterReady({
+      notice:
+        applied !== doc.snapshot
+          ? "Buluttaki bazı fotoğraf/logolar boyut sınırı nedeniyle eksik; bu cihazdaki kopyalar korundu."
+          : null,
+    });
     if (this.forceSave) this.scheduleSave(0);
   }
 
@@ -327,7 +358,7 @@ export class SyncController {
     }
   }
 
-  private enterConflict(reason: ConflictReason, local: PosterSnapshot, doc: ParsedCloudDocument | { snapshot: PosterSnapshot; revision: number; updatedAt: string }): void {
+  private enterConflict(reason: ConflictReason, local: PosterSnapshot, doc: ParsedCloudDocument): void {
     this.clearSaveTimers();
     this.setState({
       phase: "conflict",
@@ -339,6 +370,7 @@ export class SyncController {
         cloud: doc.snapshot,
         cloudRevision: doc.revision,
         cloudUpdatedAt: doc.updatedAt,
+        cloudOmitted: { photos: doc.photosOmitted, logos: doc.logosOmitted },
       },
     });
   }
@@ -362,7 +394,12 @@ export class SyncController {
         this.enterReady({ notice: saved.warning });
         return;
       }
-      this.adoptCloud({ snapshot: conflict.cloud, revision: conflict.cloudRevision });
+      this.adoptCloud({
+        snapshot: conflict.cloud,
+        revision: conflict.cloudRevision,
+        photosOmitted: conflict.cloudOmitted.photos,
+        logosOmitted: conflict.cloudOmitted.logos,
+      });
       if (choice === "merge") {
         // Yedeğe eklenen oyuncular kullanıcı düzenlemesi → normal kayıt akışı.
         this.deps.local.appendToBench(this.deps.policy.mergeExtras(conflict.local, conflict.cloud));

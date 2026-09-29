@@ -1,6 +1,5 @@
 import { normalizeTeamLogo } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
-import { slimTeamLogoForCloud } from "@/lib/teamLogoCloud";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
 import type { PosterSnapshotSource } from "@/lib/posterSnapshot";
 import type { JerseyConfig, TeamConfig, TeamLogo } from "@/types";
@@ -54,22 +53,6 @@ export function buildBrandingSnapshot(
   };
 }
 
-export function slimBrandingForCloud(
-  branding: TeamBrandingSnapshot
-): TeamBrandingSnapshot {
-  return {
-    ...branding,
-    home: {
-      ...branding.home,
-      logo: slimTeamLogoForCloud(branding.home.logo),
-    },
-    away: {
-      ...branding.away,
-      logo: slimTeamLogoForCloud(branding.away.logo),
-    },
-  };
-}
-
 export function applyBrandingToTeamConfig(
   team: TeamConfig,
   side: TeamBrandingSide
@@ -92,45 +75,6 @@ export function applyBrandingToSnapshot(
     awayTeam: applyBrandingToTeamConfig(snapshot.awayTeam, branding.away),
     teamLogoDisplaySize: branding.teamLogoDisplaySize,
   };
-}
-
-export function maxIsoTimestamp(
-  ...times: (string | undefined | null)[]
-): string | undefined {
-  const valid = times.filter((t): t is string => Boolean(t));
-  if (valid.length === 0) return undefined;
-  return valid.reduce((latest, current) =>
-    current > latest ? current : latest
-  );
-}
-
-/** Buluttaki branding alanı data'dan daha yeniyse logo/forma verisini uygula */
-function teamHasBranding(team: Partial<TeamConfig> | undefined): boolean {
-  return Boolean(team?.logo && team?.jersey);
-}
-
-/**
- * Bulut `data` alanındaki takımlar logo/forma içermez (slimTeamConfigForCloud);
- * bu bilgi yalnızca `branding` alanındadır. Bu yüzden data'da eksikse branding
- * zaman damgasına bakılmadan uygulanır. Eski formattaki (tam takım içeren)
- * kayıtlarda ise daha yeni olan kazanır.
- */
-export function mergeCloudBrandingIntoSnapshot(
-  data: PosterSnapshot,
-  branding: TeamBrandingSnapshot | undefined,
-  brandingUpdatedAt: string | undefined
-): PosterSnapshot {
-  if (!branding) return data;
-
-  const dataIsSlim =
-    !teamHasBranding(data.homeTeam) || !teamHasBranding(data.awayTeam);
-  if (dataIsSlim) return applyBrandingToSnapshot(data, branding);
-
-  if (!brandingUpdatedAt) return data;
-  const dataTime = data.localUpdatedAt || "";
-  if (dataTime && brandingUpdatedAt <= dataTime) return data;
-
-  return applyBrandingToSnapshot(data, branding);
 }
 
 export function parseBrandingSnapshot(raw: unknown): TeamBrandingSnapshot | null {

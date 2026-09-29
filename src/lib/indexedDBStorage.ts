@@ -139,22 +139,25 @@ const fallbackStorage: StateStorage = {
   removeItem: async (name) => removeLocalStorageItem(name),
 };
 
-function snapshotTimestamp(raw: string | null): string {
-  if (!raw) return "";
+/** Kaydın tazeliği: önce düzenleme sayacı (editVersion), yoksa zaman damgası. */
+function snapshotFreshness(raw: string | null): [number, string] {
+  if (!raw) return [-1, ""];
   try {
-    const parsed = JSON.parse(raw) as { state?: { localUpdatedAt?: unknown } };
+    const parsed = JSON.parse(raw) as { state?: { editVersion?: unknown; localUpdatedAt?: unknown } };
+    const version = parsed?.state?.editVersion;
     const at = parsed?.state?.localUpdatedAt;
-    return typeof at === "string" ? at : "";
+    return [typeof version === "number" ? version : -1, typeof at === "string" ? at : ""];
   } catch {
-    return "";
+    return [-1, ""];
   }
 }
 
 function pickNewerSnapshot(idbValue: string, localValue: string | null): string {
   if (!localValue || localValue === idbValue) return idbValue;
-  return snapshotTimestamp(localValue) > snapshotTimestamp(idbValue)
-    ? localValue
-    : idbValue;
+  const [idbVersion, idbAt] = snapshotFreshness(idbValue);
+  const [localVersion, localAt] = snapshotFreshness(localValue);
+  if (idbVersion !== localVersion) return localVersion > idbVersion ? localValue : idbValue;
+  return localAt > idbAt ? localValue : idbValue;
 }
 
 async function migrateLegacyLocalStorage(key: string): Promise<string | null> {

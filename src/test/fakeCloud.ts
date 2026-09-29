@@ -8,7 +8,9 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /** Bellekte tek dokümanlı bulut: revision kontrolü + canlı dinleyici. */
 export class FakeCloud implements SyncRepository {
-  doc: { snapshot: PosterSnapshot; revision: number; legacy?: boolean } | null = null;
+  doc: { snapshot: PosterSnapshot; revision: number; legacy?: boolean; photosOmitted?: boolean } | null = null;
+  /** true: gerçek depo gibi fotoğrafları buluta sığmadı sayıp atar (photosOmitted) */
+  omitPhotos = false;
   saves = 0;
   failNextSave: unknown = null;
   failNextFetch: unknown = null;
@@ -31,7 +33,7 @@ export class FakeCloud implements SyncRepository {
         snapshot: clone(this.doc.snapshot),
         revision: this.doc.revision,
         updatedAt: "2026-09-28T12:00:00.000Z",
-        photosOmitted: false,
+        photosOmitted: Boolean(this.doc.photosOmitted),
         logosOmitted: false,
         legacy: Boolean(this.doc.legacy),
       },
@@ -49,7 +51,17 @@ export class FakeCloud implements SyncRepository {
       throw Object.assign(new Error("conflict"), { code: "failed-precondition" });
     }
     this.saves += 1;
-    this.doc = { snapshot: clone(snapshot), revision: current + 1 };
+    const stored = clone(snapshot);
+    let warning: string | null = null;
+    if (this.omitPhotos) {
+      for (const player of Object.values(stored.savedPlayers)) {
+        if (!player.photoSource && !player.cutoutUrl) continue;
+        delete player.photoSource;
+        delete player.cutoutUrl;
+        warning = "fotoğraf boyut sınırı nedeniyle buluta kaydedilemedi";
+      }
+    }
+    this.doc = { snapshot: stored, revision: current + 1, photosOmitted: warning !== null };
     const change = { revision: current + 1, updatedAt: "now" };
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     if (this.echoBeforeResolve) {
@@ -61,7 +73,7 @@ export class FakeCloud implements SyncRepository {
       if (this.saveDelayMs > 0) await sleep(this.saveDelayMs);
       queueMicrotask(() => this.emit(change));
     }
-    return { revision: current + 1, updatedAt: "now", cloudSnapshot: clone(snapshot), warning: null };
+    return { revision: current + 1, updatedAt: "now", cloudSnapshot: clone(stored), warning };
   }
 
   /** Başka bir cihazın yazımını taklit eder. */

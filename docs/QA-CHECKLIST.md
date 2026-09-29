@@ -125,7 +125,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 7b. Logo kalıcılığı (bulut + yerel)
 
-**Dosyalar:** `src/lib/brandingSnapshot.ts`, `src/lib/cloudPoster.ts`, `src/contexts/AuthContext.tsx`, `src/store/useAppStore.ts`
+**Dosyalar:** `src/lib/cloud/cloudDocument.ts`, `src/lib/cloud/posterRepository.ts`, `src/lib/mediaSync.ts`, `src/store/useAppStore.ts`
 
 | Adım | Beklenen |
 |------|----------|
@@ -190,7 +190,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 11. Bulut sync stabilitesi
 
-**Dosyalar:** `src/lib/cloudSyncManager.ts`, `src/lib/firestoreWriteQueue.ts`, `src/lib/cloudPoster.ts`, `src/contexts/AuthContext.tsx`
+**Dosyalar:** `src/lib/cloud/syncController.ts`, `src/lib/cloud/posterRepository.ts`, `src/lib/cloud/syncRuntime.ts`, `src/contexts/AuthContext.tsx`
 
 > **Sync refactor regresyon testleri için:** `docs/SYNC-REFACTOR-CHECKLIST.md` (§S1–§S10)
 
@@ -199,14 +199,14 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Giriş yapmış kullanıcıda 10 ardışık oyuncu fotoğrafı ekle | `resource-exhausted` hatası olmamalı; toolbar'da "Kaydediliyor..." görünür |
 | Logo + kadro + tema değişimi burst (30 sn içinde) | Firestore'a en fazla birkaç yazı; çift branding+data duplicate yazımı yok |
 | Sekme kapat / aç veya sayfa yenile | Kadro, logo ve fotoğraflar korunur |
-| İki sekmede eşzamanlı düzenleme | Son yazan kazanır; veri kaybı veya corrupt state olmamalı |
-| `resource-exhausted` sonrası | Toolbar "Bulut dinleniyor" gösterir; cooldown bitince otomatik devam |
+| İki sekmede eşzamanlı düzenleme | İlk kaydeden kazanır; diğer sekmede "Kadro başka bir yerde de değişti" seçimi açılır (§40). Sessiz ezme yok |
+| `resource-exhausted` sonrası | Bulut simgesi uyarı rengine döner; 30 sn sonra otomatik devam |
 
 - [ ] Geçti
 
 ## 13. Firebase veri akışı ve mobil hazırlığı
 
-**Dosyalar:** `src/lib/cloudPoster.ts`, `src/lib/mediaSync.ts`, `src/lib/cloudSyncManager.ts`, `firebase/firestore.rules`, `firebase/storage.rules`
+**Dosyalar:** `src/lib/cloud/posterRepository.ts`, `src/lib/mediaSync.ts`, `src/lib/cloud/syncController.ts`, `firebase/firestore.rules`, `firebase/storage.rules`
 
 | Adım | Beklenen |
 |------|----------|
@@ -648,6 +648,37 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 40. Yeni senkron katmanı — SyncController (R4/R5)
+
+**Dosyalar:** `src/lib/cloud/*`, `src/contexts/AuthContext.tsx`, `src/components/{AppBootstrapGate,UserAuthButton,LoginConflictModal}.tsx`, `src/store/useAppStore.ts` (persist v35, `editVersion`)
+
+**Otomatik:** `npm test`: `syncController.test.ts` (21 senaryo, yarışlar dahil), `useAppStore.test.ts` (editVersion sözleşmesi), `cloudDocument.test.ts` (eski biçim).
+
+| Adım | Beklenen | Sonuç |
+|------|----------|-------|
+| Misafir oyuncuya isim ver → giriş (bulut boş) | Çatışma yok; kadro revision 1 olarak yazılır | ✅ |
+| Girişliyken saha adını değiştir | Tek yazım (debounce), revision +1; simge "Bulut kaydı güncel" | ✅ |
+| Değiştir, 2,5 sn dolmadan yenile | Değişiklik kaybolmaz, buluta yazılır, çatışma açılmaz | ✅ |
+| İki sekme: B'de düzenle | A sekmesine yenilemeden gelir; yankı yazımı yok | ✅ |
+| İki sekme aynı anda farklı düzenleme | Biri kaydeder; diğerinde "Kadro başka bir yerde de değişti" | ✅ |
+| O pencerede "Bu cihazı kullan" | Bu sekmenin kadrosu buluta; diğer sekme de ona döner | ✅ |
+| Çıkış | Bekleyen kayıt gönderilir; cihaz verisi, sahip/senkron işaretleri silinir | ✅ |
+| Misafir verisi + giriş → "Birleştir" | Bulut kadrosu + misafir oyuncu yedekte; buluta yazılır | ✅ |
+| Eski biçimli doküman (`branding` alanı) | Logo/forma branding'den uygulanır; bir kez yeni biçimde yeniden yazılır, eski alanlar silinir | ✅ |
+| Hesap silme: yanlış şifre | Hata; senkron devam eder, hiçbir şey silinmez | ✅ |
+| Hesap silme: doğru şifre | Doküman, tüm Storage dosyaları ve Auth hesabı silinir; misafir moduna dönülür | ✅ |
+| Oyuncu fotoğrafı ekle | Storage'a yüklenir; Firestore'da yalnızca yol | ✅ |
+| Çıkış → tekrar giriş (yeni cihaz gibi) | Fotoğraf Storage'dan gelir; gereksiz yazım yok (revision değişmez) | ✅ |
+| Fotoğrafı kaldır | Yeni revision; Storage dosyası silinir | ✅ |
+| Logo yükle | `logos/home.webp` Storage'da; Firestore'da `mode: upload` + yol | ✅ |
+| Bağlantı yokken düzenle → çıkış | 20 sn sonra "kaydedilemedi… Yine de çık" uyarısı; veri silinmez | ✅ |
+| Buluta sığmayan fotoğraf (`photosOmitted`) → yenile | Cihazdaki fotoğraf korunur, "kopyalar korundu" notu (birim testi) | ✅ (test) |
+| Ağ kesikken giriş / bağlantı geri gelince otomatik devam | Yükleme ekranı takılmaz; simge "… Tekrar denenecek" | Bekliyor (pilot) |
+
+- [x] Geçti (emülatör, 2026-09-28)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -677,6 +708,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-28 | R4/R5: SyncController'a geçiş; eski senkron modülleri (~1.750 satır) kaldırıldı; persist v35 `editVersion` | §11 + §36 + §40 + build/lint/test | Emülatörde uçtan uca geçti |
 | 2026-09-21 | Performans ve erişilebilirlik: arka plan kaldırma model preload’u kaldırıldı; oyuncu kartı `aria-label` görünen numara+isimle eşleştirildi; toolbar “Poster İndir”/tema/format/diziliş butonları renk kontrastı `bg-green-700`/`text-zinc-400` yapıldı | #3 + #22 + build/lint | Build/lint geçti; Lighthouse/PWA yeniden ölçümü bekliyor |
 
 ### Smoke audit özeti (2026-06-23)

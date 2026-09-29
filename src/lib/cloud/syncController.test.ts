@@ -4,6 +4,7 @@ import {
   areSnapshotsEquivalent,
   collectLocalPlayersForMerge,
   hasMeaningfulLocalChanges,
+  restoreOmittedMedia,
 } from "@/lib/loginConflict";
 import { FakeCloud, FakeLocal, memoryMeta } from "@/test/fakeCloud";
 import { renamePlayer, testSnapshot } from "@/test/fixtures";
@@ -14,6 +15,7 @@ const policy: SyncPolicy = {
   isCustomized: hasMeaningfulLocalChanges,
   equivalent: areSnapshotsEquivalent,
   mergeExtras: collectLocalPlayersForMerge,
+  restoreOmittedMedia,
 };
 
 function name(snapshot: ReturnType<FakeLocal["snapshot"]>, slot = 0): string {
@@ -304,5 +306,57 @@ describe("kayıt döngüsü ve canlı değişiklik", () => {
     await settle();
     expect(controller.getState().phase).toBe("idle");
     expect(name(local.snapshot())).toBe("Oyuncu 1");
+  });
+});
+
+describe("buluta sığmayan medya", () => {
+  const PHOTO = "data:image/jpeg;base64,YEREL";
+  const photoOf = (s: ReturnType<FakeLocal["snapshot"]>) =>
+    s.savedPlayers[s.homeTeam.playerIds[0]].photoSource;
+  const addPhoto = (s: ReturnType<typeof testSnapshot>) => {
+    const id = s.homeTeam.playerIds[0];
+    s.savedPlayers[id] = { ...s.savedPlayers[id], name: "Fotoğraflı", photoSource: PHOTO };
+  };
+
+  it("REGRESYON: bulutta atlanan fotoğraf yenilemeden sonra cihazda korunur", async () => {
+    const cloud = new FakeCloud();
+    cloud.omitPhotos = true;
+    const meta = memoryMeta();
+    const local = new FakeLocal(testSnapshot());
+    local.edit(addPhoto);
+
+    const first = setup({ local, cloud, meta });
+    first.controller.start(UID);
+    await settle();
+    expect(cloud.doc!.photosOmitted).toBe(true);
+    expect(photoOf(cloud.doc!.snapshot)).toBeUndefined();
+    const saved = first.controller.getState();
+    expect(saved.phase === "ready" && saved.notice).toBeTruthy();
+    first.controller.stop();
+
+    // Sayfa yenilendi: aynı cihaz, bekleyen düzenleme yok → bulut uygulanır
+    const second = setup({ local, cloud, meta });
+    second.controller.start(UID);
+    await settle();
+    expect(photoOf(local.snapshot())).toBe(PHOTO);
+    expect(name(local.snapshot())).toBe("Fotoğraflı");
+    const state = second.controller.getState();
+    expect(state.phase === "ready" && state.notice).toMatch(/korundu/);
+    // Geri konan fotoğraf kullanıcı düzenlemesi sayılmaz → gereksiz yazım yok
+    expect(cloud.saves).toBe(1);
+  });
+
+  it("fotoğraf başka cihazda bilerek silindiyse (işaret yok) geri gelmez", async () => {
+    const cloud = cloudWith(addPhoto, 5);
+    const local = new FakeLocal(cloud.doc!.snapshot);
+    const meta = memoryMeta({ owner: UID, synced: { [UID]: { editVersion: 0, revision: 5 } } });
+    const { controller } = setup({ local, cloud, meta });
+    controller.start(UID);
+    await settle();
+    cloud.writeFromOtherDevice((s) => {
+      delete s.savedPlayers[s.homeTeam.playerIds[0]].photoSource;
+    });
+    await settle();
+    expect(photoOf(local.snapshot())).toBeUndefined();
   });
 });

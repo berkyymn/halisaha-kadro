@@ -7,7 +7,6 @@ import { compressAllSavedPlayers } from "@/lib/imageCompress";
 import {
   hasAppStoreHydrated,
   onAppStoreHydrated,
-  useAppStore,
 } from "@/store/useAppStore";
 
 type AppBootstrapGateProps = {
@@ -15,8 +14,9 @@ type AppBootstrapGateProps = {
 };
 
 export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
-  const { loading: authLoading } = useAuth();
-  const remoteHydrating = useAppStore((s) => s.remoteHydrating);
+  const { loading: authLoading, sync } = useAuth();
+  // İlk bulut yüklemesi bitene kadar bekle; ağ hatasında yerel kadroyla aç.
+  const cloudLoading = sync.phase === "loading" && !sync.error;
   const [storeReady, setStoreReady] = useState(() => hasAppStoreHydrated());
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
     });
   }, [storeReady]);
 
-  const appReady = storeReady && !authLoading && !remoteHydrating;
+  const appReady = storeReady && !authLoading && !cloudLoading;
   const migrationTriggeredRef = useRef(false);
 
   useEffect(() => {
