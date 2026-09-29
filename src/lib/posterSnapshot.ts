@@ -1,5 +1,5 @@
 import { normalizePosterTheme } from "@/lib/posterThemes";
-import { DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
+import { clampTitleFontSize, DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
 import { normalizeTeamLogo } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
 import { buildPersistedPlayerRegistry } from "@/lib/playerPool";
@@ -61,18 +61,21 @@ export function createDefaultMatchInfo(): MatchInfo {
 export function normalizeMatchInfo(info: Partial<MatchInfo> | undefined): MatchInfo {
   const defaults = createDefaultMatchInfo();
   if (!info) return defaults;
+  // Kaldırılan alanlar (döndürme, max genişlik) eski kayıtlarda kalmasın.
+  const legacy = info as Partial<MatchInfo> & { titleRotation?: unknown; titleMaxWidth?: unknown };
+  const { titleRotation, titleMaxWidth, ...rest } = legacy;
+  void titleRotation;
+  void titleMaxWidth;
   return {
     ...defaults,
-    ...info,
+    ...rest,
     titleSubtitle: info.titleSubtitle ?? "",
     titleStyleId: info.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
     titleEffectId: info.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
-    titleFontSize: info.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize,
+    titleFontSize: clampTitleFontSize(info.titleFontSize),
     titleLetterSpacing:
       info.titleLetterSpacing ?? DEFAULT_TITLE_STYLE.titleLetterSpacing,
     titleShadow: info.titleShadow ?? DEFAULT_TITLE_STYLE.titleShadow,
-    titleRotation: info.titleRotation ?? DEFAULT_TITLE_STYLE.titleRotation,
-    titleMaxWidth: info.titleMaxWidth ?? DEFAULT_TITLE_STYLE.titleMaxWidth,
     time: normalizeMatchTime(info.time),
   };
 }

@@ -165,8 +165,6 @@ export interface MatchInfo {
   titleFontSize: number;
   titleLetterSpacing: number;
   titleShadow: number;
-  titleRotation: number;
-  titleMaxWidth: number;
   venue: string;
   time: string;
   date: string;

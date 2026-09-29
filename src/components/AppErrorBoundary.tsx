@@ -3,12 +3,17 @@
 import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { ErrorBoundary } from "@/lib/errorReporting";
+import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunkRecovery";
 
 /** Beklenmeyen render hatasında beyaz ekran yerine kurtarma ekranı; hata Sentry'ye gider. */
 export function AppErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
       beforeCapture={(scope) => scope.setTag("area", "render")}
+      // Deploy sonrası silinmiş eski JS parçası: kurtarma ekranı yerine bir kez yenile.
+      onError={(error) => {
+        if (isChunkLoadError(error)) reloadOnceForChunkError();
+      }}
       fallback={
         <main className="flex h-full flex-col items-center justify-center gap-4 bg-zinc-950 px-6 text-center text-white">
           <img src="/icon.svg" alt="" width={56} height={56} className="rounded-xl" />

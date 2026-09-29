@@ -1,120 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { RotateCcw, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { useModalBackdrop } from "@/hooks/useModalBackdrop";
+import { ModalShell } from "@/components/ModalShell";
+import { PosterTitle } from "@/components/PosterTitle";
 import { trackEvent } from "@/lib/analytics";
-import { getPosterThemeConfig, normalizePosterTheme } from "@/lib/posterThemes";
+import { getPosterThemeBackgroundSrc, normalizePosterTheme } from "@/lib/posterThemes";
 import {
+  DEFAULT_TITLE_LINE1,
   DEFAULT_TITLE_STYLE,
   TITLE_EFFECT_PRESETS,
+  TITLE_FONT_SIZE_RANGE,
+  TITLE_LINE_MAX_LENGTH,
   TITLE_STYLE_PRESETS,
+  TITLE_SUBTITLE_MAX_LENGTH,
   buildPosterTitleStyles,
   defaultTitleStyleForTheme,
+  titleLines,
 } from "@/lib/posterTitleStyles";
-import type { MatchInfo, PosterTitleEffectId } from "@/types";
+import type { MatchInfo } from "@/types";
 
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  display,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  display: string;
-  onChange: (v: number) => void;
-}) {
+const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
+const INPUT =
+  "mt-1 w-full h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/30";
+
+export function PosterTitleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] text-zinc-500">{label}</span>
-        <span className="text-[10px] font-bold text-green-400 tabular-nums">
-          {display}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step ?? 1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-green-600 h-1"
-      />
-    </div>
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      zIndexClass="z-[120]"
+      panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-3xl max-h-[94vh] shadow-2xl overflow-hidden flex flex-col"
+    >
+      {/* Her açılışta taslak güncel başlıktan yeniden başlar */}
+      {open && <PosterTitleEditor onClose={onClose} />}
+    </ModalShell>
   );
 }
 
-function ColorSwatch({ colors }: { colors: [string, string] }) {
-  return (
-    <span className="inline-flex items-center gap-0.5 shrink-0">
-      {colors.map((color) => (
-        <span
-          key={color}
-          className="w-3 h-3 rounded-full border border-white/20"
-          style={{ backgroundColor: color }}
-        />
-      ))}
-    </span>
-  );
-}
-
-export function PosterTitleModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  if (!open) return null;
-  return <PosterTitleModalBody onClose={onClose} />;
-}
-
-function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
+function PosterTitleEditor({ onClose }: { onClose: () => void }) {
   const matchInfo = useAppStore((s) => s.matchInfo);
   const setMatchInfo = useAppStore((s) => s.setMatchInfo);
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
-  const themeConfig = getPosterThemeConfig(posterTheme);
-  const { backdropProps, panelProps } = useModalBackdrop({
-    open: true,
-    onClose,
-  });
+  const themeStyleId = defaultTitleStyleForTheme(posterTheme);
 
   const [draft, setDraft] = useState<MatchInfo>(matchInfo);
-
-  const patch = (partial: Partial<MatchInfo>) =>
-    setDraft((d) => ({ ...d, ...partial }));
-
-  const preview = buildPosterTitleStyles(draft);
-  const themeStyleId = defaultTitleStyleForTheme(posterTheme);
-  const paletteMismatch = draft.titleStyleId !== themeStyleId;
+  const patch = (partial: Partial<MatchInfo>) => setDraft((d) => ({ ...d, ...partial }));
 
   const handleSave = () => {
     trackEvent("title_edited");
     setMatchInfo({
-      titleLine1: (draft.titleLine1 ?? "").trim() || "DERBİ",
-      titleLine2: (draft.titleLine2 ?? "").trim() || "GECESİ",
-      titleSubtitle: draft.titleSubtitle ?? "",
+      titleLine1: (draft.titleLine1 ?? "").trim() || DEFAULT_TITLE_LINE1,
+      titleLine2: (draft.titleLine2 ?? "").trim(),
+      titleSubtitle: (draft.titleSubtitle ?? "").trim(),
       titleStyleId: draft.titleStyleId,
       titleEffectId: draft.titleEffectId,
       titleFontSize: draft.titleFontSize,
       titleLetterSpacing: draft.titleLetterSpacing,
       titleShadow: draft.titleShadow,
-      titleRotation: draft.titleRotation,
-      titleMaxWidth: draft.titleMaxWidth,
     });
     onClose();
   };
 
-  const saveOnEnter = (e: React.KeyboardEvent) => {
+  const saveOnEnter = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSave();
@@ -122,188 +71,127 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4"
-      {...backdropProps}
-    >
-      <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col shadow-2xl"
-        {...panelProps}
-      >
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800 shrink-0">
-          <h3 className="text-sm font-semibold text-white">Başlık Düzenle</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-zinc-500 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+        <div>
+          <h3 className="text-sm font-bold text-white">Başlık</h3>
+          <p className="text-[10px] text-zinc-500">Posterin üstündeki maç başlığı</p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
+          aria-label="Kapat"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
-        <div className="shrink-0 px-5 pt-4 pb-3 border-b border-zinc-800">
-          <div
-            className="rounded-xl bg-zinc-950 border border-zinc-800 p-4 flex justify-center overflow-hidden"
-            style={{ minHeight: 100 }}
-          >
-            <div
-              className="text-center uppercase select-none"
-              style={{
-                fontFamily: "var(--font-display)",
-                maxWidth: `${draft.titleMaxWidth}%`,
-                transform: `rotate(${draft.titleRotation}deg)`,
-              }}
-            >
-              <div
-                className="flex flex-col items-center justify-center leading-none"
-                style={{
-                  fontSize: `clamp(1.4rem, ${4 * (draft.titleFontSize / 100)}cqw, 2.4rem)`,
-                }}
-              >
-                <span style={preview.line1}>
-                  {(draft.titleLine1 ?? "").trim() || "DERBİ"}
-                </span>
-                <span style={preview.line2}>
-                  {(draft.titleLine2 ?? "").trim() || "GECESİ"}
-                </span>
+      <div className="shrink-0 px-4 pt-3 pb-3 border-b border-zinc-800">
+        <TitlePreview info={draft} backgroundSrc={getPosterThemeBackgroundSrc(posterTheme)} />
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-zinc-800">
+          <section className="p-4 space-y-3">
+            <p className={LABEL}>Metin</p>
+            <TextField
+              label="Üst satır"
+              value={draft.titleLine1}
+              max={TITLE_LINE_MAX_LENGTH}
+              placeholder={DEFAULT_TITLE_LINE1}
+              uppercase
+              onChange={(v) => patch({ titleLine1: v })}
+              onKeyDown={saveOnEnter}
+            />
+            <TextField
+              label="Alt satır"
+              hint="Boş bırakırsan tek satır"
+              value={draft.titleLine2}
+              max={TITLE_LINE_MAX_LENGTH}
+              uppercase
+              onChange={(v) => patch({ titleLine2: v })}
+              onKeyDown={saveOnEnter}
+            />
+            <TextField
+              label="Alt başlık"
+              hint="İsteğe bağlı"
+              value={draft.titleSubtitle ?? ""}
+              max={TITLE_SUBTITLE_MAX_LENGTH}
+              placeholder="Cuma akşamı maçı"
+              onChange={(v) => patch({ titleSubtitle: v })}
+              onKeyDown={saveOnEnter}
+            />
+          </section>
+
+          <section className="p-4 space-y-3.5">
+            <div>
+              <p className={`${LABEL} mb-2`}>Efekt</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {TITLE_EFFECT_PRESETS.map((preset) => (
+                  <EffectTile
+                    key={preset.id}
+                    label={preset.label}
+                    info={{ ...draft, titleEffectId: preset.id }}
+                    selected={draft.titleEffectId === preset.id}
+                    onSelect={() => {
+                      trackEvent("title_effect_changed", { effect_id: preset.id });
+                      patch({ titleEffectId: preset.id });
+                    }}
+                  />
+                ))}
               </div>
-              {(draft.titleSubtitle ?? "").trim() && (
-                <p className="mt-1 uppercase" style={preview.subtitle}>
-                  {draft.titleSubtitle}
-                </p>
-              )}
             </div>
-          </div>
-          <p className="mt-2 text-center text-[10px] text-zinc-500">
-            Arka plan:{" "}
-            <span className="text-zinc-400">{themeConfig.label}</span>
-          </p>
+
+            <div>
+              <p className={`${LABEL} mb-2`}>Renk</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {TITLE_STYLE_PRESETS.map((preset) => {
+                  const selected = draft.titleStyleId === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        trackEvent("title_style_changed", { style_id: preset.id });
+                        patch({ titleStyleId: preset.id });
+                      }}
+                      aria-pressed={selected}
+                      className={`relative h-12 rounded-lg border flex flex-col items-center justify-center gap-1 transition-colors ${
+                        selected
+                          ? "border-green-500 bg-green-950/40"
+                          : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
+                      }`}
+                    >
+                      <span className="inline-flex -space-x-1">
+                        {preset.swatch.map((color) => (
+                          <span
+                            key={color}
+                            className="w-3.5 h-3.5 rounded-full border border-zinc-900"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </span>
+                      <span className="text-[10px] font-semibold text-zinc-200">{preset.label}</span>
+                      {preset.id === themeStyleId && (
+                        <span className="absolute -top-1.5 right-1 rounded bg-zinc-700 px-1 text-[8px] font-bold uppercase text-zinc-200">
+                          Tema
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
-          <div className="space-y-2">
-            <label className="block">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                Başlık 1
-              </span>
-              <input
-                value={draft.titleLine1}
-                onChange={(e) =>
-                  patch({ titleLine1: e.target.value.toLocaleUpperCase("tr-TR") })
-                }
-                maxLength={16}
-                onKeyDown={saveOnEnter}
-                className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white font-bold uppercase"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                Başlık 2
-              </span>
-              <input
-                value={draft.titleLine2}
-                onChange={(e) =>
-                  patch({ titleLine2: e.target.value.toLocaleUpperCase("tr-TR") })
-                }
-                maxLength={16}
-                onKeyDown={saveOnEnter}
-                className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white font-bold uppercase"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                Alt başlık
-              </span>
-              <input
-                value={draft.titleSubtitle ?? ""}
-                onChange={(e) => patch({ titleSubtitle: e.target.value })}
-                placeholder="Cuma Akşamı Maçı"
-                maxLength={40}
-                onKeyDown={saveOnEnter}
-                className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white"
-              />
-            </label>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                Renk paleti
-              </p>
-              {paletteMismatch && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    trackEvent("title_style_changed", { style_id: themeStyleId });
-                    patch({ titleStyleId: themeStyleId });
-                  }}
-                  className="text-[10px] font-semibold text-green-500 hover:text-green-400 whitespace-nowrap"
-                >
-                  Poster temasına uy
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TITLE_STYLE_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    trackEvent("title_style_changed", { style_id: preset.id });
-                    patch({ titleStyleId: preset.id });
-                  }}
-                  className={`rounded-lg px-2 py-2 text-left border transition-colors ${
-                    draft.titleStyleId === preset.id
-                      ? "border-green-500 bg-green-950/40"
-                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <ColorSwatch colors={preset.swatch} />
-                    <span className="text-[11px] font-bold text-white">
-                      {preset.label}
-                    </span>
-                  </span>
-                  <span className="block text-[9px] text-zinc-500 mt-0.5 pl-[18px]">
-                    {preset.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-              Efekt
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TITLE_EFFECT_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    trackEvent("title_effect_changed", {
-                      effect_id: preset.id,
-                    });
-                    patch({ titleEffectId: preset.id as PosterTitleEffectId });
-                  }}
-                  className={`h-8 px-2.5 rounded-md text-[10px] font-semibold transition-colors ${
-                    draft.titleEffectId === preset.id
-                      ? "bg-green-600 text-white"
-                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-1 border-t border-zinc-800">
+        <section className="px-4 py-3 border-t border-zinc-800">
+          <p className={`${LABEL} mb-2`}>İnce ayar</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-2.5">
             <SliderRow
-              label="Font boyutu"
-              min={70}
-              max={130}
+              label="Boyut"
+              min={TITLE_FONT_SIZE_RANGE.min}
+              max={TITLE_FONT_SIZE_RANGE.max}
               value={draft.titleFontSize}
               display={`${draft.titleFontSize}%`}
               onChange={(v) => patch({ titleFontSize: v })}
@@ -324,43 +212,172 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
               display={`${draft.titleShadow}%`}
               onChange={(v) => patch({ titleShadow: v })}
             />
-            <SliderRow
-              label="Döndürme"
-              min={-5}
-              max={5}
-              step={0.5}
-              value={draft.titleRotation}
-              display={`${draft.titleRotation}°`}
-              onChange={(v) => patch({ titleRotation: v })}
-            />
-            <SliderRow
-              label="Max genişlik"
-              min={60}
-              max={100}
-              value={draft.titleMaxWidth}
-              display={`${draft.titleMaxWidth}%`}
-              onChange={(v) => patch({ titleMaxWidth: v })}
-            />
+          </div>
+        </section>
+      </div>
+
+      <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-t border-zinc-800">
+        <button
+          type="button"
+          onClick={() =>
+            setDraft((d) => ({
+              ...d,
+              ...DEFAULT_TITLE_STYLE,
+              titleSubtitle: d.titleSubtitle,
+              titleStyleId: themeStyleId,
+            }))
+          }
+          className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
+          title="Efekt, renk ve ayarları varsayılana döndür (yazılar korunur)"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Varsayılan stil
+        </button>
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-9 px-4 rounded-lg bg-zinc-800 text-xs font-semibold text-zinc-200 hover:bg-zinc-700"
+        >
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="h-9 px-5 rounded-lg bg-green-600 text-xs font-semibold text-white hover:bg-green-500"
+        >
+          Kaydet
+        </button>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Posterin üst kısmının birebir kopyası: aynı arka plan, aynı konum, aynı
+ * `cqw` ölçeği. Kutunun kendisi 16:10 posterdir; yalnızca üst şeridi görünür.
+ */
+function TitlePreview({ info, backgroundSrc }: { info: MatchInfo; backgroundSrc: string }) {
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950" style={{ aspectRatio: "16 / 4" }}>
+      <div className="absolute inset-x-0 top-0 [container-type:inline-size]" style={{ aspectRatio: "16 / 10" }}>
+        <img src={backgroundSrc} alt="" className="absolute inset-0 h-full w-full object-cover object-center" />
+        <div className="absolute inset-x-0 flex justify-center" style={{ top: "5%" }}>
+          <div className="px-[0.6em] py-[0.25em]">
+            <PosterTitle info={info} />
           </div>
         </div>
-
-        <div className="shrink-0 flex gap-2 px-5 py-3 border-t border-zinc-800">
-          <button
-            type="button"
-            onClick={() => setDraft({ ...matchInfo, ...DEFAULT_TITLE_STYLE })}
-            className="h-10 px-3 rounded-xl bg-zinc-800 text-xs font-semibold text-zinc-300 hover:bg-zinc-700"
-          >
-            Sıfırla
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex-1 h-10 rounded-xl bg-green-600 text-sm font-semibold text-white hover:bg-green-500"
-          >
-            Kaydet
-          </button>
-        </div>
       </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950/80 to-transparent" />
+    </div>
+  );
+}
+
+function EffectTile({
+  label,
+  info,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  info: MatchInfo;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const styles = buildPosterTitleStyles(info);
+  const { line1, line2 } = titleLines(info);
+  const word = (line2 || line1).split(/\s+/)[0].slice(0, 8);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`h-14 rounded-lg border flex flex-col items-center justify-center gap-0.5 overflow-hidden transition-colors ${
+        selected ? "border-green-500 bg-green-950/40" : "border-zinc-700 bg-zinc-950 hover:border-zinc-600"
+      }`}
+    >
+      <span
+        className="uppercase leading-none whitespace-nowrap"
+        style={{ ...(line2 ? styles.line2 : styles.line1), fontFamily: "var(--font-display)", fontSize: 17 }}
+      >
+        {word}
+      </span>
+      <span className={`text-[9px] font-semibold ${selected ? "text-green-400" : "text-zinc-500"}`}>{label}</span>
+    </button>
+  );
+}
+
+function TextField({
+  label,
+  hint,
+  value,
+  max,
+  placeholder,
+  uppercase = false,
+  onChange,
+  onKeyDown,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  max: number;
+  placeholder?: string;
+  uppercase?: boolean;
+  onChange: (value: string) => void;
+  onKeyDown: (e: KeyboardEvent) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] font-semibold text-zinc-300">
+          {label}
+          {hint && <span className="ml-1.5 font-normal text-zinc-500">· {hint}</span>}
+        </span>
+        <span className="text-[10px] tabular-nums text-zinc-500">
+          {value.length}/{max}
+        </span>
+      </span>
+      <input
+        value={value}
+        maxLength={max}
+        placeholder={placeholder}
+        onChange={(e) => onChange(uppercase ? e.target.value.toLocaleUpperCase("tr-TR") : e.target.value)}
+        onKeyDown={onKeyDown}
+        className={`${INPUT} ${uppercase ? "font-bold uppercase" : ""}`}
+      />
+    </label>
+  );
+}
+
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  display,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  display: string;
+  onChange: (v: number) => void;
+}): ReactNode {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] text-zinc-400">{label}</span>
+        <span className="text-[10px] font-bold text-green-400 tabular-nums">{display}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-green-600 h-1"
+      />
     </div>
   );
 }

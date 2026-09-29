@@ -15,12 +15,6 @@
       "dev/**",
       "**/*.map"
     ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
     "headers": [
       {
         "source": "/**",

@@ -33,7 +33,7 @@ export function ConsentBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Çerez tercihi"
-      className="fixed inset-x-3 bottom-3 z-[300] mx-auto max-w-xl rounded-2xl border border-zinc-700 bg-zinc-900/95 p-4 text-white shadow-2xl backdrop-blur sm:inset-x-auto sm:right-4 sm:bottom-4"
+      className="fixed inset-x-3 bottom-3 z-[90] mx-auto max-w-xl rounded-2xl border border-zinc-700 bg-zinc-900/95 p-4 text-white shadow-2xl backdrop-blur sm:inset-x-auto sm:right-4 sm:bottom-4"
     >
       <p className="text-[13px] leading-relaxed text-zinc-300">
         Uygulamayı geliştirmek için, onay verirsen anonim kullanım
