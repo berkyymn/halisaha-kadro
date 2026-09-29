@@ -1,4 +1,5 @@
 import {
+  connectStorageEmulator,
   deleteObject,
   getDownloadURL,
   getStorage,
@@ -6,6 +7,7 @@ import {
   uploadString,
 } from "firebase/storage";
 import { getFirebaseApp } from "@/lib/firebase/client";
+import { USE_FIREBASE_EMULATORS } from "@/lib/firebase/app";
 
 let storage: ReturnType<typeof getStorage> | null = null;
 
@@ -16,6 +18,9 @@ export function isFirebaseStorageConfigured(): boolean {
 export function getFirebaseStorage() {
   if (!storage) {
     storage = getStorage(getFirebaseApp());
+    if (USE_FIREBASE_EMULATORS) {
+      connectStorageEmulator(storage, "127.0.0.1", 9199);
+    }
   }
   return storage;
 }
@@ -24,7 +29,6 @@ export async function uploadDataUrlToStorage(
   path: string,
   dataUrl: string
 ): Promise<string> {
-  console.log("[SYNC-DIAG] uploadDataUrlToStorage", JSON.stringify({ path }));
   const storageRef = ref(getFirebaseStorage(), path);
   await uploadString(storageRef, dataUrl, "data_url");
   return path;

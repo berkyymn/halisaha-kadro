@@ -53,12 +53,8 @@ export function notifyCloudSyncDirty() {
   cloudSyncManager.notifyDirty();
 }
 
-export function flushCloudSync() {
-  cloudSyncManager.requestFlush();
-}
-
-export function flushBrandingSync() {
-  cloudSyncManager.requestBrandingFlush();
+export function flushCloudSyncNow(timeoutMs?: number) {
+  return cloudSyncManager.flushNow(timeoutMs);
 }
 
 export function useCloudSync({

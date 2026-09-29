@@ -10,9 +10,20 @@ export function defaultPresetIdForSide(side: TeamSide): string {
   return side === "home" ? DEFAULT_HOME_PRESET_ID : DEFAULT_AWAY_PRESET_ID;
 }
 
+/** Henüz buluta yüklenmemiş (inline data URL) logo */
 export function isUploadLogoWithImage(logo: TeamLogo | undefined): boolean {
   return Boolean(
     logo?.mode === "upload" && logo.imageUrl?.startsWith("data:")
+  );
+}
+
+/** Kullanılabilir yüklenmiş logo: yerel data URL, Storage indirme URL'si veya Storage yolu */
+export function hasUsableUploadLogo(logo: TeamLogo | undefined): boolean {
+  return Boolean(
+    logo?.mode === "upload" &&
+      (logo.imageUrl?.startsWith("data:") ||
+        logo.imageUrl?.startsWith("https://") ||
+        logo.storagePath)
   );
 }
 
@@ -33,7 +44,7 @@ export function isTeamLogoCustomized(
 ): boolean {
   if (!logo) return false;
   if (logo.mode === "generated") return true;
-  if (isUploadLogoWithImage(logo)) return true;
+  if (hasUsableUploadLogo(logo)) return true;
   if (logo.mode === "preset" && logo.presetId) {
     return logo.presetId !== defaultPresetIdForSide(side);
   }
@@ -41,7 +52,7 @@ export function isTeamLogoCustomized(
 }
 
 export function isBrokenUploadLogo(logo: TeamLogo | undefined): boolean {
-  return logo?.mode === "upload" && !logo.imageUrl?.startsWith("data:");
+  return logo?.mode === "upload" && !hasUsableUploadLogo(logo);
 }
 
 /** Buluta kayıt: preset için yalnızca presetId; generated için görsel alanları temizle */
@@ -75,7 +86,7 @@ export function fallbackLogoAfterUploadStrip(
   return {
     ...rest,
     mode: "generated",
-    initials: (logo.initials || shortName.slice(0, 2) || "?").toUpperCase(),
+    initials: (logo.initials || shortName.slice(0, 2) || "?").toLocaleUpperCase("tr-TR"),
     showInitials: true,
     showIcon: logo.showIcon && logo.icon !== "none",
   };
@@ -100,7 +111,7 @@ export function mergeTeamLogoPreservingLocal(
     return local;
   }
 
-  if (!isUploadLogoWithImage(remote) && isUploadLogoWithImage(local)) {
+  if (!hasUsableUploadLogo(remote) && isUploadLogoWithImage(local)) {
     return { ...remote, mode: "upload", imageUrl: local.imageUrl };
   }
 

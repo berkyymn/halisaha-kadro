@@ -26,6 +26,7 @@ const MIN_RETRY_MS = 3_000;
 const MAX_RETRY_MS = 60_000;
 
 function logSyncEvent(event: string, details?: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "development") return;
   console.info(`[SYNC] ${event}`, details ?? {});
 }
 
@@ -237,6 +238,38 @@ class CloudSyncManager {
     this.lastLifecycleFlushAt = now;
     this.clearDebounceTimers();
     void this.flush();
+  }
+
+  /**
+   * Bekleyen değişiklikleri debounce beklemeden gönderir (ör. çıkış öncesi).
+   * Süre dolarsa veya kayıt başarısızsa false döner.
+   */
+  async flushNow(timeoutMs = 20_000): Promise<boolean> {
+    if (!this.enabled || this.paused) return !this.hasPendingSync();
+    const deadline = Date.now() + timeoutMs;
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    while (Date.now() < deadline) {
+      if (!this.hasPendingSync()) return true;
+      if (isFirestoreWriteCooldown()) return false;
+      if (this.inFlight) {
+        await sleep(250);
+        continue;
+      }
+      const attemptBefore = this.retryAttempt;
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      }
+      await Promise.race([this.flush(), sleep(Math.max(0, deadline - Date.now()))]);
+      if (!this.hasPendingSync()) return true;
+      if (this.retryAttempt > attemptBefore) {
+        // Başarısız deneme: kısa bekleyip süre dolana kadar tekrar dene.
+        await sleep(1_000);
+      }
+    }
+    return !this.hasPendingSync();
   }
 
   requestBrandingFlush() {

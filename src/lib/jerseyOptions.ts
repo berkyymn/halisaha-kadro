@@ -19,6 +19,14 @@ export const JERSEY_TEXT_COLORS = [
   { label: "Yeşil", color: "#16a34a" },
 ] as const;
 
+/** Yedekler hiçbir takıma ait değil: gri/siyah tarafsız antrenman forması */
+export const NEUTRAL_BENCH_JERSEY: JerseyConfig = {
+  style: "split",
+  primaryColor: "#71717a",
+  secondaryColor: "#27272a",
+  numberColor: "#ffffff",
+};
+
 const VALID_JERSEY_STYLES: JerseyStyle[] = [
   "solid",
   "split",
@@ -35,7 +43,8 @@ export function normalizeJerseyStyle(style?: JerseyStyle | string): JerseyStyle 
   return "split";
 }
 
-export function normalizeJersey(jersey: Partial<JerseyConfig>): JerseyConfig {
+export function normalizeJersey(jersey?: Partial<JerseyConfig> | null): JerseyConfig {
+  jersey = jersey ?? {};
   return {
     style: normalizeJerseyStyle(jersey.style),
     primaryColor: jersey.primaryColor ?? "#374151",

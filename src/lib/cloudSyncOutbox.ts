@@ -47,3 +47,37 @@ export function clearQueuedCloudSync(userId: string): void {
   if (entry?.userId !== userId) return;
   window.localStorage.removeItem(entryKey(userId));
 }
+
+/**
+ * Yerel kadronun hangi hesaba ait olduğu. Aynı kullanıcı gönderilmemiş
+ * değişikliklerle geri döndüğünde "başka kadro" çatışması sorulmaz; misafir
+ * verisi (sahipsiz) hesaba girerken ise sorulur. Çıkışta silinir.
+ */
+const LOCAL_OWNER_KEY = "halisaha-local-owner";
+
+export function readLocalOwner(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LOCAL_OWNER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLocalOwner(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LOCAL_OWNER_KEY, userId);
+  } catch {
+    // Özel mod vb. — yalnızca çatışma sorusu daha sık görünür.
+  }
+}
+
+export function clearLocalOwner(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LOCAL_OWNER_KEY);
+  } catch {
+    // ignore
+  }
+}

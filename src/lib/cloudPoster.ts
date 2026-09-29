@@ -58,6 +58,8 @@ export type CloudSaveResult = {
 };
 
 export type CloudSaveResultWithMeta = CloudSaveResult & {
+  /** Buluta yazılan hâli (Storage yollarıyla) — sahipsiz medya temizliği bununla karşılaştırılır */
+  cloudSnapshot: PosterSnapshot;
   updatedAt: string;
   brandingUpdatedAt?: string;
   revision: number;
@@ -235,7 +237,6 @@ export async function prepareSnapshotForCloud(
   snapshot: PosterSnapshot,
   userId?: string
 ): Promise<{ snapshot: PosterSnapshot; result: CloudSaveResult }> {
-  console.log("[SYNC-DIAG] prepareSnapshotForCloud called", JSON.stringify({ userId, photosBefore: countPlayerPhotos(snapshot.savedPlayers) }));
   const sourceFingerprint = fingerprintPosterSnapshot(snapshot);
   if (preparedSnapshotCache?.sourceFingerprint === sourceFingerprint) {
     return {
@@ -457,7 +458,6 @@ export async function saveUserPoster(
   snapshot: PosterSnapshot,
   options?: { includeBranding?: boolean; expectedRevision?: number }
 ): Promise<CloudSaveResultWithMeta> {
-  console.log("[SYNC-DIAG] saveUserPoster called", JSON.stringify({ userId }));
   return firestoreWriteQueue.enqueue(async () => {
     const { snapshot: cloudSnapshot, result } =
       await prepareSnapshotForCloud(snapshot, userId);
@@ -496,6 +496,7 @@ export async function saveUserPoster(
     );
     return {
       ...result,
+      cloudSnapshot,
       updatedAt,
       revision,
       ...(branding ? { brandingUpdatedAt: updatedAt } : {}),
@@ -564,6 +565,12 @@ export function mapAuthError(error: unknown): string {
       return "Google penceresi kapatıldı.";
     case "auth/cancelled-popup-request":
       return "Giriş iptal edildi.";
+    case "auth/popup-blocked":
+      return "Tarayıcı Google penceresini engelledi. Açılır pencerelere izin verip tekrar dene.";
+    case "auth/network-request-failed":
+      return "Bağlantı hatası. İnternetini kontrol edip tekrar dene.";
+    case "auth/missing-email":
+      return "E-posta adresini yaz.";
     default:
       return message || "İşlem başarısız.";
   }

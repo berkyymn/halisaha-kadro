@@ -248,7 +248,7 @@ export function LogoDesignerCustomPanel({
             maxLength={3}
             onChange={(e) =>
               updateLogo({
-                initials: e.target.value.toUpperCase().slice(0, 3),
+                initials: e.target.value.toLocaleUpperCase("tr-TR").slice(0, 3),
               })
             }
             className="mt-1 w-full h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2 text-sm text-white text-center font-bold"

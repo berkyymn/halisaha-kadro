@@ -142,12 +142,14 @@ export async function compressAllSavedPlayers(): Promise<void> {
   const savedPlayers = { ...store.savedPlayers };
   const players = { ...store.players };
   let anyChanged = false;
+  let photosChanged = false;
 
   for (const [id, player] of Object.entries(savedPlayers)) {
     if (player.didCompress) continue;
     const result = await compressPlayerPhotos(player);
     if (result.didCompress) {
       anyChanged = true;
+      photosChanged = true;
       const updated = {
         ...player,
         photoSource: result.photoSource,
@@ -170,6 +172,8 @@ export async function compressAllSavedPlayers(): Promise<void> {
   }
 
   if (anyChanged) {
-    useAppStore.getState().applyCompressedPlayers(players, savedPlayers);
+    useAppStore
+      .getState()
+      .applyCompressedPlayers(players, savedPlayers, { photosChanged });
   }
 }

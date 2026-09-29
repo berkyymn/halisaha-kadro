@@ -1,15 +1,32 @@
 "use client";
 
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, MapPin } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppStore } from "@/store/useAppStore";
 import { PitchPlayerLayer } from "./PitchPlayerLayer";
 import { PosterDateField } from "./PosterDateField";
+import { PosterTimeField } from "./PosterTimeField";
 import { todayDisplayDate } from "@/lib/matchDate";
 import { PosterEditableText } from "./PosterEditableText";
 import { PosterTitleDisplay } from "./PosterTitleDisplay";
 import { StaticPosterBackground } from "./StaticPosterBackground";
 import { TeamLogoBadge } from "./TeamLogoBadge";
+import { usePosterMetrics } from "@/hooks/usePosterMetrics";
+
+/**
+ * Logo boyutu ayarı bu poster genişliğindeki piksel boyutudur (≈1440px ekran).
+ * Kartlar posterle ölçeklendiği için logo da ölçeklenir; aksi halde küçük
+ * ekranda logo kaleci kartına biner.
+ */
+const LOGO_REFERENCE_POSTER_WIDTH = { versus: 1120, single: 560 } as const;
+
+function scaledLogoSize(size: number, posterWidth: number, single: boolean): number {
+  const reference = single
+    ? LOGO_REFERENCE_POSTER_WIDTH.single
+    : LOGO_REFERENCE_POSTER_WIDTH.versus;
+  const scale = Math.min(1.3, Math.max(0.55, posterWidth / reference));
+  return Math.round(size * scale);
+}
 
 function TeamPosterBlock({
   team,
@@ -30,7 +47,22 @@ function TeamPosterBlock({
   const isLeft = side === "left";
   const isCentered = side === "center";
   const teamKey = isLeft || isCentered ? "home" : "away";
-  const teamLogoDisplaySize = useAppStore((s) => s.teamLogoDisplaySize);
+  const configuredLogoSize = useAppStore((s) => s.teamLogoDisplaySize);
+  const posterMetrics = usePosterMetrics();
+  const teamLogoDisplaySize = scaledLogoSize(
+    configuredLogoSize,
+    posterMetrics.width,
+    singlePosition
+  );
+  // Ad boyutu poster genişliğine bağlı: ekranda ve PNG çıktısında aynı oran.
+  const nameFontPx = singlePosition || centered
+    ? Math.min(24, Math.max(12, posterMetrics.width * 0.036))
+    : Math.min(22, Math.max(11, posterMetrics.width * 0.018));
+  const nameFontSize = `${nameFontPx.toFixed(1)}px`;
+  const nameGap = "0.375rem";
+  // Ad logonun üstünde: blok, ad yüksekliği kadar yukarı kayar; logo eski
+  // yerinde kalır ve ad kaleci kartının satırından uzak durur.
+  const baseTop = singlePosition ? "-18%" : centered ? "-18%" : "6%";
 
   return (
     <div
@@ -44,7 +76,7 @@ function TeamPosterBlock({
               : "right-[-5%]"
       }`}
       style={{
-        top: singlePosition ? "-18%" : centered ? "-18%" : "6%",
+        top: `calc(${baseTop} - ${nameFontSize} - ${nameGap})`,
         width: singlePosition ? "25%" : centered ? "34%" : "22%",
         maxWidth: Math.max(140, teamLogoDisplaySize + 28),
       }}
@@ -60,7 +92,7 @@ function TeamPosterBlock({
       <button
         type="button"
         onClick={() => onLogoClick?.(teamKey)}
-        className={`group relative flex w-full flex-col gap-1.5 pointer-events-auto cursor-pointer rounded-lg transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/80 ${
+        className={`group relative flex w-full flex-col pointer-events-auto cursor-pointer rounded-lg transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/80 ${
             singlePosition
               ? "items-start"
               : isCentered
@@ -69,19 +101,16 @@ function TeamPosterBlock({
                   ? "items-start"
                   : "items-end"
         }`}
+        style={{ gap: nameGap }}
         title="Takım görünümünü düzenle"
       >
-        <TeamLogoBadge
-          logo={team.logo}
-          shortName={team.shortName}
-          size={teamLogoDisplaySize}
-        />
         <span
-          className="text-white font-black italic uppercase leading-none truncate w-full pointer-events-none transition-transform duration-200 ease-out group-hover:translate-y-[-1px]"
-           style={{
-            fontSize: centered
-              ? "clamp(0.8rem, 2.4vw, 1.35rem)"
-              : "clamp(0.85rem, 1.8vw, 1.35rem)",
+          className="block text-white font-black italic uppercase leading-none whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none transition-transform duration-200 ease-out group-hover:translate-y-[-1px]"
+          style={{
+            fontSize: nameFontSize,
+            // Üstte kaleci kartı yok; uzun adlar logo genişliğini aşabilir.
+            // Tek takımda üstte başlık yok: ad posterin üst şeridi boyunca uzayabilir.
+            maxWidth: singlePosition ? "340%" : "195%",
             letterSpacing: "0.06em",
             textAlign: singlePosition
               ? "left"
@@ -96,6 +125,11 @@ function TeamPosterBlock({
         >
           {team.shortName}
         </span>
+        <TeamLogoBadge
+          logo={team.logo}
+          shortName={team.shortName}
+          size={teamLogoDisplaySize}
+        />
       </button>
     </div>
   );
@@ -108,7 +142,6 @@ function PosterFooter({
   onVenueChange,
   onVenueBlur,
   onTimeChange,
-  onTimeBlur,
   onDateChange,
 }: {
   venue: string;
@@ -117,7 +150,6 @@ function PosterFooter({
   onVenueChange: (v: string) => void;
   onVenueBlur?: () => void;
   onTimeChange: (v: string) => void;
-  onTimeBlur?: () => void;
   onDateChange: (v: string) => void;
 }) {
   const footerTextStyle = {
@@ -142,7 +174,7 @@ function PosterFooter({
         />
 
         <div
-          className="grid h-full grid-cols-[1fr_auto_1fr_auto_1fr] items-center overflow-hidden rounded-sm"
+          className="grid h-full grid-cols-[1.7fr_auto_0.8fr_auto_1fr] items-center overflow-hidden rounded-sm"
           style={{
             background:
               "linear-gradient(180deg, rgba(28,28,34,0.96) 0%, rgba(10,10,14,0.98) 100%)",
@@ -151,13 +183,14 @@ function PosterFooter({
               "inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 28px rgba(0,0,0,0.6)",
           }}
         >
-          <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
+          <div className="flex items-center justify-center min-w-0 px-2 h-full" style={{ gap: footerGap }}>
             <MapPin className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <PosterEditableText
               value={venue}
               onChange={onVenueChange}
               onBlur={onVenueBlur}
               placeholder="SAHA ADI"
+              maxLength={24}
               variant="footer"
               align="center"
               style={footerTextStyle}
@@ -173,16 +206,13 @@ function PosterFooter({
             }}
           />
 
-          <div className="flex items-center justify-center min-w-0 px-2 h-full" style={{ gap: footerGap }}>
-            <Clock className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
-            <PosterEditableText
+          <div className="flex items-center justify-center min-w-0 px-2 h-full">
+            <PosterTimeField
               value={time}
               onChange={onTimeChange}
-              onBlur={onTimeBlur}
-              placeholder="21:00"
-              variant="footerAccent"
-              align="center"
               style={footerTextStyle}
+              iconSize={footerIconSize}
+              gap={footerGap}
             />
           </div>
 
@@ -227,8 +257,17 @@ export function MatchPoster({
   return (
     <div
       id="match-poster"
-      className="relative h-full max-h-full w-auto overflow-hidden"
-      style={{ aspectRatio: isSingle ? "4/5" : "16/10" }}
+      // PNG çıktısında klonlanan düğüm de Türkçe büyük harf kuralını (i → İ) kullansın.
+      lang="tr"
+      className="relative shrink-0 overflow-hidden"
+      style={{
+        // Alana oranı bozmadan sığ: genişlik hem kapsayıcı genişliğiyle hem de
+        // yükseklik × oran ile sınırlı (üst div container-type: size).
+        aspectRatio: isSingle ? "4 / 5" : "16 / 10",
+        width: isSingle
+          ? "min(100cqw, calc(100cqh * 0.8))"
+          : "min(100cqw, calc(100cqh * 1.6))",
+      }}
     >
       <StaticPosterBackground />
 
@@ -266,8 +305,10 @@ export function MatchPoster({
           date={matchInfo.date}
           onVenueChange={(venue) => setMatchInfo({ venue })}
           onVenueBlur={() => trackEvent("venue_changed")}
-          onTimeChange={(time) => setMatchInfo({ time })}
-          onTimeBlur={() => trackEvent("match_date_changed", { field: "time" })}
+          onTimeChange={(time) => {
+            trackEvent("match_date_changed", { field: "time" });
+            setMatchInfo({ time });
+          }}
           onDateChange={(date) => {
             trackEvent("match_date_changed", { field: "date" });
             setMatchInfo({ date });

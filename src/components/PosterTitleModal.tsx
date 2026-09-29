@@ -114,6 +114,13 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
+  const saveOnEnter = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4"
@@ -182,8 +189,10 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
               <input
                 value={draft.titleLine1}
                 onChange={(e) =>
-                  patch({ titleLine1: e.target.value.toUpperCase() })
+                  patch({ titleLine1: e.target.value.toLocaleUpperCase("tr-TR") })
                 }
+                maxLength={16}
+                onKeyDown={saveOnEnter}
                 className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white font-bold uppercase"
               />
             </label>
@@ -194,8 +203,10 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
               <input
                 value={draft.titleLine2}
                 onChange={(e) =>
-                  patch({ titleLine2: e.target.value.toUpperCase() })
+                  patch({ titleLine2: e.target.value.toLocaleUpperCase("tr-TR") })
                 }
+                maxLength={16}
+                onKeyDown={saveOnEnter}
                 className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white font-bold uppercase"
               />
             </label>
@@ -207,6 +218,8 @@ function PosterTitleModalBody({ onClose }: { onClose: () => void }) {
                 value={draft.titleSubtitle ?? ""}
                 onChange={(e) => patch({ titleSubtitle: e.target.value })}
                 placeholder="Cuma Akşamı Maçı"
+                maxLength={40}
+                onKeyDown={saveOnEnter}
                 className="mt-1 w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-white"
               />
             </label>

@@ -1,8 +1,11 @@
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
+import { isCustomizedPlayer } from "@/lib/playerPool";
+
+export { isCustomizedPlayer };
 import { DEFAULT_AWAY_SHORT_NAME, DEFAULT_HOME_SHORT_NAME } from "@/lib/defaults";
 import { DEFAULT_POSTER_THEME } from "@/lib/posterThemes";
 import { getDefaultFormationId } from "@/lib/formations";
-import type { JerseyConfig, TeamLogo } from "@/types";
+import type { JerseyConfig, Player, TeamLogo } from "@/types";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 export type ConflictSummary = {
@@ -199,12 +202,38 @@ export function hasMeaningfulLocalChanges(snapshot: PosterSnapshot): boolean {
   }
 
   for (const player of Object.values(snapshot.savedPlayers)) {
-    if (hasPlayerPhoto(player)) return true;
-    const defaultName = `Oyuncu ${player.number}`;
-    if (player.name?.trim() && player.name.trim() !== defaultName) {
-      return true;
-    }
+    if (isCustomizedPlayer(player)) return true;
   }
 
   return false;
+}
+
+/**
+ * "Birleştir": bulut kadrosu temel alınır; bu cihazdaki özelleştirilmiş
+ * oyunculardan bulutta olmayanlar yedeklere eklenmek üzere döndürülür.
+ */
+export function collectLocalPlayersForMerge(
+  local: PosterSnapshot,
+  cloud: PosterSnapshot
+): Player[] {
+  const ids = [
+    ...local.homeTeam.playerIds.slice(0, local.squadSize),
+    ...local.awayTeam.playerIds.slice(0, local.squadSize),
+    ...local.benchPlayerIds,
+  ];
+  const seen = new Set<string>();
+  const result: Player[] = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    if (cloud.savedPlayers[id]) continue;
+    const player = local.savedPlayers[id];
+    if (!isCustomizedPlayer(player)) continue;
+    // Bulut Storage yolları bu cihazdaki kopyaya ait değil; yeniden yüklenecek.
+    const { cutoutStoragePath, photoSourceStoragePath, ...rest } = player;
+    void cutoutStoragePath;
+    void photoSourceStoragePath;
+    result.push(rest);
+  }
+  return result;
 }

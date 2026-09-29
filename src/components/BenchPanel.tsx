@@ -12,13 +12,17 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { useDragStore } from "@/store/useDragStore";
 import { useAutoCardSize } from "@/hooks/useAutoCardSize";
 import { usePlayerDrag } from "@/hooks/usePlayerDrag";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { ModalShell } from "./ModalShell";
 import { PlayerDropOverlay } from "./PlayerDropOverlay";
 import { PlayerDragPreview } from "./PlayerDragPreview";
-import type { Player } from "@/types";
+import type { JerseyConfig, Player } from "@/types";
+import { NEUTRAL_BENCH_JERSEY } from "@/lib/jerseyOptions";
 import { findPitchSlotTarget } from "@/lib/dropTargets";
+import { findHiddenAwaySlot, isCustomizedPlayer } from "@/lib/playerPool";
 import {
   isIncomingBenchSub,
   isBenchAreaTarget,
@@ -32,6 +36,7 @@ const PlayerEditModal = dynamic(
 
 function BenchPlayerCard({
   player,
+  jersey = NEUTRAL_BENCH_JERSEY,
   dragging,
   isIncomingSub,
   cardSize,
@@ -43,18 +48,17 @@ function BenchPlayerCard({
   onPointerCancel,
 }: {
   player: Player;
+  jersey?: JerseyConfig;
   dragging: boolean;
   isIncomingSub: boolean;
   cardSize: number;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
 }) {
-  const homeJersey = useAppStore((s) => s.homeTeam.jersey);
-
   return (
     <div
       data-bench-player-id={player.id}
@@ -80,21 +84,23 @@ function BenchPlayerCard({
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onDelete}
-          className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
-          title="Yedekten sil"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onDelete}
+            className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
+            title="Yedekten sil"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col items-center pt-4">
         <PlayerAvatar
           player={player}
-          jersey={homeJersey}
+          jersey={jersey}
           number={player.number}
           name={player.name || "İsimsiz"}
           size={cardSize}
@@ -121,13 +127,20 @@ export function BenchPanel() {
   const benchPlayerIds = useAppStore((s) => s.benchPlayerIds);
   const players = useAppStore((s) => s.players);
   const savedPlayers = useAppStore((s) => s.savedPlayers);
-  const homeTeam = useAppStore((s) => s.homeTeam);
-  const dragIntent = useAppStore((s) => s.dragIntent);
+  const teamMode = useAppStore((s) => s.teamMode);
+  const awayTeam = useAppStore((s) => s.awayTeam);
+  const squadSize = useAppStore((s) => s.squadSize);
+  const swapPlayers = useAppStore((s) => s.swapPlayers);
+  const setSlotPlayer = useAppStore((s) => s.setSlotPlayer);
+  const [editingAwaySlot, setEditingAwaySlot] = useState<number | null>(null);
+  // Yeni yedek yalnızca "Kaydet"te oluşturulur; vazgeçince boş kart kalmaz.
+  const [creatingBench, setCreatingBench] = useState(false);
+  const dragIntent = useDragStore((s) => s.dragIntent);
   const addPlayerToBench = useAppStore((s) => s.addPlayerToBench);
   const updateBenchPlayer = useAppStore((s) => s.updateBenchPlayer);
   const removeFromBench = useAppStore((s) => s.removeFromBench);
   const assignBenchToSlot = useAppStore((s) => s.assignBenchToSlot);
-  const setDragIntent = useAppStore((s) => s.setDragIntent);
+  const setDragIntent = useDragStore((s) => s.setDragIntent);
 
   const benchCardSize = useAutoCardSize();
 
@@ -135,6 +148,29 @@ export function BenchPanel() {
     benchId,
     player: players[benchId] ?? savedPlayers[benchId],
   }));
+
+  // Tek takım modunda gizli kalan rakip takımın özelleştirilmiş oyuncuları.
+  const hiddenAwayEntries =
+    teamMode === "single"
+      ? awayTeam.playerIds
+          .slice(0, squadSize)
+          .map((id, slotIndex) => ({
+            slotIndex,
+            player: id ? players[id] ?? savedPlayers[id] : undefined,
+          }))
+          .filter(
+            (entry): entry is { slotIndex: number; player: Player } =>
+              isCustomizedPlayer(entry.player)
+          )
+      : [];
+
+  const editingAwayPlayer =
+    editingAwaySlot !== null
+      ? (() => {
+          const id = awayTeam.playerIds[editingAwaySlot];
+          return id ? players[id] ?? savedPlayers[id] : undefined;
+        })()
+      : undefined;
 
   const editingPlayer = editingBenchId
     ? players[editingBenchId] ?? savedPlayers[editingBenchId]
@@ -147,12 +183,24 @@ export function BenchPanel() {
   const draggingPlayer = draggingBenchId
     ? players[draggingBenchId] ?? savedPlayers[draggingBenchId]
     : undefined;
+  const draggingIsHiddenAway = hiddenAwayEntries.some(
+    (entry) => entry.player.id === draggingBenchId
+  );
+
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
 
   const handleDelete = (playerId: string, playerName: string) => {
-    const label = playerName.trim() || "Bu yedek";
-    if (!window.confirm(`${label} yedek havuzundan silinsin mi?`)) return;
-    removeFromBench(playerId);
-    if (editingBenchId === playerId) setEditingBenchId(null);
+    setPendingDelete({ id: playerId, label: playerName.trim() || "Bu yedek" });
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    removeFromBench(pendingDelete.id);
+    if (editingBenchId === pendingDelete.id) setEditingBenchId(null);
+    setPendingDelete(null);
   };
 
   const { dragClientPos, handlePointerDown, handlePointerMove, handlePointerUp, handlePointerCancel } = usePlayerDrag({
@@ -180,10 +228,19 @@ export function BenchPanel() {
         return;
       }
       const target = findPitchSlotTarget(clientX, clientY);
+      const hiddenAwaySlot = findHiddenAwaySlot(
+        useAppStore.getState(),
+        benchId
+      );
       if (target) {
-        assignBenchToSlot(target.team, target.slotIndex, benchId);
+        if (hiddenAwaySlot >= 0) {
+          swapPlayers("away", hiddenAwaySlot, target.team, target.slotIndex);
+        } else {
+          assignBenchToSlot(target.team, target.slotIndex, benchId);
+        }
       } else if (!moved) {
-        setEditingBenchId(benchId);
+        if (hiddenAwaySlot >= 0) setEditingAwaySlot(hiddenAwaySlot);
+        else setEditingBenchId(benchId);
       }
       setDragIntent({ kind: "idle" });
     },
@@ -282,15 +339,41 @@ export function BenchPanel() {
               />
             ))
           )}
+
+          {hiddenAwayEntries.length > 0 && (
+            <section className="pt-3 mt-1 border-t border-zinc-800 space-y-2">
+              <div className="px-1">
+                <h3 className="text-[11px] font-black uppercase tracking-wide text-zinc-300">
+                  {awayTeam.shortName} kadrosu
+                </h3>
+                <p className="text-[10px] text-zinc-500 leading-snug">
+                  Tek takım modunda posterde görünmez. Sürükleyip sahadaki bir
+                  oyuncuyla yer değiştirebilirsin.
+                </p>
+              </div>
+              {hiddenAwayEntries.map(({ slotIndex, player }) => (
+                <BenchPlayerCard
+                  key={`away-${player.id}`}
+                  player={player}
+                  jersey={awayTeam.jersey}
+                  dragging={draggingBenchId === player.id}
+                  isIncomingSub={isIncomingBenchSub(dragIntent, player.id)}
+                  cardSize={benchCardSize}
+                  onEdit={() => setEditingAwaySlot(slotIndex)}
+                  onPointerDown={(e) => handleBenchPointerDown(e, player.id)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerCancel}
+                />
+              ))}
+            </section>
+          )}
         </div>
 
         <div className="shrink-0 p-2 border-t border-zinc-800">
           <button
             type="button"
-            onClick={() => {
-              const id = addPlayerToBench({});
-              setEditingBenchId(id);
-            }}
+            onClick={() => setCreatingBench(true)}
             className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -313,7 +396,7 @@ export function BenchPanel() {
           >
             <PlayerDragPreview
               player={draggingPlayer}
-              jersey={homeTeam.jersey}
+              jersey={draggingIsHiddenAway ? awayTeam.jersey : NEUTRAL_BENCH_JERSEY}
               size={benchCardSize}
               variant="dark"
               overlay={isBenchCloneSubIn(dragIntent) ? "sub-in" : null}
@@ -322,12 +405,87 @@ export function BenchPanel() {
           document.body
         )}
 
+      {editingAwaySlot !== null && (
+        <PlayerEditModal
+          key={`away-${editingAwaySlot}`}
+          open
+          onClose={() => setEditingAwaySlot(null)}
+          jersey={awayTeam.jersey}
+          player={editingAwayPlayer}
+          slotIndex={editingAwaySlot}
+          isCaptain={false}
+          onToggleCaptain={() => {}}
+          showCaptainToggle={false}
+          onSave={(data) => setSlotPlayer("away", editingAwaySlot, data)}
+          source="lineup"
+          team="away"
+          teammateNumbers={awayTeam.playerIds
+            .slice(0, squadSize)
+            .filter((id, i) => id && i !== editingAwaySlot)
+            .map((id) => players[id] ?? savedPlayers[id])
+            .filter((p): p is Player => Boolean(p))
+            .map((p) => ({ number: p.number, name: p.name }))}
+          variant="dark"
+        />
+      )}
+
+      <ModalShell
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        zIndexClass="z-[140]"
+        panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
+      >
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-zinc-200 leading-relaxed">
+            <strong className="text-white">{pendingDelete?.label}</strong> yedek
+            havuzundan silinsin mi? Fotoğrafı da silinir.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPendingDelete(null)}
+              className="flex-1 h-10 rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-200 hover:bg-zinc-700"
+            >
+              İptal
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-semibold text-white"
+            >
+              Sil
+            </button>
+          </div>
+        </div>
+      </ModalShell>
+
+      {creatingBench && (
+        <PlayerEditModal
+          key="new-bench-player"
+          open
+          onClose={() => setCreatingBench(false)}
+          jersey={NEUTRAL_BENCH_JERSEY}
+          player={undefined}
+          slotIndex={benchPlayerIds.length}
+          isCaptain={false}
+          onToggleCaptain={() => {}}
+          showCaptainToggle={false}
+          onSave={(data) => {
+            const id = addPlayerToBench({ name: data.name, number: data.number });
+            updateBenchPlayer(id, data);
+          }}
+          source="bench"
+          defaultPlayerName={`Yedek ${benchPlayerIds.length + 1}`}
+          variant="dark"
+        />
+      )}
+
       {editingBenchId && (
         <PlayerEditModal
           key={editingBenchId}
           open
           onClose={() => setEditingBenchId(null)}
-          jersey={homeTeam.jersey}
+          jersey={NEUTRAL_BENCH_JERSEY}
           player={editingPlayer}
           slotIndex={Math.max(editingBenchIndex, 0)}
           isCaptain={false}

@@ -514,6 +514,45 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 ---
 
+## Phase 36 — Canlı öncesi sağlamlaştırma (2026-09-28)
+
+Ayrıntı: `docs/LAUNCH-PLAN.md`.
+
+- [x] Oyuncu modalında Enter ile kaydet; numara 1–99; HEIC/bozuk görsel hata mesajı
+- [x] Yeni ikon seti (SVG, 48/192/512, maskable, apple-touch, favicon.ico) ve OG görseli
+- [x] Yedekler tarafsız formada (`NEUTRAL_BENCH_JERSEY`)
+- [x] Saat seçici (`PosterTimeField`, `normalizeMatchTime`)
+- [x] Tek takım modunda rakip takımın özel oyuncuları yedek panelinde; sürükle-bırak ile swap
+- [x] Mobil/tablet kapısı (`MobileGate`)
+- [x] Giriş çatışması: yerel (branding dahil), bulut (tam değiştir), birleştir (yerel oyuncular yedeğe)
+- [x] Sürükleme state'i ayrı store'da (persist yazımı yok)
+- [x] Posteri sıfırla onayı + oyuncu kaydı düzeltmesi
+- [x] Foto silme/değiştirme Storage yollarını temizliyor; logo `storagePath` korunuyor; logo WebP
+- [x] Çıkış öncesi bulut flush; açılışta gereksiz yazma yok; medya cache hash'i
+- [x] Sabit çözünürlüklü PNG çıktı
+- [x] GA4 Consent Mode + onay banner'ı, `/gizlilik`, robots/sitemap env'den
+- [x] Hosting `dev/**` ignore, rules sıkılaştırma, ölü kod temizliği
+- [ ] Rules deploy, Storage CORS, KVKK veri sorumlusu bilgisi, domain (kullanıcı)
+
+---
+
+## Phase 37 — Veri tutarlılığı, bulut hataları ve emülatör testleri (2026-09-28)
+
+Ayrıntı: `docs/LAUNCH-PLAN.md` H14–H29, T1; QA §34–§37.
+
+- [x] Format değişimi oyuncu kaybetmiyor: `rosterIntegrity.ts` (`normalizeRoster`, `resizeSquad`, `formatOverflow`, persist v34)
+- [x] Depolama okunmadan diske yazma kilidi (varsayılan kadronun kayıtlı veriyi ezmesi engellendi)
+- [x] IndexedDB tek bağlantı + zaman aşımı + IDB/localStorage'dan yeni olanı okuma
+- [x] Türkçe büyük harf (İ), metin sınırları, Enter ile kaydetme, klavye erişimi
+- [x] Yer tutucular yedeğe inmiyor; sahadan yedeğe gönderince slot anında doluyor; "Yeni oyuncu" iptalinde boş kart kalmıyor
+- [x] Poster oranı her ekranda sabit (16:10 / 4:5); takım adı logonun üstünde, logo/ad posterle ölçekli
+- [x] Forma numarası takım içinde tekil (`resolveJerseyNumber`, 99 → 1)
+- [x] KRİTİK bulut düzeltmeleri: yeniden girişte bulutun ezilmesi, branding atlanınca çökme, ilk girişte branding'in yazılmaması, canlı dinleyicinin çatışmayı sessizce çözmesi, aynı kullanıcıya yanlış çatışma sorusu, sahipsiz Storage dosyaları
+- [x] Firebase Emulator Suite (`npm run emulators`, `npm run dev:emulator`) ile giriş yapmış kullanıcı akışları uçtan uca test edildi
+- [x] Gerçek hesapla canlı duman testi (kullanıcı)
+
+---
+
 ## Cross-cutting constraints (applied across phases)
 
 - [x] Never persist blob URLs — data URLs locally, Storage paths in cloud
@@ -530,7 +569,7 @@ Use `docs/IMPLEMENTATION.md` for architecture reference when extending any of th
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v32** |
+| localStorage key | `halisaha-kadro` persist **v34** |
 | Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`) + `syncRevisions` |
 | Firestore doc | `data`, `branding`, `updatedAt`, `brandingUpdatedAt`, `revision`, optional omit flags |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |

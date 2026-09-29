@@ -51,6 +51,17 @@ npm run build  # production build
 npm run lint   # ESLint
 ```
 
+## Yerel Firebase emülatörü (giriş yapmış kullanıcı testleri)
+
+Gerçek projeye dokunmadan Auth, Firestore ve Storage'ı yerelde çalıştırır; `firebase/*.rules` birebir uygulanır.
+
+```bash
+npm run emulators      # 1. terminal (Java gerekir)
+npm run dev:emulator   # 2. terminal
+```
+
+Test hesabını uygulamadaki "Kayıt ol" ekranından oluşturabilirsin; emülatör kapanınca hesaplar silinir. (İstersen bilgileri git'e girmeyen `firebase/emulator-test-users.json` dosyasında tutabilirsin.)
+
 ## QA
 
 Kritik akışlar için [`docs/QA-CHECKLIST.md`](docs/QA-CHECKLIST.md).

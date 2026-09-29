@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:clean": "rm -rf dist && next build",
+    "deploy:hosting": "npm run build:clean && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "dev:emulator": "NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true next dev",
+    "emulators": "firebase emulators:start --only auth,firestore,storage"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",

@@ -79,6 +79,9 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
 ## 4. Bootstrap & render flow
 
 ```
+page.tsx
+└── MobileGate            → phones/tablets get "Mobil uygulamamız yakında"; app never boots
+    └── AppProviders
 AppProviders
 ├── AuthProvider          → Firebase auth, cloud load/push, syncPhase
 ├── AppBootstrapGate      → waits: store hydrate + auth + !remoteHydrating
@@ -129,7 +132,7 @@ AppShell
 
 - `players` — active registry rebuilt from lineup + bench
 - `logoDesignerTeam`, `remoteHydrating`
-- Drag preview state: `dragIntent` (`DragIntent` from `src/lib/dragIntent.ts`)
+- Drag preview state lives in a **separate** store `src/store/useDragStore.ts` (`dragIntent`). It must not live in `useAppStore`: every `useAppStore` set() makes the persist middleware serialize the whole poster (photos included) to IndexedDB + localStorage.
 
 ### 5.3 PosterSnapshot (`src/lib/posterSnapshot.ts`)
 
@@ -227,7 +230,7 @@ Formations (`src/lib/formations.ts`, `src/lib/formationEngine.ts`):
 |---|---|
 | **UI** | `PlayerOnPitch`, `PosterEditableText` (inline name edit) |
 | **Store** | `setSlotPlayer`, `clearSlot`, `setCaptain`, `applyFormations`, `swapPlayers`, `movePitchPlayer` |
-| **Lib** | `defaultRoster.ts`, `playerPool.ts`, `lineupSlots.ts`, `teamJerseyNumbers.ts` |
+| **Lib** | `defaultRoster.ts`, `playerPool.ts`, `teamJerseyNumbers.ts` |
 | **QA** | §1, §9 |
 
 `players` = active lineup+bench registry. `savedPlayers` = persisted superset (pruned on snapshot build).
@@ -251,7 +254,7 @@ Formations (`src/lib/formations.ts`, `src/lib/formationEngine.ts`):
 | **Lib** | `backgroundRemoval.ts` — **static import** of `@imgly/background-removal` (required; dynamic import breaks dev HMR) |
 | **Persist** | Save cutout as **data URL** via `fileToDataUrl`; never blob URL |
 | **QA** | §3 |
-| **Preload** | `preloadBackgroundRemovalModel()` called on idle via `AppBootstrapGate`; uses `imglyPreload()` to download ~40MB model in background |
+| **Model** | No preload; ~40MB model downloads on first "Arka plan kaldır" and is served from browser cache afterwards. `isModelReady()` flips after the first successful run. |
 
 Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress separates `fetch:` (model download) from `compute:` (inference). `isModelReady()` lets UI check preload status.
 
@@ -260,7 +263,7 @@ Config: model `isnet_quint8`, output `image/webp` Q90, CPU inference. Progress s
 | | |
 |---|---|---|
 | **UI** | `PlayerOnPitch.tsx`, `PlayerDropOverlay.tsx` |
-| **Store** | `dragIntent`, `setDragIntent`, `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
+| **Store** | `useDragStore` (`dragIntent`, runtime-only, not persisted), `swapPlayers`, `movePitchPlayer`, `clearPitchPlayerPosition` |
 | **Logic** | `swapPlayers` swaps `playerIds` only, then `applyFormations()`; jersey conflicts via `resolveSameTeamJerseyConflicts`; movement policy and `SlotRules` from `pitchInteraction.ts`; geometry-based drop targets from `dropTargets.ts`; auto card sizing from `posterLayout.ts` |
 | **Hook** | `usePlayerDrag.ts` — shared pointer capture, threshold, portal offset, and release handling |
 | **Sizing** | `useAutoCardSize.ts` + `getAutoCardSize()` — responsive pitch/bench card size |
@@ -505,7 +508,6 @@ Follow this order:
 
 | Item | Notes |
 |------|-------|
-| `PhotoEditorModal.tsx` | **Dead code** — do not use in new flows |
 | `requestBrandingCloudFlush` | `posterSyncEvents.ts`; prefer store revision bump + sync manager |
 | Firestore 1MB limit | Mitigated by slim data, branding split, Storage paths, compression tiers |
 | BG removal | Requires internet on first use; large download |
@@ -545,7 +547,7 @@ Follow this order:
 | Snapshot | `posterSnapshot.ts`, `brandingSnapshot.ts`, `snapshotFingerprint.ts` |
 | Sync | `cloudSyncManager.ts`, `cloudPoster.ts`, `firestoreWriteQueue.ts`, `syncRevisions.ts`, `syncRevisionBump.ts`, `mediaSync.ts`, `posterSyncEvents.ts` |
 | Players | `playerPool.ts`, `playerPhotos.ts`, `defaultRoster.ts`, `teamJerseyNumbers.ts` |
-| Formations | `formations.ts`, `formationEngine.ts`, `lineupSlots.ts` |
+| Formations | `formations.ts`, `formationEngine.ts` |
 | Logo/jersey | `logoUtils.ts`, `logoPresets.ts`, `logoImagePresets.ts`, `logoRandomize.ts`, `jerseyOptions.ts`, `teamLogoCloud.ts` |
 | Poster visual | `posterThemes.ts`, `posterTitleStyles.ts`, `posterLayout.ts` |
 | Media | `backgroundRemoval.ts`, `imageCompress.ts`, `fileToDataUrl.ts`, `photoCrop.ts` |
@@ -616,6 +618,26 @@ Does the feature change what gets saved locally?
                   ├─ media    → mediaSync if binary
                   └─ other    → saveUserPoster data path
 ```
+
+## 15. Launch hardening (2026-09-28)
+
+| Area | Contract |
+|------|----------|
+| Mobile | `MobileGate` (`src/lib/deviceSupport.ts`) wraps the app in `src/app/page.tsx`. Phones/tablets (UA, iPadOS touch Mac, coarse-only pointer) see a coming-soon screen. `/gizlilik` is outside the gate. |
+| Analytics / KVKK | GA4 Consent Mode default `denied`; `gtag.js` loads only after "Kabul et" (`ConsentBanner`, `setAnalyticsConsent`). `trackEvent` is a no-op without consent. |
+| Legal | `/gizlilik` static page; controller name/e-mail in `src/lib/legal.ts` (must be filled before launch). |
+| Site URL | `src/lib/siteUrl.ts` ← `NEXT_PUBLIC_SITE_URL`; drives metadataBase, `app/robots.ts`, `app/sitemap.ts`. |
+| Photos | `buildPlayerPhotoPatch` in the store: clearing a photo also clears `cutoutStoragePath` / `photoSourceStoragePath`; a new `photoSource` replaces the whole photo set (old cutout removed). |
+| Logos | `normalizeTeamLogo` keeps `storagePath` for `upload` logos; `hasUsableUploadLogo` accepts data URL, https download URL or storage path. Uploaded logos are WebP (transparency kept). |
+| Login conflict | local → full save incl. branding; cloud → `hydrateFromSnapshot(..., { replace: true })`; merge → cloud replace + `appendPlayersToBench(collectLocalPlayersForMerge())`. Modal stays open on error. |
+| Sign out | `flushCloudSyncNow()` before wiping local data; on failure the user must confirm "Yine de çık". |
+| Single-team mode | Customized away players are listed in the bench panel ("{Takım B} kadrosu"); drag between them and home slots uses cross-team `swapPlayers` (`findHiddenAwaySlot`). |
+| Bench jersey | `NEUTRAL_BENCH_JERSEY` for bench cards/preview/modal. |
+| Match time | `PosterTimeField` (native time picker); `normalizeMatchTime` in `normalizeMatchInfo`. |
+| Roster integrity | `src/lib/rosterIntegrity.ts`: `normalizeRoster` (used by `finalizePosterSnapshot`) enforces slot count, no duplicate players, valid bench, captain in lineup, valid `formatOverflow`. `resizeSquad` handles 6v6/7v7/8v8: customized overflow players go to bench and are pushed on the team's `formatOverflow` stack (persist v34); growing pops them back. Placeholders are dropped. |
+| Persist write lock | `guardedStorage` in the store ignores writes until `onRehydrateStorage` finishes (initial load and tab-sync rehydrate). Migrated data is written once after unlock. |
+| Export | Fixed output width: versus 2400px, single 1600px. |
+| Deploy | `npm run deploy:hosting` (clean build + hosting). `firebase.json` ignores `dev/**` and source maps; `cleanUrls: true`. Rules: `npm run deploy:rules`. |
 
 ---
 

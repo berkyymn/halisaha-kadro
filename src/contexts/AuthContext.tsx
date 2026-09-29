@@ -42,12 +42,20 @@ import {
   resetCloudSyncState,
   notifyCloudSyncDirty,
   subscribeCloudSyncStatus,
+  flushCloudSyncNow,
 } from "@/hooks/useCloudSync";
 import { cleanupOrphanedMedia } from "@/lib/mediaSync";
 import { clearIndexedDBStorage } from "@/lib/indexedDBStorage";
 import {
+  clearLocalOwner,
+  clearQueuedCloudSync,
+  readLocalOwner,
+  setLocalOwner,
+} from "@/lib/cloudSyncOutbox";
+import {
   areSnapshotsEquivalent,
   buildConflictSummary,
+  collectLocalPlayersForMerge,
   hasMeaningfulLocalChanges,
 } from "@/lib/loginConflict";
 import { LoginConflictModal } from "@/components/LoginConflictModal";
@@ -65,8 +73,10 @@ type AuthContextValue = {
   authModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
-  signOut: () => Promise<void>;
+  signOut: (options?: { force?: boolean }) => Promise<SignOutResult>;
 };
+
+export type SignOutResult = { ok: true } | { ok: false; reason: "unsynced" };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -126,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localSnapshot: PosterSnapshot;
   } | null>(null);
   const [conflictBusy, setConflictBusy] = useState(false);
+  const [conflictError, setConflictError] = useState<string | null>(null);
   const [loadRetryNonce, setLoadRetryNonce] = useState(0);
   const loadGenerationRef = useRef(0);
   const loadedUserRef = useRef<string | null>(null);
@@ -168,8 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logosOmitted?: boolean;
       },
       localSnapshot: PosterSnapshot,
-      cloudBranding?: Parameters<typeof mergeCloudBrandingIntoSnapshot>[1]
+      cloudBranding?: Parameters<typeof mergeCloudBrandingIntoSnapshot>[1],
+      options?: { cloudWins?: boolean }
     ) => {
+      const cloudWins = options?.cloudWins ?? false;
       const localPhotos = countPhotos(localSnapshot);
       const localCustomLogos = countCustomTeamLogos(
         localSnapshot.homeTeam.logo,
@@ -183,7 +196,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       cloudSnapshotRef.current = cloudData;
 
-      hydrateFromSnapshot(cloudData, row.updatedAt);
+      // cloudWins: yerel kadro hiç özelleştirilmemiş (yeni cihaz / çıkış sonrası).
+      // Zaman damgasına bakılmaz; bulut birebir uygulanır ve geri yazılmaz.
+      hydrateFromSnapshot(
+        cloudData,
+        row.updatedAt,
+        cloudWins ? { replace: true } : undefined
+      );
       const merged = getPosterSnapshot();
       const mergedPhotos = countPhotos(merged);
       const mergedCustomLogos = countCustomTeamLogos(
@@ -230,16 +249,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSyncError(null);
       }
 
-      const localIsNewer = Boolean(
+      const localIsNewer = !cloudWins && Boolean(
         localSnapshot.localUpdatedAt &&
           row.updatedAt &&
           localSnapshot.localUpdatedAt > row.updatedAt
       );
       const localMediaWasPreserved =
-        (localPhotos > countPhotos(parsed) &&
+        !cloudWins &&
+        ((localPhotos > countPhotos(parsed) &&
           mergedPhotos > countPhotos(parsed)) ||
         (localCustomLogos > cloudCustomLogos &&
-          mergedCustomLogos > cloudCustomLogos);
+          mergedCustomLogos > cloudCustomLogos));
       const cloudHasStaleMedia =
         hasStaleInlineMedia(parsed) ||
         hasStaleInlineLogo(cloudBranding?.home.logo) ||
@@ -307,7 +327,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loadRetryAttemptRef.current = 0;
           const localIsCustom = hasMeaningfulLocalChanges(localSnapshot);
           const sameAsCloud = areSnapshotsEquivalent(localSnapshot, row.doc.data);
-          if (localIsCustom && !sameAsCloud) {
+          // Yerel veri zaten bu hesabın (gönderilmemiş değişiklikler): soru yok,
+          // daha yeni olan kazanır ve gerekirse buluta geri yazılır.
+          const localBelongsToUser = readLocalOwner() === userId;
+          if (localIsCustom && !sameAsCloud && !localBelongsToUser) {
             setLoginConflict({
               userId,
               row: {
@@ -327,8 +350,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             row.doc.data,
             row.doc,
             localSnapshot,
-            row.doc.branding
+            row.doc.branding,
+            { cloudWins: !localIsCustom }
           );
+          setLocalOwner(userId);
           loadedUserRef.current = userId;
           setInitialCloudPullCompleted(true);
           return;
@@ -341,22 +366,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
           setSyncStatus("error");
           loadedUserRef.current = userId;
+          setLocalOwner(userId);
           markPosterSnapshotSynced(getPosterSnapshot());
           setInitialCloudPullCompleted(true);
           return;
         }
 
+        // Bulutta doküman yok (ilk giriş): yerel kadro logo/forma dahil yüklenir.
         const snapshot = getPosterSnapshot();
-        const result = await saveUserPoster(userId, snapshot);
+        const result = await saveUserPoster(userId, snapshot, {
+          includeBranding: true,
+        });
         if (generation !== loadGenerationRef.current) return;
         loadRetryAttemptRef.current = 0;
         setSyncStatus("saved");
         setSyncError(describeCloudSaveResult(result));
         lastRemoteUpdatedAtRef.current = result.updatedAt;
+        lastRemoteBrandingUpdatedAtRef.current =
+          result.brandingUpdatedAt ?? result.updatedAt;
         cloudRevisionRef.current = result.revision;
-        await cleanupOrphanedMedia(cloudSnapshotRef.current, snapshot);
-        cloudSnapshotRef.current = snapshot;
+        cloudSnapshotRef.current = result.cloudSnapshot;
         loadedUserRef.current = userId;
+        setLocalOwner(userId);
         markPosterSnapshotSynced(getPosterSnapshot(), { clearOutbox: true });
         setInitialCloudPullCompleted(true);
       } catch (err) {
@@ -409,50 +440,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { userId, row, localSnapshot } = loginConflict;
       setRemoteHydrating(true);
       try {
+        const cloudData = mergeCloudBrandingIntoSnapshot(
+          row.data,
+          row.branding,
+          row.brandingUpdatedAt
+        );
         if (choice === "local") {
+          // Yerel kadro en güncel sayılır; logo/forma dahil tamamı buluta yazılır.
+          useAppStore.setState({ localUpdatedAt: new Date().toISOString() });
           const snapshot = getPosterSnapshot();
-          const result = await saveUserPoster(userId, snapshot);
+          const result = await saveUserPoster(userId, snapshot, {
+            includeBranding: true,
+          });
           lastRemoteUpdatedAtRef.current = result.updatedAt;
+          lastRemoteBrandingUpdatedAtRef.current =
+            result.brandingUpdatedAt ?? result.updatedAt;
           cloudRevisionRef.current = result.revision;
-          await cleanupOrphanedMedia(cloudSnapshotRef.current, snapshot);
-          cloudSnapshotRef.current = snapshot;
+          // Eski bulut medyası burada silinmez: yerel kopyada Storage yolları
+          // yok, aynı yola yeni yüklenen logo yanlışlıkla silinebilir.
+          cloudSnapshotRef.current = result.cloudSnapshot;
           markPosterSnapshotSynced(snapshot, { clearOutbox: true });
           setSyncStatus("saved");
           setSyncError(describeCloudSaveResult(result));
-        } else if (choice === "cloud") {
-          // Bulutun tamamen kazanması için yerel zaman damgasını geçici sıfırla.
-          useAppStore.setState({ localUpdatedAt: undefined });
-          const cloudData = mergeCloudBrandingIntoSnapshot(
-            row.data,
-            row.branding,
-            row.brandingUpdatedAt
-          );
-          hydrateFromSnapshot(cloudData, row.updatedAt);
+        } else {
+          // Bulutu kullan / Birleştir: yerel veri buluttakiyle birebir değişir.
+          hydrateFromSnapshot(cloudData, row.updatedAt, { replace: true });
           lastRemoteUpdatedAtRef.current = row.updatedAt;
           lastRemoteBrandingUpdatedAtRef.current = row.brandingUpdatedAt || null;
           cloudRevisionRef.current = row.revision ?? 0;
-          cloudSnapshotRef.current = cloudData;
-          markPosterSnapshotSynced(getPosterSnapshot());
+          cloudSnapshotRef.current = getPosterSnapshot();
+          markPosterSnapshotSynced(getPosterSnapshot(), { clearOutbox: true });
           setSyncStatus("saved");
           setSyncError(null);
-        } else {
-          applyCloudRow(row.data, row, localSnapshot, row.branding);
+          if (choice === "merge") {
+            // Bu cihazdaki özel oyuncular yedeklere eklenir; senk devam
+            // ettiğinde (pause kalkınca) buluta yazılır.
+            useAppStore
+              .getState()
+              .appendPlayersToBench(
+                collectLocalPlayersForMerge(localSnapshot, cloudData)
+              );
+          }
         }
         loadedUserRef.current = userId;
+        setLocalOwner(userId);
         setInitialCloudPullCompleted(true);
-      } catch (err) {
-        console.error("Login conflict resolution error:", err);
-        setSyncError(mapFirestoreError(err));
-        setSyncStatus("error");
-      } finally {
         setLoginConflict(null);
+        setConflictError(null);
+      } catch (err) {
+        // Modal açık kalır; kullanıcı tekrar deneyebilir veya başka seçenek seçer.
+        console.error("Login conflict resolution error:", err);
+        setConflictError(mapFirestoreError(err));
+      } finally {
         setRemoteHydrating(false);
       }
     },
     [
       loginConflict,
       getPosterSnapshot,
-      applyCloudRow,
       hydrateFromSnapshot,
       setRemoteHydrating,
     ]
@@ -511,6 +556,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user.uid,
       (change) => {
         if (useAppStore.getState().remoteHydrating) return;
+        // İlk yükleme / giriş çatışması çözülmeden canlı güncelleme uygulanmaz;
+        // aksi halde misafir verisi kullanıcıya sorulmadan bulutla birleşir.
+        if (loadedUserRef.current !== user.uid) return;
         if (
           change.revision !== undefined &&
           change.revision > 0 &&
@@ -533,8 +581,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }, [configured, user, softReloadFromCloud]);
 
-  const signOut = useCallback(async () => {
-    if (!configured) return;
+  const signOut = useCallback(async (options?: { force?: boolean }): Promise<SignOutResult> => {
+    if (!configured) return { ok: true };
+    if (!options?.force) {
+      // Çıkış yerel veriyi sildiği için bekleyen bulut kaydı önce gönderilmeli.
+      const flushed = await flushCloudSyncNow(20_000);
+      if (!flushed) return { ok: false, reason: "unsynced" };
+    }
     loadGenerationRef.current += 1;
     if (loadRetryTimerRef.current) {
       clearTimeout(loadRetryTimerRef.current);
@@ -547,6 +600,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cloudRevisionRef.current = null;
     cloudSnapshotRef.current = null;
     resetCloudSyncState();
+    const signingOutUid = getFirebaseAuth().currentUser?.uid;
+    if (signingOutUid) clearQueuedCloudSync(signingOutUid);
+    clearLocalOwner();
     await firebaseSignOut(getFirebaseAuth());
     if (typeof window !== "undefined") {
       try {
@@ -556,6 +612,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       window.location.reload();
     }
+    return { ok: true };
   }, [configured]);
 
   const pushSnapshot = useCallback(
@@ -574,8 +631,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         lastRemoteUpdatedAtRef.current = result.updatedAt;
         cloudRevisionRef.current = result.revision;
-        await cleanupOrphanedMedia(cloudSnapshotRef.current, snapshot);
-        cloudSnapshotRef.current = snapshot;
+        // Önceki ve yeni BULUT hâli karşılaştırılır (ikisi de Storage yollarını içerir).
+        await cleanupOrphanedMedia(cloudSnapshotRef.current, result.cloudSnapshot);
+        cloudSnapshotRef.current = result.cloudSnapshot;
         if (result.brandingUpdatedAt) {
           lastRemoteBrandingUpdatedAtRef.current = result.brandingUpdatedAt;
         }
@@ -619,9 +677,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       lastRemoteUpdatedAtRef.current = result.updatedAt;
       cloudRevisionRef.current = result.revision;
-      const snapshot = useAppStore.getState().getPosterSnapshot();
-      await cleanupOrphanedMedia(cloudSnapshotRef.current, snapshot);
-      cloudSnapshotRef.current = snapshot;
+      // Yalnızca logo/forma yazıldı: oyuncu medyası değişmedi, temizlik yapılmaz.
+      // (Yerel kopyada Storage yolları olmadığından karşılaştırma tüm fotoğrafları
+      // sahipsiz sanıp silerdi.)
       return {
         ok: true,
         updatedAt: result.updatedAt,
@@ -647,7 +705,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updatedAt?: string;
       brandingUpdatedAt?: string;
     }) => {
-      if (!user) return;
+      if (!user || loadedUserRef.current !== user.uid) return;
       const dataStale =
         !payload.updatedAt ||
         !lastRemoteUpdatedAtRef.current ||
@@ -719,6 +777,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <LoginConflictModal
           open
           busy={conflictBusy}
+          error={conflictError}
           localSummary={localConflictSummary}
           cloudSummary={cloudConflictSummary}
           cloudUpdatedAt={loginConflict.row.updatedAt}

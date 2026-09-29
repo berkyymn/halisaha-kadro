@@ -9,6 +9,7 @@ export type LoginConflictChoice = "local" | "cloud" | "merge";
 type LoginConflictModalProps = {
   open: boolean;
   busy?: boolean;
+  error?: string | null;
   localSummary: ConflictSummary;
   cloudSummary: ConflictSummary;
   cloudUpdatedAt?: string;
@@ -80,6 +81,7 @@ function SummaryCard({
 export function LoginConflictModal({
   open,
   busy = false,
+  error = null,
   localSummary,
   cloudSummary,
   cloudUpdatedAt,
@@ -148,11 +150,28 @@ export function LoginConflictModal({
           </button>
         </div>
 
-        <p className="text-[11px] text-zinc-500 leading-relaxed">
-          “Birleştir” seçeneği bulut kaydını temel alır ama bu cihazdaki
-          fotoğrafları/logoları korur (eğer bulutta yoksa). “Bu cihazı kullan”
-          buluttaki kadroyu siler.
-        </p>
+        {error && (
+          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2" role="alert">
+            {error}
+          </p>
+        )}
+
+        <ul className="text-[11px] text-zinc-500 leading-relaxed space-y-1 list-disc list-inside">
+          <li>
+            <span className="text-zinc-300">Bu cihazı kullan:</span> bu cihazdaki
+            kadro, logo ve formalar buluta yazılır; buluttaki eski kadronun
+            yerini alır.
+          </li>
+          <li>
+            <span className="text-zinc-300">Bulutu kullan:</span> buluttaki kadro
+            yüklenir; bu cihazdaki kadro silinir.
+          </li>
+          <li>
+            <span className="text-zinc-300">Birleştir:</span> buluttaki kadro
+            yüklenir; bu cihazda eklediğin oyuncular (isim/fotoğraf) yedeklere
+            eklenir.
+          </li>
+        </ul>
       </div>
     </ModalShell>
   );

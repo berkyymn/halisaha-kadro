@@ -142,7 +142,7 @@ export function TeamLogoBadge({
   const scale = size / 100;
   const totalH = viewH * scale;
   const showIcon = logo.showIcon && logo.icon !== "none";
-  const initials = logo.initials || shortName.slice(0, 2).toUpperCase() || "?";
+  const initials = logo.initials || shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "?";
   const iconSize = size * (logo.showInitials && showIcon ? 0.28 : 0.34);
   const iconTop = logo.showInitials && showIcon ? size * 0.17 : size * 0.2;
 

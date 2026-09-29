@@ -67,14 +67,3 @@ export function getPitchMovementPolicy(
     ? { ...FULL_PITCH_POLICY, dropXMax: 48, allowedSwapTeams: ["home", "away"] }
     : { ...FULL_PITCH_POLICY, dropXMin: 52, allowedSwapTeams: ["home", "away"] };
 }
-
-export function clampPitchPosition(
-  x: number,
-  y: number,
-  policy: PitchMovementPolicy
-): { x: number; y: number } {
-  return {
-    x: Math.max(policy.dragXMin, Math.min(policy.dragXMax, x)),
-    y: Math.max(policy.dragYMin, Math.min(policy.dragYMax, y)),
-  };
-}
