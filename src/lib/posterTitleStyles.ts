@@ -5,33 +5,12 @@ import type { MatchInfo, PosterTitleEffectId, PosterTitleStyleId } from "@/types
 export const TITLE_STYLE_PRESETS: {
   id: PosterTitleStyleId;
   label: string;
-  description: string;
   swatch: [string, string];
 }[] = [
-  {
-    id: "cinematic",
-    label: "Kırmızı",
-    description: "Beyaz + kırmızı vurgu",
-    swatch: ["#ffffff", "#ef4444"],
-  },
-  {
-    id: "champions-league",
-    label: "Mavi",
-    description: "Beyaz + mavi vurgu",
-    swatch: ["#ffffff", "#38bdf8"],
-  },
-  {
-    id: "summer-cup",
-    label: "Turkuaz",
-    description: "Beyaz + turkuaz vurgu",
-    swatch: ["#ffffff", "#2dd4bf"],
-  },
-  {
-    id: "dark-arena",
-    label: "Gri",
-    description: "Metalik gri tonlar",
-    swatch: ["#e4e4e7", "#a1a1aa"],
-  },
+  { id: "cinematic", label: "Kırmızı", swatch: ["#ffffff", "#ef4444"] },
+  { id: "champions-league", label: "Mavi", swatch: ["#ffffff", "#38bdf8"] },
+  { id: "summer-cup", label: "Turkuaz", swatch: ["#ffffff", "#2dd4bf"] },
+  { id: "dark-arena", label: "Gri", swatch: ["#e4e4e7", "#a1a1aa"] },
 ];
 
 export const TITLE_EFFECT_PRESETS: {
@@ -53,8 +32,6 @@ export const DEFAULT_TITLE_STYLE: Pick<
   | "titleFontSize"
   | "titleLetterSpacing"
   | "titleShadow"
-  | "titleRotation"
-  | "titleMaxWidth"
   | "titleSubtitle"
 > = {
   titleSubtitle: "",
@@ -63,9 +40,31 @@ export const DEFAULT_TITLE_STYLE: Pick<
   titleFontSize: 100,
   titleLetterSpacing: 50,
   titleShadow: 85,
-  titleRotation: 0,
-  titleMaxWidth: 88,
 };
+
+export const TITLE_LINE_MAX_LENGTH = 16;
+export const TITLE_SUBTITLE_MAX_LENGTH = 40;
+export const TITLE_FONT_SIZE_RANGE = { min: 80, max: 120 } as const;
+export const DEFAULT_TITLE_LINE1 = "DERBİ";
+export const DEFAULT_TITLE_LINE2 = "GECESİ";
+
+export function clampTitleFontSize(value: unknown): number {
+  const n = typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_TITLE_STYLE.titleFontSize;
+  return Math.min(TITLE_FONT_SIZE_RANGE.max, Math.max(TITLE_FONT_SIZE_RANGE.min, Math.round(n)));
+}
+
+/** Posterde görünen satırlar: üst satır boşsa varsayılan, alt satır isteğe bağlı. */
+export function titleLines(info: Pick<MatchInfo, "titleLine1" | "titleLine2" | "titleSubtitle">): {
+  line1: string;
+  line2: string;
+  subtitle: string;
+} {
+  return {
+    line1: (info.titleLine1 ?? "").trim() || DEFAULT_TITLE_LINE1,
+    line2: (info.titleLine2 ?? "").trim(),
+    subtitle: (info.titleSubtitle ?? "").trim(),
+  };
+}
 
 export function defaultTitleStyleForTheme(
   theme: PosterThemeId
@@ -202,8 +201,12 @@ function effectStyles(
   }
 }
 
+/**
+ * Başlık stilleri. Boyutlar yalnızca posterin genişliğine (`cqw`, #match-poster
+ * container) bağlıdır; böylece ekran boyutu, önizleme ve JPEG çıktısında
+ * başlığın postere oranı aynı kalır.
+ */
 export function buildPosterTitleStyles(info: MatchInfo): {
-  container: CSSProperties;
   line1: CSSProperties;
   line2: CSSProperties;
   subtitle: CSSProperties;
@@ -212,17 +215,13 @@ export function buildPosterTitleStyles(info: MatchInfo): {
   const palette = PALETTES[info.titleStyleId] ?? PALETTES.cinematic;
   const spacing =
     -0.02 + (info.titleLetterSpacing / 100) * 0.22;
-  const sizeScale = info.titleFontSize / 100;
+  const sizeScale = clampTitleFontSize(info.titleFontSize) / 100;
 
-  const fontSize = `clamp(${2.1 * sizeScale}rem, ${5.8 * sizeScale}cqw, ${4.4 * sizeScale}rem)`;
-  const subtitleSize = `clamp(0.55rem, ${1.35 * sizeScale}cqw, ${0.95 * sizeScale}rem)`;
+  const fontSize = `${(5.8 * sizeScale).toFixed(3)}cqw`;
+  const subtitleSize = `${(1.35 * sizeScale).toFixed(3)}cqw`;
 
   return {
     fontSize,
-    container: {
-      maxWidth: `${info.titleMaxWidth}%`,
-      transform: `rotate(${info.titleRotation}deg)`,
-    },
     line1: {
       ...effectStyles(info.titleEffectId, palette, info.titleShadow, false),
       letterSpacing: `${spacing}em`,

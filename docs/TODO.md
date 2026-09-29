@@ -561,6 +561,7 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.
 - [x] Persist v35: `syncRevisions` → tek `editVersion` sayacı; `applyCloudSnapshot` sayacı artırmaz
 - [x] Eski senkron modülleri kaldırıldı: `cloudSyncManager`, `useCloudSync`, `firestoreWriteQueue`, `cloudSyncOutbox`, `syncRevisions`, `syncRevisionBump`, `cloudPoster`, `snapshotFingerprint` ve LWW birleştirme yardımcıları
 - [x] Emülatörde uçtan uca: ilk giriş, otomatik kayıt, yenileme, iki sekme, eşzamanlı düzenleme çatışması, birleştir, eski doküman göçü, hesap silme
+- [x] Başlık düzenleyici yeniden tasarlandı: ortak `PosterTitle` çizimi, gerçek arka planlı önizleme, tek satır başlık, efekt kartları, yalnızca `cqw` ölçek; işe yaramayan "Max genişlik" ve "Döndürme" kaldırıldı (persist v36)
 - [ ] R3 Store refactor (tek oyuncu kaydı, `playerCardSize` göçle kalkacak)
 - [ ] R10 Safari/Firefox + pilot geri bildirimi (kullanıcı)
 
@@ -582,7 +583,7 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.
 
 | Layer | Schema |
 |-------|--------|
-| localStorage key | `halisaha-kadro` persist **v35** |
+| localStorage key | `halisaha-kadro` persist **v36** |
 | Snapshot | `PosterSnapshot` (`teamMode`, `singlePitchPlayers`, `formatOverflow`) + `editVersion` |
 | Firestore doc | `data` (logo/forma dahil), `updatedAt`, `revision`, omit flags (eski `branding`/`brandingUpdatedAt` ilk yazımda silinir) |
 | Storage | `users/{uid}/players/{id}/cutout.webp`, `users/{uid}/logos/{side}.webp` |

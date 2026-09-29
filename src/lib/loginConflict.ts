@@ -5,6 +5,7 @@ import { isCustomizedPlayer } from "@/lib/playerPool";
 export { isCustomizedPlayer };
 import { DEFAULT_AWAY_SHORT_NAME, DEFAULT_HOME_SHORT_NAME } from "@/lib/defaults";
 import { DEFAULT_POSTER_THEME } from "@/lib/posterThemes";
+import { DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
 import { getDefaultFormationId } from "@/lib/formations";
 import type { JerseyConfig, Player, TeamLogo } from "@/types";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
@@ -134,13 +135,11 @@ function normalizeMatchInfo(snapshot: PosterSnapshot) {
     venue: matchInfo.venue ?? "",
     time: matchInfo.time ?? "",
     date: matchInfo.date ?? "",
-    titleStyleId: matchInfo.titleStyleId ?? "cinematic",
-    titleEffectId: matchInfo.titleEffectId ?? "normal",
-    titleFontSize: matchInfo.titleFontSize ?? 64,
-    titleLetterSpacing: matchInfo.titleLetterSpacing ?? 0,
-    titleShadow: matchInfo.titleShadow ?? 0,
-    titleRotation: matchInfo.titleRotation ?? 0,
-    titleMaxWidth: matchInfo.titleMaxWidth ?? 100,
+    titleStyleId: matchInfo.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
+    titleEffectId: matchInfo.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
+    titleFontSize: matchInfo.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize,
+    titleLetterSpacing: matchInfo.titleLetterSpacing ?? DEFAULT_TITLE_STYLE.titleLetterSpacing,
+    titleShadow: matchInfo.titleShadow ?? DEFAULT_TITLE_STYLE.titleShadow,
   };
 }
 

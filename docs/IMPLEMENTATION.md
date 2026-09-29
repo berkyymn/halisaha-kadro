@@ -49,7 +49,7 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
                             │ useAppStore()
 ┌───────────────────────────▼─────────────────────────────────┐
 │  State (src/store/useAppStore.ts)                             │
-│  All poster mutations; persist v35; editVersion counter     │
+│  All poster mutations; persist v36; editVersion counter     │
 └───────────────────────────┬─────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
@@ -97,7 +97,7 @@ AppShell
 ```
 
 **Hydration order:**
-1. Zustand rehydrates from IndexedDB/localStorage (`halisaha-kadro`, persist v35)
+1. Zustand rehydrates from IndexedDB/localStorage (`halisaha-kadro`, persist v36)
 2. `onRehydrateStorage` runs `finalizePosterSnapshot`
 3. If user signed in, `SyncController.start(uid)` fetches `posters/{uid}` and decides (see F11): adopt cloud, keep local and save, or open a conflict
 4. Cloud data enters the store only via `applyCloudSnapshot` (replace, no `editVersion` bump)
@@ -251,12 +251,15 @@ Logo modes: `preset` (PNG assets), `generated` (SVG-like params), `upload` (user
 
 | | |
 |---|---|
-| **UI** | `PosterTitleDisplay.tsx`, `PosterTitleModal.tsx`, `PosterDateField.tsx`, `PosterEditableText.tsx` |
+| **UI** | `PosterTitle.tsx` (tek çizim), `PosterTitleDisplay.tsx`, `PosterTitleModal.tsx`, `PosterDateField.tsx`, `PosterEditableText.tsx` |
 | **Store** | `setMatchInfo` |
 | **Lib** | `posterTitleStyles.ts`, `matchDate.ts` |
 | **QA** | §8 |
 
-Title modal keeps preview fixed at top while scrolling effect/color controls.
+- `PosterTitle` is the only renderer; the poster and the modal preview both use it, so what you see in the modal is what the poster shows.
+- Sizes are `cqw` only (no rem clamps): the title keeps the same proportion to the poster on every screen and in the JPEG export. The modal preview is a 16:10 container (`container-type: inline-size`) over the real theme background, cropped to the top strip.
+- Line 2 is optional (empty → single-line title); empty line 1 falls back to "DERBİ". Size range 80–120% (`clampTitleFontSize`).
+- Rotation and max-width were removed in persist v36 (max-width had no visible effect because lines are `nowrap`).
 
 ### F8 — Bench / substitutes
 
@@ -385,7 +388,7 @@ All poster mutations go through wrapped `set()`:
 
 `applyCloudSnapshot` and internal normalizations (formation fixes, `applyCompressedPlayers` when only the `didCompress` flag changed) use `realSet` directly — they are not user edits and must not trigger a save. Compressed photos do go through `set()` so the smaller images reach the cloud.
 
-### 7.2 Persist middleware (v35)
+### 7.2 Persist middleware (v36)
 
 | Hook | Responsibility |
 |------|----------------|
@@ -482,7 +485,8 @@ Follow this order:
 | `BenchPanel.tsx` | Substitute pool UI |
 | `PlayerEditModal.tsx` | Player name/number/photo/bg removal |
 | `LogoDesignerModal.tsx` | Team logo & jersey designer |
-| `PosterTitleModal.tsx` | Title style editor |
+| `PosterTitleModal.tsx` | Title editor (text / effect / color / fine-tune, live preview) |
+| `PosterTitle.tsx` | Shared title renderer (poster + preview) |
 | `ModalShell.tsx` | Shared modal chrome |
 | `StaticPosterBackground.tsx` | Theme background image |
 | `TeamLogoBadge.tsx` | Renders team logo (preset/generated/upload) |
@@ -591,4 +595,4 @@ Does the feature change what gets saved locally?
 
 ---
 
-*Last aligned with persist v35 and the SyncController cloud layer (R4/R5).*
+*Last aligned with persist v36, the SyncController cloud layer (R4/R5) and the title editor redesign.*

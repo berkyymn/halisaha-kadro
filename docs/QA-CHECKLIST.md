@@ -142,10 +142,27 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 8. Başlık düzenleme
 
-**Dosyalar:** `src/components/PosterTitleDisplay.tsx`, `src/components/PosterTitleModal.tsx`
+**Dosyalar:** `src/components/PosterTitle.tsx`, `src/components/PosterTitleDisplay.tsx`, `src/components/PosterTitleModal.tsx`, `src/lib/posterTitleStyles.ts`
 
 | Adım | Beklenen |
 |------|----------|
+| Posterde başlığın üzerine gel | Kesikli çerçeve + "Düzenle" ipucu (poster-editable ile aynı dil) |
+| Başlığa tıkla | Pencere açılır; önizleme posterin gerçek arka planı üzerinde, posterdekiyle birebir aynı oranda |
+| Üst / alt satır yaz | Türkçe büyük harf (i → İ); sayaç `x/16` |
+| Alt satırı boş bırak, Kaydet | Başlık tek satır görünür (eskiden sessizce "GECESİ" dönüyordu) |
+| Üst satırı boş bırak, Kaydet | "DERBİ" varsayılanı kullanılır |
+| Efekt kartları | Her kart efekti gerçek başlık yazısıyla gösterir; seçim önizlemeye anında yansır |
+| Renk | 4 renk; aktif temanın rengi "Tema" etiketiyle işaretli |
+| Boyut / harf aralığı / gölge | Önizleme anında güncellenir; boyut 80–120% |
+| Enter | Kaydeder ve kapatır; Esc / Vazgeç değişikliği atar |
+| Varsayılana dön | Stil varsayılana döner (yazılar korunur) |
+| Farklı ekran genişlikleri | Başlığın postere oranı sabit (rem sınırı yok, yalnızca `cqw`) |
+| Poster İndir (JPEG) | Başlık ekrandakiyle aynı; Altın/Krom/Metalik degrade yazılar doğru çıkar |
+| Eski kayıt (döndürme / max genişlik değeri olan) | Persist v36 göçü alanları siler; başlık düz ve ortalı |
+
+- [ ] Geçti
+
+------|----------|
 | Posterde başlığa tıkla | Düzenleme modalı açılır |
 | Aşağı kaydır (efekt/slider) | Önizleme üstte sabit kalır |
 | Renk paleti / efekt değiştir | Önizleme anında güncellenir |
@@ -708,6 +725,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-29 | Başlık düzenleyici yeniden tasarım (ortak çizim, gerçek arka planlı önizleme, tek satır, efekt kartları, cqw ölçek; döndürme/max genişlik kaldırıldı, persist v36) | §8 + build/lint/test | Tarayıcıda 1280×720 ve 1440×900 doğrulandı; JPEG çıktısı kullanıcıda |
 | 2026-09-28 | R4/R5: SyncController'a geçiş; eski senkron modülleri (~1.750 satır) kaldırıldı; persist v35 `editVersion` | §11 + §36 + §40 + build/lint/test | Emülatörde uçtan uca geçti |
 | 2026-09-21 | Performans ve erişilebilirlik: arka plan kaldırma model preload’u kaldırıldı; oyuncu kartı `aria-label` görünen numara+isimle eşleştirildi; toolbar “Poster İndir”/tema/format/diziliş butonları renk kontrastı `bg-green-700`/`text-zinc-400` yapıldı | #3 + #22 + build/lint | Build/lint geçti; Lighthouse/PWA yeniden ölçümü bekliyor |
 
