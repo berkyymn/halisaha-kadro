@@ -98,12 +98,14 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
 
 ### App Check ve yedekleme (pilot öncesi)
 
+**Durum (2026-09-29):** App Check 1–3 ✅ (reCAPTCHA v3 anahtarı, konsol kaydı, canlıda deploy — token alışverişi doğrulandı); 4 yerel debug token `.env.local`'de sabit (`NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN`), konsola eklenmeli; 5 **Enforce** 1–2 gün metrik izledikten sonra. Firestore günlük yedek ✅ (7 gün saklama).
+
 **A. Firebase App Check** — Firestore/Storage'a yalnızca bu uygulamanın erişmesini sağlar; biri API anahtarını alıp kotayı tüketemez. Kod hazır (`src/lib/firebase/client.ts`), site anahtarı girilene kadar kapalı.
 
 1. https://www.google.com/recaptcha/admin/create → **reCAPTCHA v3** → alan adları: `hali-saha-kadro-97082.web.app`, `hali-saha-kadro-97082.firebaseapp.com`, `localhost` (domain alınınca onu da ekle) → *Site anahtarı* ve *Gizli anahtar*ı kopyala.
 2. Firebase Console → **App Check** → *Apps* → web uygulaması → **reCAPTCHA** → *gizli anahtarı* yapıştır → Kaydet.
 3. `.env.local` → `NEXT_PUBLIC_RECAPTCHA_SITE_KEY=<site anahtarı>` → `npm run deploy:hosting`.
-4. Localhost için: `npm run dev` → tarayıcı konsolunda "App Check debug token: …" satırını kopyala → Firebase Console → App Check → *Apps* → ⋮ → **Manage debug tokens** → ekle.
+4. Localhost için: `.env.local` → `NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN=<uuid>` (her tarayıcıda aynı token; yoksa her tarayıcı konsola kendi rastgele token'ını basar) → Firebase Console → App Check → *Apps* → ⋮ → **Manage debug tokens** → ekle → `npm run dev`'i yeniden başlat. Token canlı pakete girmez (yalnızca geliştirme modunda okunur).
 5. **1–2 gün bekle**, sonra Firebase Console → App Check → *APIs* → **Cloud Firestore** ve **Cloud Storage** için metriklerde "Verified requests" ~%100 ise → **Enforce**. (Önce zorlama yapma: eski sekmesi açık kullanıcılar ve yanlış yapılandırma herkesi kilitler.)
 
 **B. Firestore yedekleri** (Blaze, maliyeti bu veri boyutunda kuruşlar):
