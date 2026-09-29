@@ -21,6 +21,12 @@ interface TeamLogoBadgeProps {
   className?: string;
 }
 
+/** Baş harfler posterin başlık yazı tipiyle (Bebas Neue) */
+const INITIALS_FONT = {
+  fontFamily: "var(--font-display), Arial, Helvetica, sans-serif",
+  fontWeight: 400,
+} as const;
+
 /** Hazır görsel logolarda kalan boşluğu telafi eder */
 const IMAGE_LOGO_SCALE = 1.12;
 
@@ -143,8 +149,11 @@ export function TeamLogoBadge({
   const totalH = viewH * scale;
   const showIcon = logo.showIcon && logo.icon !== "none";
   const initials = logo.initials || shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "?";
-  const iconSize = size * (logo.showInitials && showIcon ? 0.28 : 0.34);
-  const iconTop = logo.showInitials && showIcon ? size * 0.17 : size * 0.2;
+  // Dolgu siluet semboller: tek başına armanın yarısı, baş harflerle birlikte üst kısım.
+  const withInitials = logo.showInitials && showIcon;
+  const iconSize = size * (withInitials ? 0.4 : 0.52);
+  const iconCenterY = size * (withInitials ? 0.4 : 0.49);
+  const iconTop = iconCenterY - iconSize / 2;
 
   return (
     <div
@@ -215,10 +224,8 @@ export function TeamLogoBadge({
             textAnchor="middle"
             dominantBaseline="middle"
             fill={logo.textColor}
-            fontSize={initials.length > 1 ? 24 : 30}
-            fontWeight="900"
-            fontFamily="Arial, Helvetica, sans-serif"
-            style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.7))" }}
+            fontSize={initials.length > 2 ? 30 : 36}
+            style={{ ...INITIALS_FONT, filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.7))" }}
           >
             {initials}
           </text>
@@ -227,16 +234,14 @@ export function TeamLogoBadge({
         {logo.showInitials && showIcon && (
           <text
             x="50"
-            y="72"
+            y="74"
             textAnchor="middle"
             dominantBaseline="middle"
             fill={logo.textColor}
-            fontSize="13"
-            fontWeight="800"
-            fontFamily="Arial, Helvetica, sans-serif"
-            letterSpacing="1.2"
+            fontSize="17"
+            letterSpacing="1.5"
             opacity="0.95"
-            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+            style={{ ...INITIALS_FONT, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
           >
             {initials}
           </text>

@@ -1,3 +1,4 @@
+import { EMBLEMS } from "@/lib/logoEmblems.generated";
 import type {
   LogoBackgroundStyle,
   LogoBorderStyle,
@@ -35,18 +36,7 @@ const BACKGROUNDS: LogoBackgroundStyle[] = [
   "solid",
 ];
 
-const ICONS: LogoIcon[] = [
-  "eagle",
-  "lion",
-  "wolf",
-  "crown",
-  "shield",
-  "star",
-  "lightning",
-  "flame",
-  "ball",
-  "trophy",
-];
+const ICONS: LogoIcon[] = EMBLEMS.map((e) => e.id);
 
 const PALETTES = [
   {

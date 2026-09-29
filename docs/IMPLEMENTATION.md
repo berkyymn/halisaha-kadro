@@ -240,12 +240,16 @@ Goalkeepers can be dragged for swaps (including with bench players) but cannot b
 
 | | |
 |---|---|
-| **UI** | `LogoDesignerModal.tsx`, `LogoDesignerPresetPanel.tsx`, `LogoDesignerCustomPanel.tsx`, `TeamBrandingPreview.tsx`, `JerseyControls.tsx`, `TeamLogoBadge.tsx` |
+| **UI** | `LogoDesignerModal.tsx`, `LogoDesignerPresetPanel.tsx`, `LogoDesignerCustomPanel.tsx`, `JerseyControls.tsx`, `TeamLogoBadge.tsx`, `logo/LogoIcon.tsx` |
 | **Store** | `updateHomeTeam`, `updateAwayTeam`, `setTeamLogoDisplaySize`, `setLogoDesignerTeam` |
-| **Lib** | `logoUtils.ts`, `logoPresets.ts`, `logoImagePresets.ts`, `logoRandomize.ts`, `jerseyOptions.ts`, `teamLogoCloud.ts`, `brandingSnapshot.ts` |
+| **Lib** | `logoUtils.ts`, `logoPresets.ts`, `logoImagePresets.ts`, `logoRandomize.ts`, `logoEmblems.generated.ts`, `jerseyOptions.ts`, `teamLogoCloud.ts`, `brandingSnapshot.ts` |
 | **QA** | §7, §7b |
 
 Logo modes: `preset` (PNG assets), `generated` (SVG-like params), `upload` (user image).
+
+- The modal edits a **draft** (`TeamAppearance`: logo, jersey, shortName, logoDisplaySize) and applies it with one `onSave` → one store update (one `editVersion` bump, one cloud save). Switching tabs never mutates the logo; Vazgeç discards everything.
+- Emblems are filled silhouettes from game-icons.net (CC BY 3.0, attribution on `/gizlilik`). Only the selected icons ship: edit the list in `scripts/build-logo-emblems.mjs`, run `npm run emblems` (dev dependency `@iconify-json/game-icons`), commit the generated `src/lib/logoEmblems.generated.ts`. Removed ids are mapped in `LEGACY_ICON_MAP` (`logoUtils.ts`).
+- `teamLogoDisplaySize` is global (both teams); the modal says so.
 
 ### F7 — Match title & footer
 

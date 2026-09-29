@@ -9,7 +9,7 @@ export interface LogoPreset {
 export const LOGO_PRESETS: LogoPreset[] = [
   {
     id: "yellow-navy-crest",
-    label: "Yellow Navy Crest",
+    label: "Lacivert Yıldız",
     config: {
       shape: "circle",
       borderStyle: "gold",
@@ -27,7 +27,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "red-yellow-lion",
-    label: "Red Yellow Lion",
+    label: "Kırmızı Aslan",
     config: {
       shape: "crest",
       borderStyle: "gold",
@@ -45,7 +45,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "black-white-eagle",
-    label: "Black White Eagle",
+    label: "Siyah-Beyaz Kartal",
     config: {
       shape: "shield",
       borderStyle: "chrome",
@@ -63,7 +63,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "claret-blue-storm",
-    label: "Claret Blue Storm",
+    label: "Bordo-Mavi Şimşek",
     config: {
       shape: "shield",
       borderStyle: "chrome",
@@ -81,7 +81,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "green-crocodile",
-    label: "Green Crocodile",
+    label: "Yeşil Timsah",
     config: {
       shape: "roundedShield",
       borderStyle: "chrome",
@@ -89,7 +89,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
       primaryColor: "#166534",
       secondaryColor: "#052e16",
       accentColor: "#86efac",
-      icon: "claw",
+      icon: "crocodile",
       initials: "GC",
       showInitials: true,
       showIcon: true,
@@ -99,7 +99,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "red-bull-crest",
-    label: "Red Bull Crest",
+    label: "Kırmızı Boğa",
     config: {
       shape: "crest",
       borderStyle: "chrome",
@@ -117,7 +117,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "royal-crown",
-    label: "Royal Crown",
+    label: "Mor Taç",
     config: {
       shape: "hexagon",
       borderStyle: "gold",
@@ -135,7 +135,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "fire-wolves",
-    label: "Fire Wolves",
+    label: "Turuncu Kurt",
     config: {
       shape: "esports",
       borderStyle: "chrome",
@@ -153,7 +153,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "storm-falcon",
-    label: "Storm Falcon",
+    label: "Mavi Şahin",
     config: {
       shape: "diamond",
       borderStyle: "neon",
@@ -171,7 +171,7 @@ export const LOGO_PRESETS: LogoPreset[] = [
   },
   {
     id: "iron-spartan",
-    label: "Iron Spartan",
+    label: "Demir Spartalı",
     config: {
       shape: "pentagon",
       borderStyle: "triple",

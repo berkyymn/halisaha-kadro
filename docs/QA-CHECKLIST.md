@@ -110,18 +110,26 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ## 7. Logo ve forma tasarımı
 
-**Dosyalar:** `src/components/LogoDesignerModal.tsx`, `src/components/LogoDesigner.tsx`
+**Dosyalar:** `src/components/LogoDesignerModal.tsx`, `LogoDesignerPresetPanel.tsx`, `LogoDesignerCustomPanel.tsx`, `JerseyControls.tsx`, `TeamLogoBadge.tsx`, `logo/LogoIcon.tsx`, `src/lib/logoEmblems.generated.ts` (`npm run emblems`)
 
 | Adım | Beklenen |
 |------|----------|
-| Takım logosuna tıkla | Modal açılır |
-| Logo yükle | **Modal açık kalır**, logo güncellenir |
-| Forma rengi / stil değiştir | Önizleme güncellenir |
-| Tamam | Modal kapanır |
+| Posterde logoya tıkla | Pencere: solda önizleme (logo, takım adı, forma), takım adı, ortak logo boyutu; sağda Hazır logo / Tasarla / Forma |
+| Herhangi bir değişiklik | Yalnızca pencerede görünür; poster Kaydet'e kadar değişmez |
+| Vazgeç / Esc / dışarı tıkla | Tüm değişiklikler atılır |
+| Kaydet (veya takım adında Enter) | Logo, forma, ad ve logo boyutu tek seferde postere yazılır |
+| Görsel yükle → Tasarla sekmesine geç → geri dön | Yüklenen logo hâlâ seçili ve listede (eskiden sekme değiştirmek yüklenen logoyu siliyordu) |
+| Hazır logo seç ("forma renklerini de uygula" açık / kapalı) | Açıkken forma önerilen renklere geçer; kapalıyken forma korunur |
+| Tasarla: hızlı başla şablonu | Şablon adı ile çizilen sembol eşleşir (ör. "Yeşil Timsah" → timsah) |
+| Sembol / şekil / zemin / kenarlık | Her seçenek küçük arma önizlemesiyle; "Sembolsüz" düğmesi sembolü kaldırır |
+| Baş harfler | Posterin yazı tipiyle (Bebas Neue); takım adı değişince, elle değiştirilmediyse adla birlikte güncellenir |
+| Forma: "Logonun renklerini kullan" | Forma renk 1/2 ve numara rengi logodan alınır |
+| Forma deseni | 6 desen forma önizlemesiyle (Çapraz şerit dahil) |
+| Varsayılana dön | Logo ve forma takımın varsayılanına döner (taslakta; Kaydet gerekir) |
+| Eski kayıt (phoenix, claw, panther, football…) | Yüklenirken en yakın yeni sembole eşlenir, çökme yok |
+| /gizlilik | "Kullanılan içerikler": game-icons.net CC BY 3.0 atfı |
 
-- [ ] Geçti
-
----
+- [x] Geçti (tarayıcı, 1440×900; 2026-09-29)
 
 ## 7b. Logo kalıcılığı (bulut + yerel)
 
@@ -725,6 +733,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |
 | 2026-09-29 | Başlık düzenleyici yeniden tasarım (ortak çizim, gerçek arka planlı önizleme, tek satır, efekt kartları, cqw ölçek; döndürme/max genişlik kaldırıldı, persist v36) | §8 + build/lint/test | Tarayıcıda 1280×720 ve 1440×900 doğrulandı; JPEG çıktısı kullanıcıda |
 | 2026-09-28 | R4/R5: SyncController'a geçiş; eski senkron modülleri (~1.750 satır) kaldırıldı; persist v35 `editVersion` | §11 + §36 + §40 + build/lint/test | Emülatörde uçtan uca geçti |
 | 2026-09-21 | Performans ve erişilebilirlik: arka plan kaldırma model preload’u kaldırıldı; oyuncu kartı `aria-label` görünen numara+isimle eşleştirildi; toolbar “Poster İndir”/tema/format/diziliş butonları renk kontrastı `bg-green-700`/`text-zinc-400` yapıldı | #3 + #22 + build/lint | Build/lint geçti; Lighthouse/PWA yeniden ölçümü bekliyor |
