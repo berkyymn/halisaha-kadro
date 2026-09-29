@@ -96,6 +96,24 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
    - (Opsiyonel) Google ile girişte "hali-saha-kadro-97082.firebaseapp.com" yerine kendi domaininin görünmesi için `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` + OAuth redirect URI ayarı
    - `npm run deploy:hosting`
 
+### App Check ve yedekleme (pilot öncesi)
+
+**A. Firebase App Check** — Firestore/Storage'a yalnızca bu uygulamanın erişmesini sağlar; biri API anahtarını alıp kotayı tüketemez. Kod hazır (`src/lib/firebase/client.ts`), site anahtarı girilene kadar kapalı.
+
+1. https://www.google.com/recaptcha/admin/create → **reCAPTCHA v3** → alan adları: `hali-saha-kadro-97082.web.app`, `hali-saha-kadro-97082.firebaseapp.com`, `localhost` (domain alınınca onu da ekle) → *Site anahtarı* ve *Gizli anahtar*ı kopyala.
+2. Firebase Console → **App Check** → *Apps* → web uygulaması → **reCAPTCHA** → *gizli anahtarı* yapıştır → Kaydet.
+3. `.env.local` → `NEXT_PUBLIC_RECAPTCHA_SITE_KEY=<site anahtarı>` → `npm run deploy:hosting`.
+4. Localhost için: `npm run dev` → tarayıcı konsolunda "App Check debug token: …" satırını kopyala → Firebase Console → App Check → *Apps* → ⋮ → **Manage debug tokens** → ekle.
+5. **1–2 gün bekle**, sonra Firebase Console → App Check → *APIs* → **Cloud Firestore** ve **Cloud Storage** için metriklerde "Verified requests" ~%100 ise → **Enforce**. (Önce zorlama yapma: eski sekmesi açık kullanıcılar ve yanlış yapılandırma herkesi kilitler.)
+
+**B. Firestore yedekleri** (Blaze, maliyeti bu veri boyutunda kuruşlar):
+
+- Günlük yedek, 7 gün sakla (Firebase Console → Firestore → *Disaster recovery* → *Backups* → *Create schedule*; ya da):
+  `gcloud firestore backups schedules create --database='(default)' --recurrence=daily --retention=7d --project=hali-saha-kadro-97082`
+- Ek güvence (opsiyonel): son 7 günün herhangi bir dakikasına dönebilmek için PITR:
+  `gcloud firestore databases update --database='(default)' --enable-pitr --project=hali-saha-kadro-97082`
+- Storage (fotoğraflar) için ayrı yedek gerekmez: kaybolsa kullanıcı yeniden yükler; asıl değer Firestore'daki kadro verisi.
+
 ---
 
 # Faz 5 — Canlı sonrası yol haritası (2026-09-28 kararları)

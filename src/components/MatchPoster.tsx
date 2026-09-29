@@ -24,8 +24,8 @@ function scaledLogoSize(size: number, posterWidth: number, single: boolean): num
   const reference = single
     ? LOGO_REFERENCE_POSTER_WIDTH.single
     : LOGO_REFERENCE_POSTER_WIDTH.versus;
-  const scale = Math.min(1.3, Math.max(0.55, posterWidth / reference));
-  return Math.round(size * scale);
+  // Kırpma yok: logo her ekranda ve JPEG'de postere aynı oranda.
+  return Math.round(size * (posterWidth / reference));
 }
 
 function TeamPosterBlock({
@@ -55,9 +55,7 @@ function TeamPosterBlock({
     singlePosition
   );
   // Ad boyutu poster genişliğine bağlı: ekranda ve PNG çıktısında aynı oran.
-  const nameFontPx = singlePosition || centered
-    ? Math.min(24, Math.max(12, posterMetrics.width * 0.036))
-    : Math.min(22, Math.max(11, posterMetrics.width * 0.018));
+  const nameFontPx = posterMetrics.width * (singlePosition || centered ? 0.036 : 0.018);
   const nameFontSize = `${nameFontPx.toFixed(1)}px`;
   const nameGap = "0.375rem";
   // Ad logonun üstünde: blok, ad yüksekliği kadar yukarı kayar; logo eski
@@ -78,7 +76,7 @@ function TeamPosterBlock({
       style={{
         top: `calc(${baseTop} - ${nameFontSize} - ${nameGap})`,
         width: singlePosition ? "25%" : centered ? "34%" : "22%",
-        maxWidth: Math.max(140, teamLogoDisplaySize + 28),
+        maxWidth: Math.round(teamLogoDisplaySize + posterMetrics.width * 0.025),
       }}
     >
       <div
@@ -143,7 +141,9 @@ function PosterFooter({
   onVenueBlur,
   onTimeChange,
   onDateChange,
+  single = false,
 }: {
+  single?: boolean;
   venue: string;
   time: string;
   date: string;
@@ -152,11 +152,19 @@ function PosterFooter({
   onTimeChange: (v: string) => void;
   onDateChange: (v: string) => void;
 }) {
+  // Boyutlar poster genişliğine (#match-poster container, cqw) bağlı: ekran
+  // boyutundan bağımsız, önizleme ve JPEG çıktısında aynı oran.
+  const size = single
+    ? { text: 3.2, icon: 2.9, gap: 1 }
+    : { text: 2.1, icon: 1.7, gap: 0.6 };
   const footerTextStyle = {
-    fontSize: "clamp(0.55rem, 1vw, 0.85rem)",
+    fontSize: `${size.text}cqw`,
+    fontFamily: "var(--font-display), system-ui, sans-serif",
+    fontWeight: 400,
+    letterSpacing: "0.08em",
   } as const;
-  const footerIconSize = "clamp(0.875rem, 1.6vw, 1.25rem)";
-  const footerGap = "clamp(0.3rem, 0.6vw, 0.5rem)";
+  const footerIconSize = `${size.icon}cqw`;
+  const footerGap = `${size.gap}cqw`;
 
   return (
     <div
@@ -300,6 +308,7 @@ export function MatchPoster({
         </div>
 
         <PosterFooter
+          single={isSingle}
           venue={matchInfo.venue}
           time={matchInfo.time}
           date={matchInfo.date}

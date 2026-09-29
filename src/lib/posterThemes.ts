@@ -9,6 +9,8 @@ export interface PosterThemeConfig {
   label: string;
   /** Path under /public */
   backgroundSrc: string;
+  /** Araç çubuğundaki küçük önizleme (~10 KB) */
+  thumbSrc: string;
 }
 
 export const POSTER_THEMES: Record<PosterThemeId, PosterThemeConfig> = {
@@ -16,21 +18,25 @@ export const POSTER_THEMES: Record<PosterThemeId, PosterThemeConfig> = {
     id: "derby-night",
     label: "Derbi Gecesi",
     backgroundSrc: "/posters/derby-night.png",
+    thumbSrc: "/posters/thumbs/derby-night.jpg",
   },
   "champions-night": {
     id: "champions-night",
     label: "Şampiyonlar Ligi",
     backgroundSrc: "/posters/champions-night.png",
+    thumbSrc: "/posters/thumbs/champions-night.jpg",
   },
   "dark-arena": {
     id: "dark-arena",
     label: "Karanlık Arena",
     backgroundSrc: "/posters/dark-arena.png",
+    thumbSrc: "/posters/thumbs/dark-arena.jpg",
   },
   "summer-cup": {
     id: "summer-cup",
     label: "Summer Cup",
     backgroundSrc: "/posters/summer-cup.png",
+    thumbSrc: "/posters/thumbs/summer-cup.jpg",
   },
 };
 
