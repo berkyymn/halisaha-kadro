@@ -15,9 +15,10 @@ const CARD_ASPECT = 1.48;
 
 // Auto-responsive card sizing. The vertical cap is the most important guard
 // for single-team (portrait) mode where rows are stacked densely.
-const CARD_HEIGHT_RATIO = 0.2;
+// Tekli modda 4 hat (kaleci + 3) dikeyde sığmalı: kart yüksekliği sahanın ~%21'i.
+const CARD_HEIGHT_RATIO = 0.24;
 const CARD_WIDTH_RATIO = 0.14;
-const CARD_MAX_HEIGHT_RATIO = 0.18;
+const CARD_MAX_HEIGHT_RATIO = 0.21;
 
 /** Satırda üst üste binmeden sığabilecek üst kart boyutu */
 export function computeSafeMaxCardSize(
@@ -28,7 +29,8 @@ export function computeSafeMaxCardSize(
 
   const pitch = getPitchMetrics(metrics);
   const gaps = maxPlayersInRowCount - 1;
-  const maxSpanPercent = 78;
+  // Hat sınırı (formationEngine rowYLimits): %15–85 → en fazla %70 yayılım.
+  const maxSpanPercent = 70;
   const maxHalfH = (maxSpanPercent / gaps - 2.5) / 2;
   if (maxHalfH <= 0) return MIN_PLAYER_CARD_SIZE;
 
@@ -58,9 +60,9 @@ export function getAutoCardSize(
   mode?: TeamMode
 ): number {
   const isSingle = mode === "single";
-  const heightRatio = isSingle ? CARD_HEIGHT_RATIO : 0.26;
+  const heightRatio = isSingle ? CARD_HEIGHT_RATIO : 0.3;
   const widthRatio = isSingle ? CARD_WIDTH_RATIO : 0.18;
-  const maxHeightRatio = isSingle ? CARD_MAX_HEIGHT_RATIO : 0.24;
+  const maxHeightRatio = isSingle ? CARD_MAX_HEIGHT_RATIO : 0.28;
 
   const pitch = getPitchMetrics(metrics);
   const safeHorizontal = computeSafeMaxCardSize(metrics, maxPlayersInRowCount);

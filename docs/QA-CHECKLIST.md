@@ -704,6 +704,25 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 41. Saha dizilimi ve oyuncu kartı (2026-09-29)
+
+**Dosyalar:** `src/components/PlayerAvatar.tsx`, `src/lib/formationEngine.ts`, `src/lib/posterLayout.ts`, `src/lib/formations.ts`
+
+**Otomatik:** `formationLayout.test.ts` — 17 formasyon × 3 ekran × iki mod: hiçbir kart diğerine binmez, tekli modda sahadan taşmaz, kart boyutu postere orantılı.
+
+| Adım | Beklenen |
+|------|----------|
+| İki takım 7v7 / 8v8 | Hatlar sahaya yayılır (orta şeride sıkışmaz); kaleci orta hatla aynı hizada; kartlar önceye göre ~%15 büyük |
+| 8v8 4'lü hat (4-2-1) | Dört kart çakışmadan sığar |
+| Tek takım | Kartlar ~%17 büyük; hatlar yatayda yayılır; forvet orta sahanın üstüne binmez |
+| 1280×720 ve 27" ekran | Aynı formasyon aynı oranda görünür (kart boyutu postere orantılı; alt sınır 36px, üst 200px) |
+| Kart | Foto halkası ve isim plakası çizgisi takım renginde (koyu formada ikinci renk / krom); numara ve isim Bebas Neue; koyu numarada açık hale |
+| Yedek paneli / oyuncu penceresi | Aynı kart stili, panele sığar |
+
+- [x] Geçti (tarayıcı 1440×900 + otomatik test)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -733,6 +752,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |
 | 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |
 | 2026-09-29 | Başlık düzenleyici yeniden tasarım (ortak çizim, gerçek arka planlı önizleme, tek satır, efekt kartları, cqw ölçek; döndürme/max genişlik kaldırıldı, persist v36) | §8 + build/lint/test | Tarayıcıda 1280×720 ve 1440×900 doğrulandı; JPEG çıktısı kullanıcıda |
 | 2026-09-28 | R4/R5: SyncController'a geçiş; eski senkron modülleri (~1.750 satır) kaldırıldı; persist v35 `editVersion` | §11 + §36 + §40 + build/lint/test | Emülatörde uçtan uca geçti |
