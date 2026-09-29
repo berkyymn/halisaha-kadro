@@ -207,7 +207,8 @@ export const PlayerAvatar = memo(function PlayerAvatar({
           height: photoD,
           background:
             "radial-gradient(circle at 50% 38%, #4b5563 0%, #252a31 52%, #0a0c10 100%)",
-          border: `${Math.max(2, w * 0.03)}px solid ${accent}`,
+          // İnce ve kromla yumuşatılmış takım rengi: fotoğrafın önüne geçmesin.
+          border: `${Math.max(1.5, w * 0.018)}px solid color-mix(in srgb, ${accent} 60%, ${CHROME.mid})`,
           boxShadow: `
             0 0 0 1px rgba(0,0,0,0.65),
             0 5px 16px ${CHROME.shadow},
