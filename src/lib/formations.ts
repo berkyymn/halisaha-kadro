@@ -7,8 +7,8 @@ import type {
 } from "@/types";
 
 const GK_X = 12;
-const OUTFIELD_X_MIN = 23;
-const OUTFIELD_X_MAX = 44;
+const OUTFIELD_X_MIN = 22;
+const OUTFIELD_X_MAX = 45;
 
 function inferRowRole(rowIndex: number, totalRows: number): FormationRowRole {
   if (rowIndex === 0) return "GK";

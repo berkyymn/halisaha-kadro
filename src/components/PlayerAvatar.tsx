@@ -59,6 +59,28 @@ function jerseyBodyBackground(jersey: JerseyConfig): string {
   }
 }
 
+/** Göreli parlaklık (0 siyah … 1 beyaz) */
+function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return 0.5;
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Takım vurgu rengi: forma rengi; çok koyuysa ikinci renk, o da koyuysa krom. */
+function teamAccent(jersey: JerseyConfig): string {
+  for (const color of [jersey.primaryColor, jersey.secondaryColor]) {
+    if (color && luminance(color) > 0.06) return color;
+  }
+  return CHROME.mid;
+}
+
+const DISPLAY_FONT = "var(--font-display), system-ui, sans-serif";
+
 function PlaceholderSilhouette({ gradId }: { gradId: string }) {
   return (
     <svg viewBox="0 0 100 100" className="h-[58%] w-[58%]" aria-hidden>
@@ -104,6 +126,7 @@ export const PlayerAvatar = memo(function PlayerAvatar({
   const nameH = showName ? h * (compact ? 0.14 : 0.16) : 0;
 
   const numberColor = jersey.numberColor || "#ffffff";
+  const accent = teamAccent(jersey);
 
   const jerseyClip = `polygon(
     24% 0%,
@@ -123,23 +146,6 @@ export const PlayerAvatar = memo(function PlayerAvatar({
         filter: `drop-shadow(0 18px 28px ${CHROME.shadow}) drop-shadow(0 6px 12px rgba(0,0,0,0.55))`,
       }}
     >
-      {/* Card shell — krom çerçeve */}
-      <div
-        className="absolute inset-x-[3%] overflow-hidden rounded-[18%]"
-        style={{
-          top: photoD * 0.16,
-          height: h - nameH * 0.55,
-          background:
-            "linear-gradient(180deg, rgba(10,12,16,.97) 0%, rgba(18,20,24,.97) 48%, rgba(6,8,10,.98) 100%)",
-          border: `1px solid ${CHROME.mid}`,
-          boxShadow: `
-            inset 0 1px 0 rgba(229,231,235,0.22),
-            inset 0 -1px 0 rgba(55,65,81,0.55),
-            inset 0 -20px 32px rgba(0,0,0,0.5)
-          `,
-        }}
-      />
-
       {/* Forma gövdesi — takım renkleri korunur, dış kenar krom vurgu */}
       <div
         className="absolute left-1/2 -translate-x-1/2 overflow-hidden"
@@ -175,12 +181,18 @@ export const PlayerAvatar = memo(function PlayerAvatar({
       </div>
 
       <div
-        className="absolute left-1/2 z-20 -translate-x-1/2 font-black leading-none"
+        className="absolute left-1/2 z-20 -translate-x-1/2 leading-none"
         style={{
-          top: bodyTop + bodyH * 0.34,
+          top: bodyTop + bodyH * 0.3,
           color: numberColor,
-          fontSize: w * 0.37,
-          textShadow: "0 2px 6px rgba(0,0,0,0.85)",
+          fontFamily: DISPLAY_FONT,
+          fontSize: w * 0.46,
+          letterSpacing: "0.01em",
+          // Koyu numara açık bir hale, açık numara koyu gölgeyle okunur kalsın.
+          textShadow:
+            luminance(numberColor) < 0.2
+              ? "0 0 3px rgba(255,255,255,0.55), 0 1px 1px rgba(255,255,255,0.35)"
+              : "0 2px 6px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9)",
         }}
       >
         {number}
@@ -195,8 +207,10 @@ export const PlayerAvatar = memo(function PlayerAvatar({
           height: photoD,
           background:
             "radial-gradient(circle at 50% 38%, #4b5563 0%, #252a31 52%, #0a0c10 100%)",
-          border: `2px solid ${CHROME.mid}`,
+          // İnce ve kromla yumuşatılmış takım rengi: fotoğrafın önüne geçmesin.
+          border: `${Math.max(1.5, w * 0.018)}px solid color-mix(in srgb, ${accent} 60%, ${CHROME.mid})`,
           boxShadow: `
+            0 0 0 1px rgba(0,0,0,0.65),
             0 5px 16px ${CHROME.shadow},
             inset 0 3px 6px rgba(255,255,255,0.12),
             inset 0 -4px 10px rgba(0,0,0,0.55)
@@ -254,9 +268,9 @@ export const PlayerAvatar = memo(function PlayerAvatar({
             width: w * 0.92,
             height: nameH,
             borderRadius: w * 0.06,
-            background: "rgba(0,0,0,0.96)",
+            background: "linear-gradient(180deg, rgba(24,24,27,0.97), rgba(0,0,0,0.97))",
             border: `1px solid ${CHROME.dark}`,
-            borderTop: `1px solid rgba(229,231,235,0.28)`,
+            borderTop: `${Math.max(1.5, w * 0.022)}px solid ${accent}`,
             boxShadow: `
               inset 0 1px 0 rgba(229,231,235,0.1),
               0 4px 14px ${CHROME.shadow}
@@ -265,11 +279,14 @@ export const PlayerAvatar = memo(function PlayerAvatar({
           }}
         >
           <span
-            className="w-full truncate text-center font-black uppercase text-white"
+            lang="tr"
+            className="w-full truncate text-center uppercase text-white"
             style={{
-              fontSize: Math.max(compact ? 7 : 8, w * (compact ? 0.11 : 0.14)),
-              lineHeight: 1.05,
-              letterSpacing: compact ? "0.02em" : "0.04em",
+              fontFamily: DISPLAY_FONT,
+              fontSize: Math.max(compact ? 9 : 10, w * (compact ? 0.15 : 0.18)),
+              lineHeight: 1,
+              letterSpacing: "0.05em",
+              paddingTop: "0.08em",
               textShadow: "0 1px 3px rgba(0,0,0,0.9)",
             }}
           >

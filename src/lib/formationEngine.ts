@@ -12,6 +12,8 @@ export interface ResolvedFormationSlot {
 
 const CARD_ASPECT = 1.48;
 const ROW_GAP = 2.5;
+/** İkili modda hatların dikey merkezi: üst sıra tribüne taşmasın diye ortanın biraz altı */
+const ROW_CENTER_Y = 55;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -82,7 +84,7 @@ function rowYLimits(role: FormationRowRole): {
 } {
   switch (role) {
     case "ATT":
-      return { min: 18, max: 82 };
+      return { min: 15, max: 85 };
     case "DEF":
       return { min: 15, max: 85 };
     default:
@@ -99,13 +101,18 @@ function layoutRowY(
   if (count <= 1) return [centerY];
 
   const { min, max } = rowYLimits(role);
+  // Hat sahaya yayılsın: kartlar arası en az bir kart boyu, tercihen sahanın
+  // genişliğine orantılı (en fazla %32) aralık. Sıkışık "orta şerit" görünümü olmasın.
   const minGap = halfH * 2 + 2.5;
-  const span = (count - 1) * minGap;
-  const start = centerY - span / 2;
+  const preferredGap = Math.min(32, (max - min) / (count - 1));
+  // Aralık hattın sınırını aşmaz; hat sınıra dayanırsa kaydırılır (son kartı
+  // komşusunun üstüne kırpmak yerine). Kart boyutu computeSafeMaxCardSize ile
+  // bu aralığa sığacak şekilde sınırlanır.
+  const gap = Math.min(Math.max(minGap, preferredGap), (max - min) / (count - 1));
+  const span = (count - 1) * gap;
+  const start = clamp(centerY - span / 2, min, max - span);
 
-  return Array.from({ length: count }, (_, i) =>
-    clamp(start + (i / (count - 1)) * span, min, max)
-  );
+  return Array.from({ length: count }, (_, i) => start + i * gap);
 }
 
 interface LayoutSlot {
@@ -120,7 +127,8 @@ interface LayoutSlot {
 function separateCrossRowOverlaps(
   slots: LayoutSlot[],
   halfW: number,
-  halfH: number
+  halfH: number,
+  limits: (role: FormationRowRole) => { min: number; max: number } = rowYLimits
 ) {
   const pad = 1.2;
 
@@ -156,7 +164,7 @@ function separateCrossRowOverlaps(
 
     for (const slot of slots) {
       if (slot.locked) continue;
-      const { min, max } = rowYLimits(slot.role);
+      const { min, max } = limits(slot.role);
       slot.y = clamp(slot.y, min, max);
     }
 
@@ -176,7 +184,7 @@ export function computeFormationLayout(
   const rowXs = resolveRowDepths(formation, halfW);
   const rowYs = new Map<number, number[]>();
   formation.rows.forEach((row, rowIndex) => {
-    rowYs.set(rowIndex, layoutRowY(row.count, halfH, row.role, 55));
+    rowYs.set(rowIndex, layoutRowY(row.count, halfH, row.role, ROW_CENTER_Y));
   });
 
   const mutable: LayoutSlot[] = [];
@@ -192,7 +200,7 @@ export function computeFormationLayout(
       ? GK_X
       : (rowXs.get(slot.rowIndex) ?? slot.x);
     const ys = rowYs.get(slot.rowIndex) ?? [50];
-    const y = slot.isGoalkeeper ? 50 : (ys[indexInRow] ?? 50);
+    const y = slot.isGoalkeeper ? ROW_CENTER_Y : (ys[indexInRow] ?? ROW_CENTER_Y);
 
     mutable.push({
       x: homeX,
@@ -219,8 +227,8 @@ export function computeFormationLayout(
   }));
 }
 
-const SINGLE_GK_Y = 86;
-const SINGLE_OUTFIELD_Y_MIN = 22;
+const SINGLE_GK_Y = 87;
+const SINGLE_OUTFIELD_Y_MIN = 16;
 const SINGLE_OUTFIELD_Y_MAX = 74;
 const SINGLE_X_MIN = 8;
 const SINGLE_X_MAX = 92;
@@ -273,7 +281,8 @@ function layoutSingleRowX(count: number, halfW: number): number[] {
   // Tekli modda kartlar dikey olarak üst üste bindiği için yatayda
   // daha geniş aralıklarla dağıtarak "yığın" görünümünü önlüyoruz.
   const minGap = halfW * 2 + ROW_GAP + SINGLE_ROW_EXTRA_GAP;
-  const span = (count - 1) * minGap;
+  const preferredGap = Math.min(28, 70 / (count - 1));
+  const span = (count - 1) * Math.max(minGap, preferredGap);
   const start = 50 - span / 2;
 
   return Array.from({ length: count }, (_, i) =>
@@ -329,7 +338,11 @@ export function computeSingleFormationLayout(
     });
   });
 
-  separateCrossRowOverlaps(mutable, halfW, halfH);
+  // Tekli modda y saha derinliğidir: ikili modun hat sınırları uygulanmaz.
+  separateCrossRowOverlaps(mutable, halfW, halfH, () => ({
+    min: SINGLE_OUTFIELD_Y_MIN,
+    max: SINGLE_GK_Y,
+  }));
 
   return mutable.map((pos, i) => ({
     ...resolvedMeta[i],

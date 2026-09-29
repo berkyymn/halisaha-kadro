@@ -97,8 +97,9 @@ export const DEFAULT_LOGO_DISPLAY_SIZE = 150;
 export const MIN_LOGO_DISPLAY_SIZE = 60;
 export const MAX_LOGO_DISPLAY_SIZE = 220;
 
-export const MIN_PLAYER_CARD_SIZE = 58;
-export const MAX_PLAYER_CARD_SIZE = 150;
+/** Yalnızca güvenlik tabanı; kart boyutu postere orantılıdır (küçük ekranda da çakışmasın). */
+export const MIN_PLAYER_CARD_SIZE = 36;
+export const MAX_PLAYER_CARD_SIZE = 200;
 
 export type LogoMode = "preset" | "generated" | "upload";
 

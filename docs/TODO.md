@@ -563,6 +563,7 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.
 - [x] Emülatörde uçtan uca: ilk giriş, otomatik kayıt, yenileme, iki sekme, eşzamanlı düzenleme çatışması, birleştir, eski doküman göçü, hesap silme
 - [x] Başlık düzenleyici yeniden tasarlandı: ortak `PosterTitle` çizimi, gerçek arka planlı önizleme, tek satır başlık, efekt kartları, yalnızca `cqw` ölçek; işe yaramayan "Max genişlik" ve "Döndürme" kaldırıldı (persist v36)
 - [x] Logo/forma penceresi yeniden tasarlandı: taslak + Kaydet/Vazgeç (sekme değiştirmek artık yüklenen logoyu silmiyor), game-icons dolgu semboller (28, CC BY), tüm seçenekler görsel önizlemeli, Türkçe ve sembolüyle eşleşen şablonlar, "Logonun renklerini kullan", Çapraz şerit forma
+- [x] Saha dizilimi ve kart: hatlar yayılır, kart postere orantılı ve büyük, takım renkli kart; tekli modda derinlik sınırı ve 4'lü hat çakışmaları düzeltildi (+103 yerleşim testi)
 - [ ] R3 Store refactor (tek oyuncu kaydı, `playerCardSize` göçle kalkacak)
 - [ ] R10 Safari/Firefox + pilot geri bildirimi (kullanıcı)
 
