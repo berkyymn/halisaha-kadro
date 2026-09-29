@@ -723,6 +723,26 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 42. Araç çubuğu, yedek paneli, alt bilgi (2026-09-29)
+
+**Dosyalar:** `src/components/PosterToolbar.tsx`, `BenchPanel.tsx`, `MatchPoster.tsx`, `src/lib/teamColors.ts`, `public/posters/thumbs/*`
+
+| Adım | Beklenen |
+|------|----------|
+| Araç çubuğu | Kadro ve format segment kontrol; tema küçük arka plan görselleri (~10 KB) + aktif tema adı |
+| Diziliş düğmesi | Takım rengi noktası + takım adı + formasyon; açılınca formasyonlar küçük saha şemasıyla; dışarı tıkla / Esc kapatır |
+| Deplasman dizilişi | Şema aynalı (kaleci sağda); yalnızca iki takım modunda |
+| Yedek paneli | Başlıkta `n/20`; iki sütunlu kompakt kartlar; düzenle/sil üzerine gelince belirgin |
+| Boş yedek paneli | Kesikli çerçeve, "sahadaki bir oyuncuyu buraya sürükle" ipucu |
+| Yedeği sahaya sürükle | Oyuncu slota geçer, panelden çıkar |
+| Alt bilgi (saha/saat/tarih) | Bebas Neue; boyut poster genişliğine bağlı (`cqw`), ekran boyutundan bağımsız |
+| Takım adı ve logo | Postere orantılı (eski px sınırları kalktı): 27" ekranda da aynı oran |
+| App Check | Site anahtarı yoksa hiçbir şey değişmez; varsa konsolda doğrulanmış istekler görünür |
+
+- [x] Geçti (tarayıcı 1440×900)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -752,6 +772,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |
 | 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |
 | 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |
 | 2026-09-29 | Başlık düzenleyici yeniden tasarım (ortak çizim, gerçek arka planlı önizleme, tek satır, efekt kartları, cqw ölçek; döndürme/max genişlik kaldırıldı, persist v36) | §8 + build/lint/test | Tarayıcıda 1280×720 ve 1440×900 doğrulandı; JPEG çıktısı kullanıcıda |
