@@ -1,3 +1,4 @@
+import type { EmblemId } from "@/lib/logoEmblems.generated";
 export type SquadSize = 6 | 7 | 8;
 
 export interface PosterMetrics {
@@ -86,36 +87,11 @@ export type LogoBackgroundStyle =
   | "verticalStripes"
   | "horizontalStripes";
 
-export type LogoIcon =
-  | "none"
-  | "eagle"
-  | "lion"
-  | "wolf"
-  | "crown"
-  | "shield"
-  | "star"
-  | "flame"
-  | "lightning"
-  | "ball"
-  | "trophy"
-  /** @deprecated mapped on load */
-  | "tiger"
-  | "bear"
-  | "bull"
-  | "dragon"
-  | "phoenix"
-  | "shark"
-  | "panther"
-  | "falcon"
-  | "sword"
-  | "skull"
-  | "spartan"
-  | "wings"
-  | "claw"
-  | "mountain"
-  | "anchor"
-  /** @deprecated use ball */
-  | "football";
+/** Arma sembolü: game-icons setinden seçilenler (lib/logoEmblems.generated.ts) */
+export type LogoIcon = "none" | EmblemId | LegacyLogoIcon;
+
+/** Eski kayıtlarda kalan kimlikler; yüklenirken normalizeLogoIcon ile eşlenir */
+export type LegacyLogoIcon = "phoenix" | "panther" | "claw" | "mountain" | "football";
 
 export const DEFAULT_LOGO_DISPLAY_SIZE = 150;
 export const MIN_LOGO_DISPLAY_SIZE = 60;

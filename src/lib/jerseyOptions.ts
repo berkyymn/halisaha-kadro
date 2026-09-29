@@ -6,6 +6,7 @@ export const JERSEY_STYLE_OPTIONS: { id: JerseyStyle; label: string }[] = [
   { id: "vertical_stripes", label: "Dikey çizgi" },
   { id: "wide_vertical_stripes", label: "Geniş dikey" },
   { id: "horizontal_stripes", label: "Yatay çizgi" },
+  { id: "sash", label: "Çapraz şerit" },
 ];
 
 export const JERSEY_TEXT_COLORS = [

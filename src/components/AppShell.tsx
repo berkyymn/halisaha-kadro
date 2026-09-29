@@ -47,6 +47,8 @@ export function AppShell() {
   const updateHomeTeam = useAppStore((s) => s.updateHomeTeam);
   const updateAwayTeam = useAppStore((s) => s.updateAwayTeam);
   const teamMode = useAppStore((s) => s.teamMode);
+  const teamLogoDisplaySize = useAppStore((s) => s.teamLogoDisplaySize);
+  const setTeamLogoDisplaySize = useAppStore((s) => s.setTeamLogoDisplaySize);
 
   const mainBg = useMemo(() => {
     const hexToRgba = (hex: string, alpha: number) => {
@@ -279,27 +281,23 @@ export function AppShell() {
 
       {logoDesignerTeam && (
         <LogoDesignerModal
+          key={logoDesignerTeam}
           open
           onClose={() => setLogoDesignerTeam(null)}
           teamSide={logoDesignerTeam}
-          teamLabel={activeTeam.shortName}
-          logo={activeTeam.logo}
-          jersey={activeTeam.jersey}
-          shortName={activeTeam.shortName}
-          onLogoChange={(logo) => updateActiveTeam({ logo })}
-          onJerseyChange={(jersey) => updateActiveTeam({ jersey })}
-          onTeamNameChange={(shortName) => {
-            updateActiveTeam({
-              shortName,
-              name: shortName,
-              logo:
-                activeTeam.logo.mode === "generated"
-                  ? {
-                      ...activeTeam.logo,
-                      initials: shortName.slice(0, 2).toLocaleUpperCase("tr-TR") || "?",
-                    }
-                  : activeTeam.logo,
-            });
+          initial={{
+            logo: activeTeam.logo,
+            jersey: activeTeam.jersey,
+            shortName: activeTeam.shortName,
+            logoDisplaySize: teamLogoDisplaySize,
+          }}
+          onSave={({ logo, jersey, shortName, logoDisplaySize }) => {
+            const name = shortName.trim() || activeTeam.shortName;
+            if (name !== activeTeam.shortName) {
+              trackEvent("team_name_changed", { team: logoDesignerTeam });
+            }
+            updateActiveTeam({ logo, jersey, shortName: name, name });
+            if (logoDisplaySize !== teamLogoDisplaySize) setTeamLogoDisplaySize(logoDisplaySize);
           }}
         />
       )}

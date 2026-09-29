@@ -1,100 +1,303 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Shuffle } from "lucide-react";
 import { applyLogoPreset, LOGO_PRESETS } from "@/lib/logoPresets";
-import type {
-  LogoBackgroundStyle,
-  LogoBorderStyle,
-  LogoIcon,
-  LogoShape,
-  TeamLogo,
-} from "@/types";
-import { LOGO_ICON_OPTIONS } from "./logo/LogoIcon";
+import type { LogoBackgroundStyle, LogoBorderStyle, LogoShape, TeamLogo } from "@/types";
+import { ColorField } from "./JerseyControls";
+import { TeamLogoBadge } from "./TeamLogoBadge";
+import { LogoIcon, LOGO_ICON_OPTIONS } from "./logo/LogoIcon";
+
+const EMBLEM_OPTIONS = LOGO_ICON_OPTIONS.filter((o) => o.id !== "none");
+
+const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
 
 const SHAPES: { id: LogoShape; label: string }[] = [
   { id: "shield", label: "Kalkan" },
-  { id: "roundedShield", label: "Yuvarlak Kalkan" },
+  { id: "roundedShield", label: "Oval kalkan" },
   { id: "crest", label: "Arma" },
   { id: "circle", label: "Daire" },
   { id: "hexagon", label: "Altıgen" },
   { id: "pentagon", label: "Beşgen" },
   { id: "diamond", label: "Elmas" },
-  { id: "esports", label: "Esports" },
-];
-
-const BORDERS: { id: LogoBorderStyle; label: string }[] = [
-  { id: "chrome", label: "Krom" },
-  { id: "gold", label: "Altın" },
-  { id: "double", label: "Çift" },
-  { id: "triple", label: "Üçlü" },
-  { id: "neon", label: "Neon" },
-  { id: "single", label: "Tek" },
+  { id: "esports", label: "Rozet" },
 ];
 
 const BACKGROUNDS: { id: LogoBackgroundStyle; label: string }[] = [
-  { id: "verticalStripes", label: "Dikey çizgi" },
-  { id: "horizontalStripes", label: "Yatay çizgi" },
-  { id: "split", label: "Bölünmüş" },
-  { id: "gradient", label: "Gradient" },
-  { id: "radial", label: "Radial" },
   { id: "solid", label: "Düz" },
+  { id: "gradient", label: "Geçişli" },
+  { id: "radial", label: "Işıltılı" },
+  { id: "split", label: "İkiye bölünmüş" },
+  { id: "verticalStripes", label: "Dikey çizgili" },
+  { id: "horizontalStripes", label: "Yatay çizgili" },
 ];
 
-function OptionGrid<T extends string>({
-  options,
-  value,
+const BORDERS: { id: LogoBorderStyle; label: string }[] = [
+  { id: "single", label: "İnce" },
+  { id: "double", label: "Çift" },
+  { id: "triple", label: "Üçlü" },
+  { id: "chrome", label: "Krom" },
+  { id: "gold", label: "Altın" },
+  { id: "neon", label: "Neon" },
+];
+
+const COLORS = [
+  ["Ana renk", "primaryColor"],
+  ["İkinci renk", "secondaryColor"],
+  ["Kenar vurgusu", "accentColor"],
+  ["Sembol ve yazı", "textColor"],
+] as const;
+
+/**
+ * Kendi logonu tasarla. Her seçenek, o seçenekle çizilmiş küçük bir arma
+ * olarak gösterilir. `design` her zaman "generated" moddadır; değişiklikler
+ * `onChange` ile taslağa gider.
+ */
+export function LogoDesignerCustomPanel({
+  design,
+  shortName,
   onChange,
-  columns = 4,
+  onReplace,
+  onRandomize,
 }: {
-  options: { id: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-  columns?: number;
+  design: TeamLogo;
+  shortName: string;
+  onChange: (patch: Partial<TeamLogo>) => void;
+  onReplace: (logo: TeamLogo) => void;
+  onRandomize: () => void;
 }) {
+  const variant = (patch: Partial<TeamLogo>) => ({ ...design, ...patch });
+
   return (
-    <div
-      className="grid gap-1.5"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-    >
-      {options.map((opt) => {
-        const selected = value === opt.id;
-        return (
+    <div className="space-y-4">
+      <Section
+        title="Hızlı başla"
+        action={
           <button
-            key={opt.id}
             type="button"
-            onClick={() => onChange(opt.id)}
-            className={`px-1.5 py-2 rounded-md text-[10px] font-semibold leading-tight transition-all ${
-              selected
-                ? "bg-white text-zinc-900 ring-2 ring-green-500 shadow-lg shadow-green-900/20"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+            onClick={onRandomize}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-zinc-800 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white"
+          >
+            <Shuffle className="w-3 h-3" />
+            Rastgele
+          </button>
+        }
+      >
+        <div className="grid grid-cols-5 gap-1.5">
+          {LOGO_PRESETS.map((preset) => {
+            const logo = applyLogoPreset(preset, design, shortName);
+            return (
+              <BadgeOption
+                key={preset.id}
+                label={preset.label}
+                logo={{ ...logo, initials: design.initials }}
+                shortName={shortName}
+                selected={false}
+                onClick={() => onReplace({ ...logo, initials: design.initials })}
+              />
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section
+        title="Sembol"
+        action={
+          <button
+            type="button"
+            aria-pressed={!design.showIcon}
+            onClick={() => onChange({ icon: "none", showIcon: false })}
+            className={`h-7 px-2 rounded-md text-[10px] font-semibold transition-colors ${
+              !design.showIcon
+                ? "bg-green-950/60 text-green-400 ring-1 ring-green-500"
+                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"
             }`}
           >
-            {opt.label}
+            Sembolsüz
           </button>
-        );
-      })}
+        }
+      >
+        <div className="grid grid-cols-7 gap-1.5">
+          {EMBLEM_OPTIONS.map((option) => {
+            const selected = design.showIcon && design.icon === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                title={option.label}
+                aria-label={option.label}
+                aria-pressed={selected}
+                onClick={() => onChange({ icon: option.id, showIcon: true })}
+                className={`flex h-11 items-center justify-center rounded-lg border transition-colors ${
+                  selected
+                    ? "border-green-500 bg-green-950/40 text-white"
+                    : "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-500 hover:text-white"
+                }`}
+              >
+                <LogoIcon icon={option.id} size={26} color="currentColor" />
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section title="Şekil">
+        <div className="grid grid-cols-4 gap-1.5">
+          {SHAPES.map((option) => (
+            <BadgeOption
+              key={option.id}
+              label={option.label}
+              logo={variant({ shape: option.id })}
+              shortName={shortName}
+              selected={design.shape === option.id}
+              onClick={() => onChange({ shape: option.id })}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Zemin">
+        <div className="grid grid-cols-6 gap-1.5">
+          {BACKGROUNDS.map((option) => (
+            <BadgeOption
+              key={option.id}
+              label={option.label}
+              logo={variant({ backgroundStyle: option.id, showIcon: false, showInitials: false })}
+              shortName={shortName}
+              selected={design.backgroundStyle === option.id}
+              onClick={() => onChange({ backgroundStyle: option.id })}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Kenarlık">
+        <div className="grid grid-cols-6 gap-1.5">
+          {BORDERS.map((option) => (
+            <BadgeOption
+              key={option.id}
+              label={option.label}
+              logo={variant({ borderStyle: option.id, showIcon: false, showInitials: false })}
+              shortName={shortName}
+              selected={design.borderStyle === option.id}
+              onClick={() => onChange({ borderStyle: option.id })}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Renkler">
+        <div className="grid grid-cols-2 gap-2">
+          {COLORS.map(([label, key]) => (
+            <ColorField
+              key={key}
+              label={label}
+              value={design[key]}
+              onChange={(value) => onChange({ [key]: value })}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Baş harfler">
+        <div className="flex items-center gap-3">
+          <input
+            value={design.initials}
+            maxLength={3}
+            aria-label="Baş harfler"
+            onChange={(e) =>
+              onChange({ initials: e.target.value.toLocaleUpperCase("tr-TR").slice(0, 3) })
+            }
+            className="w-20 h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2 text-sm text-white text-center font-bold uppercase focus:border-green-500 focus:outline-none"
+          />
+          <div className="flex-1">
+            <Toggle
+              label="Armada göster"
+              checked={design.showInitials}
+              onChange={(showInitials) => onChange({ showInitials })}
+            />
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }
 
-function Toggle({
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className={LABEL}>{title}</p>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function BadgeOption({
+  label,
+  logo,
+  shortName,
+  selected,
+  onClick,
+}: {
+  label: string;
+  logo: TeamLogo;
+  shortName: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-pressed={selected}
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 rounded-lg border px-1 pt-2 pb-1.5 transition-colors ${
+        selected
+          ? "border-green-500 bg-green-950/40"
+          : "border-zinc-700 bg-zinc-800/40 hover:border-zinc-500"
+      }`}
+    >
+      <TeamLogoBadge logo={logo} shortName={shortName} size={36} />
+      <span
+        className={`w-full truncate text-center text-[9px] font-semibold ${
+          selected ? "text-green-400" : "text-zinc-400"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+export function Toggle({
   label,
   checked,
   onChange,
 }: {
   label: string;
   checked: boolean;
-  onChange: (v: boolean) => void;
+  onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 text-xs text-zinc-300">
+    <label className="flex cursor-pointer items-center justify-between gap-3 text-[11px] text-zinc-300">
       <span>{label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 rounded-full transition-colors ${
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
           checked ? "bg-green-600" : "bg-zinc-700"
         }`}
       >
@@ -105,168 +308,5 @@ function Toggle({
         />
       </button>
     </label>
-  );
-}
-
-export function LogoDesignerCustomPanel({
-  logo,
-  shortName,
-  onLogoChange,
-  onRandomize,
-}: {
-  logo: TeamLogo;
-  shortName: string;
-  onLogoChange: (logo: TeamLogo) => void;
-  onRandomize: () => void;
-}) {
-  const updateLogo = (patch: Partial<TeamLogo>) =>
-    onLogoChange({
-      ...logo,
-      mode: "generated",
-      presetId: undefined,
-      imageUrl: undefined,
-      ...patch,
-    });
-
-  return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        onClick={onRandomize}
-        className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800 text-[11px] font-semibold text-zinc-300 hover:bg-zinc-700"
-      >
-        <Shuffle className="w-3.5 h-3.5" />
-        Rastgele logo
-      </button>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Renk şablonları
-        </h3>
-        <div className="flex flex-wrap gap-1.5">
-          {LOGO_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() =>
-                onLogoChange(applyLogoPreset(preset, logo, shortName))
-              }
-              className="px-2 py-1 rounded-md bg-zinc-800 text-[10px] font-semibold text-zinc-400 hover:bg-zinc-700 hover:text-white"
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Şekil
-        </h3>
-        <OptionGrid
-          options={SHAPES}
-          value={logo.shape}
-          onChange={(v) => updateLogo({ shape: v })}
-        />
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Kenarlık
-        </h3>
-        <OptionGrid
-          options={BORDERS}
-          value={logo.borderStyle}
-          onChange={(v) => updateLogo({ borderStyle: v })}
-          columns={3}
-        />
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Arka plan
-        </h3>
-        <OptionGrid
-          options={BACKGROUNDS}
-          value={logo.backgroundStyle}
-          onChange={(v) => updateLogo({ backgroundStyle: v })}
-          columns={2}
-        />
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          İkon
-        </h3>
-        <OptionGrid
-          options={LOGO_ICON_OPTIONS}
-          value={logo.icon}
-          onChange={(v: LogoIcon) =>
-            updateLogo({
-              icon: v,
-              showIcon: v !== "none",
-            })
-          }
-          columns={4}
-        />
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Renkler
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {(
-            [
-              ["Ana renk", "primaryColor"],
-              ["İkincil renk", "secondaryColor"],
-              ["Vurgu", "accentColor"],
-              ["Metin rengi", "textColor"],
-            ] as const
-          ).map(([label, key]) => (
-            <label key={key} className="block">
-              <span className="text-[10px] text-zinc-500">{label}</span>
-              <input
-                type="color"
-                value={logo[key]}
-                onChange={(e) => updateLogo({ [key]: e.target.value })}
-                className="mt-1 w-full h-9 rounded cursor-pointer bg-transparent border border-zinc-700"
-              />
-            </label>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Metin
-        </h3>
-        <label className="block mb-3">
-          <span className="text-[10px] text-zinc-500">Baş harfler</span>
-          <input
-            value={logo.initials}
-            maxLength={3}
-            onChange={(e) =>
-              updateLogo({
-                initials: e.target.value.toLocaleUpperCase("tr-TR").slice(0, 3),
-              })
-            }
-            className="mt-1 w-full h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2 text-sm text-white text-center font-bold"
-          />
-        </label>
-        <div className="space-y-2">
-          <Toggle
-            label="Baş harfleri göster"
-            checked={logo.showInitials}
-            onChange={(v) => updateLogo({ showInitials: v })}
-          />
-          <Toggle
-            label="İkonu göster"
-            checked={logo.showIcon}
-            onChange={(v) => updateLogo({ showIcon: v })}
-          />
-        </div>
-      </section>
-    </div>
   );
 }

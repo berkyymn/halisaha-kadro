@@ -1,5 +1,7 @@
 import { resolveLogoImageSrc } from "@/lib/logoImagePresets";
+import { EMBLEMS } from "@/lib/logoEmblems.generated";
 import type {
+  LegacyLogoIcon,
   LogoBackgroundStyle,
   LogoBorderStyle,
   LogoIcon,
@@ -13,38 +15,15 @@ import {
   MIN_LOGO_DISPLAY_SIZE,
 } from "@/types";
 
-const VALID_ICONS: LogoIcon[] = [
-  "none",
-  "eagle",
-  "lion",
-  "wolf",
-  "crown",
-  "shield",
-  "star",
-  "flame",
-  "lightning",
-  "ball",
-  "trophy",
-  "football",
-];
+const VALID_ICONS = new Set<LogoIcon>(["none", ...EMBLEMS.map((e) => e.id)]);
 
-const DEPRECATED_ICON_MAP: Partial<Record<LogoIcon, LogoIcon>> = {
+/** Eski/kaldırılmış sembol kimlikleri → en yakın güncel sembol */
+const LEGACY_ICON_MAP: Record<LegacyLogoIcon, LogoIcon> = {
   football: "ball",
-  tiger: "lion",
-  bear: "lion",
-  bull: "lion",
+  phoenix: "falcon",
   panther: "wolf",
-  shark: "wolf",
-  falcon: "eagle",
-  phoenix: "eagle",
-  dragon: "flame",
-  wings: "eagle",
-  claw: "wolf",
-  sword: "shield",
-  spartan: "shield",
-  anchor: "shield",
-  skull: "shield",
-  mountain: "shield",
+  claw: "crocodile",
+  mountain: "castle",
 };
 
 const VALID_BACKGROUNDS: LogoBackgroundStyle[] = [
@@ -58,11 +37,8 @@ const VALID_BACKGROUNDS: LogoBackgroundStyle[] = [
 
 export function normalizeLogoIcon(icon?: LogoIcon | string): LogoIcon {
   if (!icon) return "none";
-  const mapped =
-    DEPRECATED_ICON_MAP[icon as LogoIcon] ??
-    (icon as LogoIcon);
-  if (VALID_ICONS.includes(mapped)) return mapped === "football" ? "ball" : mapped;
-  return "none";
+  const mapped = LEGACY_ICON_MAP[icon as LegacyLogoIcon] ?? (icon as LogoIcon);
+  return VALID_ICONS.has(mapped) ? mapped : "none";
 }
 
 export function clampLogoDisplaySize(size?: number): number {

@@ -158,7 +158,29 @@ export default function PrivacyPage() {
           <p>haklarına sahipsin. Başvurularını {LEGAL.contactEmail} adresine iletebilirsin.</p>
         </Section>
 
-        <footer className="border-t border-zinc-800 pt-6 text-sm text-zinc-500">
+        <footer className="space-y-3 border-t border-zinc-800 pt-6 text-sm text-zinc-500">
+          <p id="kullanilan-icerikler">
+            <span className="font-semibold text-zinc-400">Kullanılan içerikler:</span> Logo
+            tasarımındaki arma sembolleri{" "}
+            <a
+              href="https://game-icons.net"
+              target="_blank"
+              rel="noopener"
+              className="text-zinc-300 underline underline-offset-2"
+            >
+              game-icons.net
+            </a>{" "}
+            (Lorc, Delapouite ve katkıcılar) kaynaklıdır ve{" "}
+            <a
+              href="https://creativecommons.org/licenses/by/3.0/"
+              target="_blank"
+              rel="noopener"
+              className="text-zinc-300 underline underline-offset-2"
+            >
+              CC BY 3.0
+            </a>{" "}
+            lisansıyla kullanılmaktadır.
+          </p>
           <Link href="/" className="text-green-400 underline underline-offset-2">
             Uygulamaya dön
           </Link>

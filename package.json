@@ -14,7 +14,8 @@
     "emulators": "firebase emulators:start --only auth,firestore,storage",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "node scripts/rules-smoke.mjs"
+    "test:rules": "node scripts/rules-smoke.mjs",
+    "emblems": "node scripts/build-logo-emblems.mjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
@@ -29,6 +30,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@iconify-json/game-icons": "^1.2.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
