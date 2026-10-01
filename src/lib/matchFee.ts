@@ -6,18 +6,25 @@ export function clampFeeTotal(value: unknown): number {
   return Math.min(MAX_FEE_TOTAL, Math.max(0, n));
 }
 
+export type FeeSplit = {
+  goalkeepersPay: boolean;
+  /** Yalnızca bu takım öder (tek takım posteri; ör. rakip kendi payını ayrı öder) */
+  teamOnly: boolean;
+};
+
 /**
- * Ücrete ortak olan kişi sayısı: maçtaki iki takımın tüm oyuncuları (tek takım
- * posterinde de saha iki takımla oynanır); kaleciler ödemiyorsa ikisi düşer.
+ * Ücrete ortak olan kişi sayısı: varsayılan maçtaki iki takımın tüm oyuncuları;
+ * `teamOnly` ise yalnızca bir takım. Kaleciler ödemiyorsa takım başına bir kişi düşer.
  */
-export function feePayerCount(squadSize: number, goalkeepersPay: boolean): number {
-  return Math.max(1, squadSize * 2 - (goalkeepersPay ? 0 : 2));
+export function feePayerCount(squadSize: number, split: FeeSplit): number {
+  const teams = split.teamOnly ? 1 : 2;
+  return Math.max(1, (squadSize - (split.goalkeepersPay ? 0 : 1)) * teams);
 }
 
 /** Kişi başı tutar, yukarı yuvarlanmış tam ₺ (eksik kalmasın) */
-export function feePerPerson(total: number, squadSize: number, goalkeepersPay: boolean): number {
+export function feePerPerson(total: number, squadSize: number, split: FeeSplit): number {
   if (total <= 0) return 0;
-  return Math.ceil(total / feePayerCount(squadSize, goalkeepersPay));
+  return Math.ceil(total / feePayerCount(squadSize, split));
 }
 
 export function formatLira(amount: number): string {

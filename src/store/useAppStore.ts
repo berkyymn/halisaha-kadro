@@ -1079,7 +1079,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 38,
+      version: 39,
       storage: createJSONStorage(() => guardedStorage),
       migrate: (persisted: unknown, version: number): AppStore => {
         migratedDuringHydration = true;
@@ -1440,6 +1440,10 @@ export const useAppStore = create<AppStore>()(
         }
         if (version < 38) {
           // Saha ücreti alanları (varsayılan kapalı).
+          state = { ...state, matchInfo: normalizeMatchInfo(state.matchInfo as Partial<MatchInfo>) };
+        }
+        if (version < 39) {
+          // Tek takımda "ücreti yalnızca takımımız paylaşır" seçeneği (varsayılan: takımımız).
           state = { ...state, matchInfo: normalizeMatchInfo(state.matchInfo as Partial<MatchInfo>) };
         }
         return state as unknown as AppStore;

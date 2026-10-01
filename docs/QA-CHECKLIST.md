@@ -784,6 +784,23 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 45. Tek takım: saha düzeni ve ücret paylaşımı (2026-10-01)
+
+**Dosyalar:** `MatchPoster.tsx` (SingleTeamHeader), `formationEngine.ts` (SINGLE_PITCH_AREA), `posterLayout.ts`, `MatchFeeModal.tsx`, `matchFee.ts` (persist v39)
+
+| Adım | Beklenen |
+|------|----------|
+| Tek takım, 14" (1512×860) | Logo + takım adı üst şeritte (%3–18); saha %19'dan başlar; kartlar ~75 px (önce 65) |
+| 2-1-3 / 2-2-2 / 3-2-1 | Hiçbir kart logoya, üst şeride ya da alt bilgiye binmez (formationLayout testi) |
+| Uzun takım adı | Logonun yanında tam görünür, sığmazsa "…" |
+| Ücret penceresi (tek takım) | "Ücreti kimler paylaşıyor?" varsayılan "Sadece takımımız"; alan adı "Takımımızın ödediği tutar" |
+| Sadece takımımız, 1050 ₺, 7v7 | Kişi başı ₺150 (kaleciler hariç 6 kişi → ₺175) |
+| İki takım modu | Seçim görünmez; ücret her zaman iki takıma bölünür |
+
+- [x] Geçti (tarayıcı 1512×860 + otomatik test)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -813,6 +830,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-10-01 | Tek takım: logo üst şeritte, saha %19–87, kartlar ~%15 büyük (logo–forvet çakışması giderildi); ücret 'Sadece takımımız' varsayılan (persist v39) | §45 + yerleşim testleri | Geçti |
 | 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |
 | 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |
 | 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |

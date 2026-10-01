@@ -145,6 +145,8 @@ export interface MatchInfo {
   feeTotal: number;
   /** false: kaleciler ücrete ortak olmaz (kişi başı daha az kişiye bölünür) */
   feeGoalkeepersPay: boolean;
+  /** Tek takım posterinde: true (varsayılan) → ücret yalnızca bu takımın oyuncularına bölünür */
+  feeTeamOnly: boolean;
   titleStyleId: PosterTitleStyleId;
   titleEffectId: PosterTitleEffectId;
   titleFontSize: number;

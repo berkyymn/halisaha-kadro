@@ -5,7 +5,7 @@ import {
   MAX_PLAYER_CARD_SIZE,
   MIN_PLAYER_CARD_SIZE,
 } from "@/types";
-import { getPitchMetrics, maxPlayersInRow } from "@/lib/formationEngine";
+import { getPitchMetrics, getSinglePitchMetrics, maxPlayersInRow } from "@/lib/formationEngine";
 
 export type { PosterMetrics };
 
@@ -15,19 +15,21 @@ const CARD_ASPECT = 1.48;
 
 // Auto-responsive card sizing. The vertical cap is the most important guard
 // for single-team (portrait) mode where rows are stacked densely.
-// Tekli modda 4 hat (kaleci + 3) dikeyde sığmalı: kart yüksekliği sahanın ~%21'i.
-const CARD_HEIGHT_RATIO = 0.24;
-const CARD_WIDTH_RATIO = 0.14;
-const CARD_MAX_HEIGHT_RATIO = 0.21;
+// Tekli modda 4 hat (kaleci + 3) dikeyde sığmalı: hatlar sahanın %13–88'inde,
+// 3 aralık × (kart + %2,5) ≤ %75 → kart yüksekliği sahanın en fazla ~%22,5'i.
+const CARD_HEIGHT_RATIO = 0.26;
+const CARD_WIDTH_RATIO = 0.15;
+const CARD_MAX_HEIGHT_RATIO = 0.225;
 
 /** Satırda üst üste binmeden sığabilecek üst kart boyutu */
 export function computeSafeMaxCardSize(
   metrics: PosterMetrics,
-  maxPlayersInRowCount: number
+  maxPlayersInRowCount: number,
+  mode?: TeamMode
 ): number {
   if (maxPlayersInRowCount <= 1) return MAX_PLAYER_CARD_SIZE;
 
-  const pitch = getPitchMetrics(metrics);
+  const pitch = mode === "single" ? getSinglePitchMetrics(metrics) : getPitchMetrics(metrics);
   const gaps = maxPlayersInRowCount - 1;
   // Hat sınırı (formationEngine rowYLimits): %15–85 → en fazla %70 yayılım.
   const maxSpanPercent = 70;
@@ -64,8 +66,9 @@ export function getAutoCardSize(
   const widthRatio = isSingle ? CARD_WIDTH_RATIO : 0.18;
   const maxHeightRatio = isSingle ? CARD_MAX_HEIGHT_RATIO : 0.28;
 
-  const pitch = getPitchMetrics(metrics);
-  const safeHorizontal = computeSafeMaxCardSize(metrics, maxPlayersInRowCount);
+  // Tekli modda saha alanı farklı (formationEngine SINGLE_PITCH_AREA).
+  const pitch = isSingle ? getSinglePitchMetrics(metrics) : getPitchMetrics(metrics);
+  const safeHorizontal = computeSafeMaxCardSize(metrics, maxPlayersInRowCount, mode);
 
   const targetFromHeight = Math.floor(
     (pitch.height * heightRatio) / CARD_ASPECT

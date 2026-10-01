@@ -227,17 +227,20 @@ export function computeFormationLayout(
   }));
 }
 
-const SINGLE_GK_Y = 87;
-const SINGLE_OUTFIELD_Y_MIN = 16;
+const SINGLE_GK_Y = 88;
+const SINGLE_OUTFIELD_Y_MIN = 13;
 const SINGLE_OUTFIELD_Y_MAX = 74;
 const SINGLE_X_MIN = 8;
 const SINGLE_X_MAX = 92;
 const SINGLE_ROW_EXTRA_GAP = 4;
 
+/** Tek takım posterinde saha alanı (poster yüzdesi): üstte %3–18 takım şeridi, altta alt bilgi. */
+export const SINGLE_PITCH_AREA = { top: 19, height: 68 } as const;
+
 export function getSinglePitchMetrics(poster: PosterMetrics): PosterMetrics {
   return {
     width: poster.width * 0.9,
-    height: poster.height * 0.61,
+    height: (poster.height * SINGLE_PITCH_AREA.height) / 100,
   };
 }
 
