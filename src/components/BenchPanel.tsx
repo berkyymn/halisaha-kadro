@@ -30,6 +30,9 @@ import {
   isBenchCloneSubIn,
 } from "@/lib/dragIntent";
 
+/** Panel genişliği (w-60 / w-72) içinde iki sütuna sığan yedek kartı boyutu */
+const BENCH_CARD_SIZE = 96;
+
 const PlayerEditModal = dynamic(
   () => import("./PlayerEditModal").then((module) => module.PlayerEditModal),
   { ssr: false }
@@ -142,8 +145,9 @@ export function BenchPanel() {
   const setDragIntent = useDragStore((s) => s.setDragIntent);
 
   const benchCardSize = useAutoCardSize();
-  // Panelde iki sütun: kartlar sahadakinden küçük; sürükleme önizlemesi saha boyutunda.
-  const listCardSize = Math.min(benchCardSize, 84);
+  // Panel kartı moddan bağımsız, iki sütuna rahat sığan sabit boyut (tek takımda
+  // saha kartları küçüldüğünde yedekler de küçülmesin). Sürükleme önizlemesi saha boyutunda.
+  const listCardSize = BENCH_CARD_SIZE;
 
   const benchFull = benchPlayerIds.length >= MAX_BENCH_PLAYERS;
 

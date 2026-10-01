@@ -35,7 +35,7 @@ export const DEFAULT_TITLE_STYLE: Pick<
   | "titleSubtitle"
 > = {
   titleSubtitle: "",
-  titleStyleId: "cinematic",
+  titleStyleId: "champions-league",
   titleEffectId: "smoky",
   titleFontSize: 100,
   titleLetterSpacing: 50,

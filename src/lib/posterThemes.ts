@@ -50,7 +50,7 @@ export const POSTER_THEME_LIST: PosterThemeConfig[] = [
 
 export const POSTER_THEME_IDS = POSTER_THEME_LIST.map((t) => t.id);
 
-export const DEFAULT_POSTER_THEME: PosterThemeId = "derby-night";
+export const DEFAULT_POSTER_THEME: PosterThemeId = "champions-night";
 
 /** Eski kayıtlı tema kimlikleri → güncel poster teması */
 const LEGACY_POSTER_THEME_MAP: Record<string, PosterThemeId> = {

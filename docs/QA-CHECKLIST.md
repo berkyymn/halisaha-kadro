@@ -743,6 +743,29 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 43. Pilot bulguları (2026-10-01)
+
+| Adım | Beklenen |
+|------|----------|
+| Yeni kullanıcı / Posteri sıfırla | Tema Şampiyonlar Ligi, başlık mavi; ev sahibi beyaz kartal, deplasman sarı-lacivert |
+| Tema seçici | Daha büyük küçük resimler, sağda yazı yok |
+| Paylaş menüsü | WhatsApp / X: panoya kopyalar + "Web'i aç" bildirimi; Instagram: indirir + "Instagram'ı aç"; Panoya kopyala; destekleyen tarayıcıda "Diğer…" (sistem paylaşımı) |
+| Pano izni yoksa | Hata değil: poster indirilir, "sürükleyip bırak" bildirimi |
+| Poster İndir / paylaşım | Hazırlanırken animasyonlu "Poster hazırlanıyor…" katmanı; çıktıda "Düzenle" / "Başlık ekle" ipuçları yok |
+| Gizlilik → Uygulamaya dön | Yeni sekmede açıldıysa sekme kapanır (var olan sekmeye dönülür); aynı sekmedeyse geri gider |
+| Başlık penceresi → "Posterde göster" kapalı | Başlık posterden kalkar; yerine soluk "+ Başlık ekle" (JPEG'e girmez); yazılar ve stil saklanır |
+| Yeni poster / Posteri sıfırla | Başlık kapalı başlar, yalnızca soluk "+ Başlık ekle"; eski kayıtlarda başlık görünür kalır |
+| "+ Başlık ekle" | Pencere "Posterde göster" açık gelir; Kaydet → başlık görünür, Vazgeç → kapalı kalır |
+| Oyuncu numarası | Harf ve 3. basamak yazılamaz (yapıştırmada da); "07" → 7 |
+| Arka plan kaldırılırken | Fotoğraf değiştir / Geri al / Fotoğrafı kaldır pasif; işlem bitmeden fotoğraf değişse bile sonuç yanlış fotoğrafa yazılmaz |
+| Yedek kartları | Her iki modda 96 px (tek takımda küçülmez), iki sütun |
+| Tarih | Geçmiş tarihli kayıt açılınca bugüne çekilir; seçicide geçmiş günler pasif |
+| Saat | Maç bugünse geçmiş saat seçilemez (bir sonraki çeyrek saate çekilir) |
+
+- [x] Geçti (tarayıcı 1440×900; pano izni bu ortamda kapalı olduğu için yedek yol doğrulandı, çıktı 2400×1500 JPEG)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -772,6 +795,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |
 | 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |
 | 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |
 | 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |

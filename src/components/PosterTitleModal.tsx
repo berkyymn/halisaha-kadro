@@ -5,6 +5,7 @@ import { RotateCcw, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { ModalShell } from "@/components/ModalShell";
 import { PosterTitle } from "@/components/PosterTitle";
+import { Toggle } from "@/components/Toggle";
 import { trackEvent } from "@/lib/analytics";
 import { getPosterThemeBackgroundSrc, normalizePosterTheme } from "@/lib/posterThemes";
 import {
@@ -25,7 +26,16 @@ const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
 const INPUT =
   "mt-1 w-full h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/30";
 
-export function PosterTitleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function PosterTitleModal({
+  open,
+  onClose,
+  addingTitle = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** "+ Başlık ekle" ile açıldı: taslak başlık görünür başlar */
+  addingTitle?: boolean;
+}) {
   return (
     <ModalShell
       open={open}
@@ -34,18 +44,20 @@ export function PosterTitleModal({ open, onClose }: { open: boolean; onClose: ()
       panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-3xl max-h-[94vh] shadow-2xl overflow-hidden flex flex-col"
     >
       {/* Her açılışta taslak güncel başlıktan yeniden başlar */}
-      {open && <PosterTitleEditor onClose={onClose} />}
+      {open && <PosterTitleEditor onClose={onClose} addingTitle={addingTitle} />}
     </ModalShell>
   );
 }
 
-function PosterTitleEditor({ onClose }: { onClose: () => void }) {
+function PosterTitleEditor({ onClose, addingTitle }: { onClose: () => void; addingTitle: boolean }) {
   const matchInfo = useAppStore((s) => s.matchInfo);
   const setMatchInfo = useAppStore((s) => s.setMatchInfo);
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
   const themeStyleId = defaultTitleStyleForTheme(posterTheme);
 
-  const [draft, setDraft] = useState<MatchInfo>(matchInfo);
+  const [draft, setDraft] = useState<MatchInfo>(() =>
+    addingTitle ? { ...matchInfo, titleHidden: false } : matchInfo
+  );
   const patch = (partial: Partial<MatchInfo>) => setDraft((d) => ({ ...d, ...partial }));
 
   const handleSave = () => {
@@ -59,6 +71,7 @@ function PosterTitleEditor({ onClose }: { onClose: () => void }) {
       titleFontSize: draft.titleFontSize,
       titleLetterSpacing: draft.titleLetterSpacing,
       titleShadow: draft.titleShadow,
+      titleHidden: draft.titleHidden,
     });
     onClose();
   };
@@ -88,13 +101,29 @@ function PosterTitleEditor({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="shrink-0 px-4 pt-3 pb-3 border-b border-zinc-800">
-        <TitlePreview info={draft} backgroundSrc={getPosterThemeBackgroundSrc(posterTheme)} />
+        <div className={draft.titleHidden ? "opacity-40 grayscale transition" : "transition"}>
+          <TitlePreview info={draft} backgroundSrc={getPosterThemeBackgroundSrc(posterTheme)} />
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-zinc-800">
           <section className="p-4 space-y-3">
-            <p className={LABEL}>Metin</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className={LABEL}>Metin</p>
+              <div className="w-40">
+                <Toggle
+                  label="Posterde göster"
+                  checked={!draft.titleHidden}
+                  onChange={(visible) => patch({ titleHidden: !visible })}
+                />
+              </div>
+            </div>
+            {draft.titleHidden && (
+              <p className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-[11px] text-zinc-300">
+                Başlık posterde görünmeyecek. Yazıların ve stilin saklanır; istediğinde yeniden açabilirsin.
+              </p>
+            )}
             <TextField
               label="Üst satır"
               value={draft.titleLine1}
@@ -224,6 +253,7 @@ function PosterTitleEditor({ onClose }: { onClose: () => void }) {
               ...d,
               ...DEFAULT_TITLE_STYLE,
               titleSubtitle: d.titleSubtitle,
+              titleHidden: d.titleHidden,
               titleStyleId: themeStyleId,
             }))
           }

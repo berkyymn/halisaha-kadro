@@ -78,8 +78,8 @@ export const LOGO_IMAGE_PRESETS: LogoImagePreset[] = [
   },
 ];
 
-export const DEFAULT_HOME_PRESET_ID = "yellow-navy-crest";
-export const DEFAULT_AWAY_PRESET_ID = "red-yellow-lion";
+export const DEFAULT_HOME_PRESET_ID = "white-eagles";
+export const DEFAULT_AWAY_PRESET_ID = "yellow-navy-crest";
 
 export function getLogoImagePreset(id?: string): LogoImagePreset | undefined {
   if (!id) return undefined;

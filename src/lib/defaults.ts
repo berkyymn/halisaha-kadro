@@ -51,7 +51,7 @@ export const defaultHomeTeam: TeamConfig = {
   name: "Takım A",
   shortName: DEFAULT_HOME_SHORT_NAME,
   jersey: getLogoImagePreset(DEFAULT_HOME_PRESET_ID)!.jersey,
-  atmosphereColor: "#facc15",
+  atmosphereColor: "#e5e7eb",
   logo: defaultHomeLogo,
   playerIds: [],
 };
@@ -60,7 +60,7 @@ export const defaultAwayTeam: TeamConfig = {
   name: "Takım B",
   shortName: DEFAULT_AWAY_SHORT_NAME,
   jersey: getLogoImagePreset(DEFAULT_AWAY_PRESET_ID)!.jersey,
-  atmosphereColor: "#dc2626",
+  atmosphereColor: "#facc15",
   logo: defaultAwayLogo,
   playerIds: [],
 };

@@ -1079,7 +1079,7 @@ export const useAppStore = create<AppStore>()(
     }},
     {
       name: "halisaha-kadro",
-      version: 36,
+      version: 37,
       storage: createJSONStorage(() => guardedStorage),
       migrate: (persisted: unknown, version: number): AppStore => {
         migratedDuringHydration = true;
@@ -1432,6 +1432,10 @@ export const useAppStore = create<AppStore>()(
         }
         if (version < 36) {
           // Başlıktan kullanılmayan döndürme / max genişlik ayarları kaldırıldı.
+          state = { ...state, matchInfo: normalizeMatchInfo(state.matchInfo as Partial<MatchInfo>) };
+        }
+        if (version < 37) {
+          // Başlık gizlenebilir oldu (titleHidden); eski kayıtlarda başlık görünür kalır.
           state = { ...state, matchInfo: normalizeMatchInfo(state.matchInfo as Partial<MatchInfo>) };
         }
         return state as unknown as AppStore;

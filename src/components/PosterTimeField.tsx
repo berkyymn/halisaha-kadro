@@ -14,7 +14,10 @@ export function PosterTimeField({
   style,
   iconSize,
   gap,
+  min,
 }: {
+  /** HH:MM — maç bugünse şu andan önceki saatler seçicide pasif */
+  min?: string;
   value: string;
   onChange: (value: string) => void;
   style?: React.CSSProperties;
@@ -61,6 +64,7 @@ export function PosterTimeField({
         ref={inputRef}
         type="time"
         value={time}
+        min={min}
         onChange={(e) => {
           if (e.target.value) onChange(normalizeMatchTime(e.target.value));
         }}

@@ -103,3 +103,8 @@ export function resolveSameTeamJerseyConflicts({
 
   return updates;
 }
+
+/** Numara alanı: yalnızca rakam, en fazla 2 basamak, baştaki sıfırlar atılır ("07" → "7", "100" → "10"). */
+export function sanitizeJerseyNumberInput(raw: string): string {
+  return raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, 2);
+}

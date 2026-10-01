@@ -3,7 +3,7 @@
 import { ImagePlus } from "lucide-react";
 import { LOGO_IMAGE_PRESETS, type LogoImagePreset } from "@/lib/logoImagePresets";
 import type { TeamLogo } from "@/types";
-import { Toggle } from "./LogoDesignerCustomPanel";
+import { Toggle } from "./Toggle";
 
 const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
 

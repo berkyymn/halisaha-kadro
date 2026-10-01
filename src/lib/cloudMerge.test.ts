@@ -21,7 +21,7 @@ function snapshot(overrides: Partial<PosterSnapshot> = {}): PosterSnapshot {
       singlePitchPlayers: [],
       playerCardSize: 100,
       teamLogoDisplaySize: 150,
-      posterTheme: "derby-night",
+      posterTheme: "champions-night",
     }),
     ...overrides,
   };

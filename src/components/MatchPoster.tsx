@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppStore } from "@/store/useAppStore";
 import { PitchPlayerLayer } from "./PitchPlayerLayer";
 import { PosterDateField } from "./PosterDateField";
 import { PosterTimeField } from "./PosterTimeField";
-import { todayDisplayDate } from "@/lib/matchDate";
+import {
+  clampMatchTimeForDate,
+  isPastMatchDate,
+  isTodayMatchDate,
+  nextQuarterHour,
+  todayDisplayDate,
+  todayIsoDate,
+} from "@/lib/matchDate";
 import { PosterEditableText } from "./PosterEditableText";
 import { PosterTitleDisplay } from "./PosterTitleDisplay";
 import { StaticPosterBackground } from "./StaticPosterBackground";
@@ -217,6 +225,7 @@ function PosterFooter({
           <div className="flex items-center justify-center min-w-0 px-2 h-full">
             <PosterTimeField
               value={time}
+              min={isTodayMatchDate(date) ? nextQuarterHour() : undefined}
               onChange={onTimeChange}
               style={footerTextStyle}
               iconSize={footerIconSize}
@@ -237,6 +246,7 @@ function PosterFooter({
             <Calendar className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
             <PosterDateField
               value={date}
+              min={todayIsoDate()}
               onChange={onDateChange}
               placeholder={todayDisplayDate()}
               style={footerTextStyle}
@@ -261,6 +271,14 @@ export function MatchPoster({
   const awayTeam = useAppStore((s) => s.awayTeam);
   const teamMode = useAppStore((s) => s.teamMode);
   const isSingle = teamMode === "single";
+
+  // Poster her zaman yaklaşan maç içindir: kayıtlı tarih geçmişte kaldıysa
+  // (geçen haftanın kadrosu, buluttan gelen eski kayıt) bugüne çekilir.
+  useEffect(() => {
+    if (!isPastMatchDate(matchInfo.date)) return;
+    const date = todayDisplayDate();
+    setMatchInfo({ date, time: clampMatchTimeForDate(date, matchInfo.time) });
+  }, [matchInfo.date, matchInfo.time, setMatchInfo]);
 
   return (
     <div
@@ -316,11 +334,13 @@ export function MatchPoster({
           onVenueBlur={() => trackEvent("venue_changed")}
           onTimeChange={(time) => {
             trackEvent("match_date_changed", { field: "time" });
-            setMatchInfo({ time });
+            // Maç bugünse geçmiş saat seçilemez.
+            setMatchInfo({ time: clampMatchTimeForDate(matchInfo.date, time) });
           }}
           onDateChange={(date) => {
+            if (isPastMatchDate(date)) return;
             trackEvent("match_date_changed", { field: "date" });
-            setMatchInfo({ date });
+            setMatchInfo({ date, time: clampMatchTimeForDate(date, matchInfo.time) });
           }}
         />
       </div>

@@ -31,3 +31,37 @@ export function normalizeMatchTime(value: string | undefined): string {
   if (hours > 23 || minutes > 59) return DEFAULT_MATCH_TIME;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Bugünün tarihi YYYY-MM-DD (yerel saat) */
+export function todayIsoDate(now = new Date()): string {
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** Maç tarihi bugünden önce mi? (geçersiz tarih geçmiş sayılmaz) */
+export function isPastMatchDate(display: string, now = new Date()): boolean {
+  const iso = displayDateToIso(display);
+  return iso !== "" && iso < todayIsoDate(now);
+}
+
+export function isTodayMatchDate(display: string, now = new Date()): boolean {
+  return displayDateToIso(display) === todayIsoDate(now);
+}
+
+/** Şu anki saatten sonraki ilk çeyrek saat (ör. 18:07 → 18:15); gün bitiyorsa 23:45. */
+export function nextQuarterHour(now = new Date()): string {
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const rounded = Math.min(23 * 60 + 45, Math.ceil((minutes + 1) / 15) * 15);
+  return `${pad(Math.floor(rounded / 60))}:${pad(rounded % 60)}`;
+}
+
+/** Maç bugünse geçmiş bir saat seçilemez: geçmişteyse bir sonraki çeyrek saate çekilir. */
+export function clampMatchTimeForDate(date: string, time: string, now = new Date()): string {
+  const normalized = normalizeMatchTime(time);
+  if (!isTodayMatchDate(date, now)) return normalized;
+  const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return normalized > current ? normalized : nextQuarterHour(now);
+}

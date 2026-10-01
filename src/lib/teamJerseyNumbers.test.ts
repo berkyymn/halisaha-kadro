@@ -4,6 +4,7 @@ import {
   resolveJerseyNumber,
   resolveSameTeamJerseyConflicts,
 } from "@/lib/teamJerseyNumbers";
+import { sanitizeJerseyNumberInput } from "@/lib/teamJerseyNumbers";
 import { p } from "@/test/fixtures";
 import { defaultHomeTeam } from "@/lib/defaults";
 
@@ -43,5 +44,15 @@ describe("resolveSameTeamJerseyConflicts", () => {
     const teamWithB = { ...defaultHomeTeam, playerIds: ["b", "in"] };
     const updates = resolveSameTeamJerseyConflicts({ team: teamWithB, squadSize: 6, registry, incomingPlayerId: "in" });
     expect(updates.in.number).toBe(10);
+  });
+});
+
+describe("numara alanı", () => {
+  it("harf ve üçüncü basamak yazılamaz, baştaki sıfır atılır", () => {
+    expect(sanitizeJerseyNumberInput("12a")).toBe("12");
+    expect(sanitizeJerseyNumberInput("100")).toBe("10");
+    expect(sanitizeJerseyNumberInput("abc")).toBe("");
+    expect(sanitizeJerseyNumberInput("07")).toBe("7");
+    expect(sanitizeJerseyNumberInput("00")).toBe("");
   });
 });

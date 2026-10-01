@@ -41,3 +41,16 @@ describe("eski başlık alanları", () => {
     expect(info.titleFontSize).toBe(120);
   });
 });
+
+describe("başlık görünürlüğü", () => {
+  it("yeni poster başlıksız başlar", () => {
+    expect(createDefaultMatchInfo().titleHidden).toBe(true);
+    expect(normalizeMatchInfo(undefined).titleHidden).toBe(true);
+  });
+
+  it("alanı olmayan eski kayıtta başlık görünür kalır", () => {
+    const legacy = { ...createDefaultMatchInfo() } as Partial<ReturnType<typeof createDefaultMatchInfo>>;
+    delete legacy.titleHidden;
+    expect(normalizeMatchInfo(legacy).titleHidden).toBe(false);
+  });
+});
