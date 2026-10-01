@@ -137,6 +137,8 @@ export interface MatchInfo {
   titleLine1: string;
   titleLine2: string;
   titleSubtitle: string;
+  /** true: posterde başlık hiç gösterilmez */
+  titleHidden: boolean;
   titleStyleId: PosterTitleStyleId;
   titleEffectId: PosterTitleEffectId;
   titleFontSize: number;

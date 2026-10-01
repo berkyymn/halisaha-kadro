@@ -70,6 +70,7 @@ export function normalizeMatchInfo(info: Partial<MatchInfo> | undefined): MatchI
     ...defaults,
     ...rest,
     titleSubtitle: info.titleSubtitle ?? "",
+    titleHidden: info.titleHidden === true,
     titleStyleId: info.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
     titleEffectId: info.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
     titleFontSize: clampTitleFontSize(info.titleFontSize),

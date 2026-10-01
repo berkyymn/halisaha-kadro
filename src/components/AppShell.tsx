@@ -1,9 +1,8 @@
 "use client";
 
-import { reportError } from "@/lib/errorReporting";
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Download, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,10 +18,7 @@ import { MatchPoster } from "./MatchPoster";
 import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
 import { ModalShell } from "./ModalShell";
-
-/** Çıktı genişliği ekrandaki poster boyutundan bağımsız sabit tutulur. */
-const EXPORT_WIDTH = { versus: 2400, single: 1600 } as const;
-const EXPORT_JPEG_QUALITY = 0.92;
+import { PosterExportControls } from "./PosterExportControls";
 
 const PlayerEditModal = dynamic(
   () =>
@@ -87,42 +83,10 @@ export function AppShell() {
     `;
   }, [teamMode, homeTeam.atmosphereColor, awayTeam.atmosphereColor]);
 
-  const [exporting, setExporting] = useState(false);
   const [editing, setEditing] = useState<{
     team: "home" | "away";
     slotIndex: number;
   } | null>(null);
-
-  const handleExport = useCallback(async () => {
-    const el = document.getElementById("match-poster");
-    if (!el) return;
-    setExporting(true);
-    try {
-      const { toJpeg } = await import("html-to-image");
-      const targetWidth = EXPORT_WIDTH[teamMode];
-      const pixelRatio = Math.max(2, targetWidth / Math.max(1, el.offsetWidth));
-      // JPEG %92: posterde saydamlık yok; gözle kayıp yok, ~1 MB (PNG ~5 MB).
-      // WhatsApp'ta daha hızlı gider ve ikinci kez sert sıkıştırılmaz.
-      const dataUrl = await toJpeg(el, {
-        pixelRatio,
-        cacheBust: true,
-        quality: EXPORT_JPEG_QUALITY,
-        backgroundColor: "#09090b",
-      });
-      const link = document.createElement("a");
-      link.download = "halisaha-kadro.jpg";
-      link.href = dataUrl;
-      link.click();
-      trackEvent("poster_downloaded");
-    } catch (err) {
-      reportError(err, "export", { extra: { teamMode } });
-      alert(
-        "Poster indirilemedi. Sayfayı yenileyip tekrar deneyin; sorun sürerse fotoğrafları yeniden yükleyin."
-      );
-    } finally {
-      setExporting(false);
-    }
-  }, [teamMode]);
 
   const handleEditPlayer = useCallback(
     (team: "home" | "away", slotIndex: number) => setEditing({ team, slotIndex }),
@@ -193,15 +157,7 @@ export function AppShell() {
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-1.5 bg-green-700 hover:bg-green-800 disabled:opacity-50 px-3 py-1.5 rounded text-xs font-semibold"
-          >
-            <Download className="w-3.5 h-3.5" />
-            {exporting ? "..." : "Poster İndir"}
-          </button>
+          <PosterExportControls />
         </div>
       </header>
 

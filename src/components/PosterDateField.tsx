@@ -18,7 +18,10 @@ export function PosterDateField({
   onChange,
   placeholder,
   style,
+  min,
 }: {
+  /** YYYY-MM-DD — geçmiş günler seçicide pasif */
+  min?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
@@ -59,6 +62,7 @@ export function PosterDateField({
         ref={inputRef}
         type="date"
         value={iso}
+        min={min}
         onChange={(e) => {
           if (e.target.value) onChange(isoDateToDisplay(e.target.value));
         }}

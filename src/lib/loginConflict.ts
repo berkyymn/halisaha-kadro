@@ -132,6 +132,7 @@ function normalizeMatchInfo(snapshot: PosterSnapshot) {
     titleLine1: matchInfo.titleLine1 ?? "",
     titleLine2: matchInfo.titleLine2 ?? "",
     titleSubtitle: matchInfo.titleSubtitle ?? "",
+    titleHidden: matchInfo.titleHidden === true,
     venue: matchInfo.venue ?? "",
     time: matchInfo.time ?? "",
     date: matchInfo.date ?? "",

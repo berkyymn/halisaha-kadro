@@ -33,9 +33,11 @@ export const DEFAULT_TITLE_STYLE: Pick<
   | "titleLetterSpacing"
   | "titleShadow"
   | "titleSubtitle"
+  | "titleHidden"
 > = {
   titleSubtitle: "",
-  titleStyleId: "cinematic",
+  titleHidden: false,
+  titleStyleId: "champions-league",
   titleEffectId: "smoky",
   titleFontSize: 100,
   titleLetterSpacing: 50,

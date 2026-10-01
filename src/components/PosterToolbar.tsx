@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, UserRound, UsersRound } from "lucide-react";
 import { getFormationsForSize } from "@/lib/formations";
 import { useAppStore } from "@/store/useAppStore";
-import { POSTER_THEME_LIST, getPosterThemeConfig, normalizePosterTheme } from "@/lib/posterThemes";
+import { POSTER_THEME_LIST, normalizePosterTheme } from "@/lib/posterThemes";
 import type { Formation, SquadSize } from "@/types";
 import { teamAccent } from "@/lib/teamColors";
 
@@ -87,7 +87,7 @@ export function PosterToolbar() {
                   aria-label={theme.label}
                   title={theme.label}
                   onClick={() => setPosterTheme(theme.id)}
-                  className={`relative h-7 w-11 overflow-hidden rounded-md border transition-all ${
+                  className={`relative h-9 w-[60px] overflow-hidden rounded-md border transition-all ${
                     selected
                       ? "border-green-500 ring-2 ring-green-500/40"
                       : "border-zinc-700 opacity-70 hover:opacity-100 hover:border-zinc-500"
@@ -103,9 +103,6 @@ export function PosterToolbar() {
               );
             })}
           </div>
-          <span className="hidden xl:inline text-[11px] font-semibold text-zinc-300 min-w-[7.5rem]">
-            {getPosterThemeConfig(posterTheme).label}
-          </span>
         </Group>
       </div>
     </div>

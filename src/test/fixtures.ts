@@ -64,7 +64,7 @@ export function testSnapshot(overrides: Partial<PosterSnapshot> = {}): PosterSna
       singlePitchPlayers: [],
       playerCardSize: 100,
       teamLogoDisplaySize: 150,
-      posterTheme: "derby-night",
+      posterTheme: "champions-night",
     }),
     ...overrides,
   };

@@ -22,7 +22,7 @@ import {
 } from "@/lib/imageCompress";
 import { loadImage, PHOTO_CROP_VIEWPORT_REF } from "@/lib/photoCrop";
 import { removeBackground, isModelReady } from "@/lib/backgroundRemoval";
-import { resolveJerseyNumber } from "@/lib/teamJerseyNumbers";
+import { resolveJerseyNumber, sanitizeJerseyNumberInput } from "@/lib/teamJerseyNumbers";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 import type { JerseyConfig, PhotoCrop, Player } from "@/types";
 import { PlayerAvatar } from "./PlayerAvatar";
@@ -97,7 +97,9 @@ function PlayerEditModalBody({
       defaultPlayerName ||
       `Oyuncu ${slotIndex + 1}`
   );
-  const [number, setNumber] = useState(() => player?.number ?? slotIndex + 1);
+  // Metin olarak tutulur: yazarken boş bırakılabilir; yalnızca 1–99 rakam kabul edilir.
+  const [numberText, setNumberText] = useState(() => String(player?.number ?? slotIndex + 1));
+  const number = parseInt(numberText, 10);
   const [photoSource, setPhotoSource] = useState<string | null>(
     () => player?.photoSource ?? player?.photoUrl ?? null
   );
@@ -118,6 +120,9 @@ function PlayerEditModalBody({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Fotoğraf her değiştiğinde artar; bittiğinde fotoğrafı değişmiş olan arka
+  // plan kaldırma işleminin sonucu yok sayılır (yanlış fotoğrafa yazılmasın).
+  const photoVersionRef = useRef(0);
 
   const { backdropProps, panelProps, openFilePicker, clearPickingFile } =
     useModalBackdrop({
@@ -163,6 +168,7 @@ function PlayerEditModalBody({
       setPhotoError("Bu görsel açılamadı. Farklı bir JPG veya PNG deneyin.");
       return;
     }
+    photoVersionRef.current += 1;
     setPhotoSource(url);
     setCutoutUrl(null);
     setBeforeCutout(undefined);
@@ -175,6 +181,8 @@ function PlayerEditModalBody({
   const handleRemoveBg = async () => {
     const src = photoSource;
     if (!src || removingBg) return;
+    const version = photoVersionRef.current;
+    const isStale = () => version !== photoVersionRef.current;
     setRemovingBg(true);
     setBgError(null);
     setBgProgress(isModelReady() ? "Arka plan kaldırılıyor…" : "Model indiriliyor…");
@@ -195,10 +203,12 @@ function PlayerEditModalBody({
       });
       const dataUrl = await blobUrlToDataUrl(blobUrl);
       const compressed = await compressDataUrl(dataUrl, { kind: "cutout" });
+      if (isStale()) return;
       setCutoutUrl(compressed);
       setBgProgress(null);
       trackEvent("background_removed");
     } catch (err) {
+      if (isStale()) return;
       console.error("Background removal failed:", err);
       reportError(err, "background-removal", { level: "warning" });
       setBgError(
@@ -210,16 +220,19 @@ function PlayerEditModalBody({
       setBgProgress(null);
     } finally {
       setRemovingBg(false);
+      if (isStale()) setBgProgress(null);
     }
   };
 
   const undoCutout = () => {
-    if (beforeCutout === undefined) return;
+    if (beforeCutout === undefined || removingBg) return;
     setCutoutUrl(beforeCutout);
     setBeforeCutout(undefined);
   };
 
   const clearPhoto = () => {
+    if (removingBg) return;
+    photoVersionRef.current += 1;
     setPhotoSource(null);
     setCutoutUrl(null);
     setBeforeCutout(undefined);
@@ -322,15 +335,12 @@ function PlayerEditModalBody({
           <div className="space-y-2.5">
             <div className="flex gap-2">
               <input
-                type="number"
-                min={1}
-                max={99}
-                value={number}
-                onChange={(e) => {
-                  const n = parseInt(e.target.value, 10);
-                  if (Number.isFinite(n)) setNumber(n);
-                }}
-                onBlur={() => setNumber((n) => clampJerseyNumber(n))}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={numberText}
+                onChange={(e) => setNumberText(sanitizeJerseyNumberInput(e.target.value))}
+                onBlur={() => setNumberText(String(clampJerseyNumber(number)))}
                 onKeyDown={handleEnterKey}
                 className="no-spinner w-14 h-11 bg-zinc-800/80 border border-zinc-700 rounded-xl text-center text-xl font-black text-white focus:outline-none focus:border-green-500/70 focus:ring-1 focus:ring-green-500/30"
                 aria-label="Numara"
@@ -357,7 +367,9 @@ function PlayerEditModalBody({
               <button
                 type="button"
                 onClick={() => openFilePicker(fileInputRef.current)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800/80 text-xs text-zinc-300 hover:bg-zinc-700 ring-1 ring-zinc-700/80 transition-colors"
+                disabled={removingBg}
+                title={removingBg ? "Arka plan kaldırma bitince fotoğrafı değiştirebilirsin" : undefined}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-zinc-800/80 text-xs text-zinc-300 hover:bg-zinc-700 ring-1 ring-zinc-700/80 transition-colors disabled:opacity-40 disabled:hover:bg-zinc-800/80"
               >
                 <Camera className="w-3.5 h-3.5" />
                 {hasPhoto ? "Fotoğraf değiştir" : "Fotoğraf ekle"}
@@ -505,7 +517,8 @@ function PlayerEditModalBody({
                   <button
                     type="button"
                     onClick={undoCutout}
-                    className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-zinc-800/80 text-[11px] text-amber-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80"
+                    disabled={removingBg}
+                    className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-zinc-800/80 text-[11px] text-amber-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
                   >
                     <RotateCcw className="w-3 h-3" />
                     Geri al
@@ -514,7 +527,8 @@ function PlayerEditModalBody({
                 <button
                   type="button"
                   onClick={clearPhoto}
-                  className="flex items-center justify-center h-8 w-8 rounded-lg bg-zinc-800/80 text-red-400/70 hover:text-red-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80"
+                  disabled={removingBg}
+                  className="flex items-center justify-center h-8 w-8 rounded-lg bg-zinc-800/80 text-red-400/70 hover:text-red-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
                   title="Fotoğrafı kaldır"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

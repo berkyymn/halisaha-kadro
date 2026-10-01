@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackToAppLink } from "@/components/BackToAppLink";
 import { ConsentResetButton } from "@/components/ConsentResetButton";
 import { LEGAL } from "@/lib/legal";
 
@@ -24,10 +24,10 @@ export default function PrivacyPage() {
     <main className="h-full overflow-y-auto bg-zinc-950 text-white">
       <article className="mx-auto max-w-3xl space-y-8 px-5 py-10 sm:py-14">
         <header className="space-y-3">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-300 hover:text-white">
+          <BackToAppLink className="inline-flex items-center gap-2 text-sm font-bold text-zinc-300 hover:text-white">
             <img src="/icon.svg" alt="" width={28} height={28} className="rounded-lg" />
             Halı Saha Kadro
-          </Link>
+          </BackToAppLink>
           <h1 className="text-2xl font-black sm:text-3xl">
             Gizlilik Politikası ve KVKK Aydınlatma Metni
           </h1>
@@ -181,9 +181,9 @@ export default function PrivacyPage() {
             </a>{" "}
             lisansıyla kullanılmaktadır.
           </p>
-          <Link href="/" className="text-green-400 underline underline-offset-2">
+          <BackToAppLink className="text-green-400 underline underline-offset-2">
             Uygulamaya dön
-          </Link>
+          </BackToAppLink>
         </footer>
       </article>
     </main>

@@ -132,3 +132,24 @@ input[type="number"]::-webkit-outer-spin-button {
 .animate-spin-slow {
   animation: spin-slow 8s linear infinite;
 }
+
+/* Poster hazırlanırken önizleme simgesinin üzerinden geçen parlama */
+.poster-export-shine {
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: poster-export-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes poster-export-shine {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-export-shine {
+    animation: none;
+  }
+}
