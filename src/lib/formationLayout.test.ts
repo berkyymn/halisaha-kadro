@@ -7,6 +7,7 @@ import {
   getPitchMetrics,
   getSinglePitchMetrics,
   maxPlayersInRow,
+  SINGLE_PITCH_AREA,
 } from "@/lib/formationEngine";
 import { getAutoCardSize } from "@/lib/posterLayout";
 import type { PosterMetrics } from "@/types";
@@ -84,9 +85,14 @@ describe("saha dizilimi: kartlar üst üste binmez", () => {
         const slots = computeSingleFormationLayout(formation, poster, cardSize);
         const all = boxes(slots, pitch, cardSize, "");
         expectNoOverlap(all, `${formation.id} ${poster.width}px`);
+        // Saha alanı posterin %19–87'si; üstte takım şeridi %18'de biter,
+        // alt bilgi %88,5'te başlar: kart bu şeritlere binmemeli.
+        const posterPct = pitch.height / SINGLE_PITCH_AREA.height;
         for (const box of all) {
           expect(box.left).toBeGreaterThanOrEqual(-1);
           expect(box.right).toBeLessThanOrEqual(pitch.width + 1);
+          expect(box.top).toBeGreaterThanOrEqual(-1 * posterPct - 1);
+          expect(box.bottom).toBeLessThanOrEqual(pitch.height + 1.5 * posterPct + 1);
         }
       });
     }

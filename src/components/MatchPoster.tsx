@@ -21,6 +21,7 @@ import { StaticPosterBackground } from "./StaticPosterBackground";
 import { TeamLogoBadge } from "./TeamLogoBadge";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { feePerPerson, formatLira } from "@/lib/matchFee";
+import { SINGLE_PITCH_AREA } from "@/lib/formationEngine";
 import { MatchFeeModal } from "./MatchFeeModal";
 
 /**
@@ -42,57 +43,40 @@ function TeamPosterBlock({
   team,
   side,
   onLogoClick,
-  centered = false,
-  singlePosition = false,
 }: {
   team: {
     logo: Parameters<typeof TeamLogoBadge>[0]["logo"];
     shortName: string;
   };
-  side: "left" | "right" | "center";
+  side: "left" | "right";
   onLogoClick?: (team: "home" | "away") => void;
-  centered?: boolean;
-  singlePosition?: boolean;
 }) {
   const isLeft = side === "left";
-  const isCentered = side === "center";
-  const teamKey = isLeft || isCentered ? "home" : "away";
+  const teamKey = isLeft ? "home" : "away";
   const configuredLogoSize = useAppStore((s) => s.teamLogoDisplaySize);
   const posterMetrics = usePosterMetrics();
-  const teamLogoDisplaySize = scaledLogoSize(
-    configuredLogoSize,
-    posterMetrics.width,
-    singlePosition
-  );
+  const teamLogoDisplaySize = scaledLogoSize(configuredLogoSize, posterMetrics.width, false);
   // Ad boyutu poster genişliğine bağlı: ekranda ve PNG çıktısında aynı oran.
-  const nameFontPx = posterMetrics.width * (singlePosition || centered ? 0.036 : 0.018);
+  const nameFontPx = posterMetrics.width * 0.018;
   const nameFontSize = `${nameFontPx.toFixed(1)}px`;
   const nameGap = "0.375rem";
   // Ad logonun üstünde: blok, ad yüksekliği kadar yukarı kayar; logo eski
   // yerinde kalır ve ad kaleci kartının satırından uzak durur.
-  const baseTop = singlePosition ? "-18%" : centered ? "-18%" : "6%";
+  const baseTop = "6%";
 
   return (
     <div
-      className={`absolute z-20 ${
-        singlePosition
-          ? "left-[2%]"
-          : isCentered
-            ? "left-1/2 -translate-x-1/2"
-            : isLeft
-              ? "left-[-5%]"
-              : "right-[-5%]"
-      }`}
+      className={`absolute z-20 ${isLeft ? "left-[-5%]" : "right-[-5%]"}`}
       style={{
         top: `calc(${baseTop} - ${nameFontSize} - ${nameGap})`,
-        width: singlePosition ? "25%" : centered ? "34%" : "22%",
+        width: "22%",
         maxWidth: Math.round(teamLogoDisplaySize + posterMetrics.width * 0.025),
       }}
     >
       <div
         className="absolute -inset-[30%] -z-10 blur-xl pointer-events-none"
            style={{
-             background: isLeft || centered
+             background: isLeft
             ? "radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)"
             : "radial-gradient(circle, rgba(220,38,38,0.25) 0%, transparent 70%)",
         }}
@@ -101,13 +85,7 @@ function TeamPosterBlock({
         type="button"
         onClick={() => onLogoClick?.(teamKey)}
         className={`group relative flex w-full flex-col pointer-events-auto cursor-pointer rounded-lg transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/80 ${
-            singlePosition
-              ? "items-start"
-              : isCentered
-                ? "items-center"
-                : isLeft
-                  ? "items-start"
-                  : "items-end"
+          isLeft ? "items-start" : "items-end"
         }`}
         style={{ gap: nameGap }}
         title="Takım görünümünü düzenle"
@@ -117,16 +95,9 @@ function TeamPosterBlock({
           style={{
             fontSize: nameFontSize,
             // Üstte kaleci kartı yok; uzun adlar logo genişliğini aşabilir.
-            // Tek takımda üstte başlık yok: ad posterin üst şeridi boyunca uzayabilir.
-            maxWidth: singlePosition ? "340%" : "195%",
+            maxWidth: "195%",
             letterSpacing: "0.06em",
-            textAlign: singlePosition
-              ? "left"
-              : isCentered
-                ? "center"
-                : isLeft
-                  ? "left"
-                  : "right",
+            textAlign: isLeft ? "left" : "right",
             textShadow:
               "0 2px 16px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.8)",
           }}
@@ -138,6 +109,60 @@ function TeamPosterBlock({
           shortName={team.shortName}
           size={teamLogoDisplaySize}
         />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Tek takım posterinin üst şeridi: logo solda, takım adı yanında. Sabit
+ * yükseklikte (%15) olduğu için saha %19'dan başlar ve hiçbir dizilişte
+ * forvet hattı logoya binmez.
+ */
+const SINGLE_HEADER = { top: 3, height: 15 } as const;
+
+function SingleTeamHeader({
+  team,
+  onLogoClick,
+}: {
+  team: { logo: Parameters<typeof TeamLogoBadge>[0]["logo"]; shortName: string };
+  onLogoClick?: (team: "home" | "away") => void;
+}) {
+  const configuredLogoSize = useAppStore((s) => s.teamLogoDisplaySize);
+  const posterMetrics = usePosterMetrics();
+  // Görsel logolar 1,12× çizilir; şeride sığsın.
+  const maxLogo = (posterMetrics.height * SINGLE_HEADER.height) / 100 / 1.12;
+  const logoSize = Math.round(
+    Math.min(scaledLogoSize(configuredLogoSize, posterMetrics.width, true), maxLogo)
+  );
+
+  return (
+    <div
+      className="absolute z-20"
+      style={{ top: `${SINGLE_HEADER.top}%`, height: `${SINGLE_HEADER.height}%`, left: "4%", right: "4%" }}
+    >
+      <button
+        type="button"
+        onClick={() => onLogoClick?.("home")}
+        title="Takım görünümünü düzenle"
+        style={{ gap: `${Math.round(posterMetrics.width * 0.03)}px` }}
+        className="group flex h-full max-w-full items-center rounded-lg pointer-events-auto cursor-pointer transition-transform duration-200 ease-out hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/80"
+      >
+        <span className="shrink-0">
+          <TeamLogoBadge logo={team.logo} shortName={team.shortName} size={logoSize} />
+        </span>
+        <span
+          className="min-w-0 truncate text-left text-white font-black italic uppercase leading-none"
+          style={{
+            // italik harfin sağa taşan ucu kesilmesin
+            paddingRight: "0.15em",
+            fontSize: `${(posterMetrics.width * 0.06).toFixed(1)}px`,
+            letterSpacing: "0.06em",
+            textShadow: "0 2px 16px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.8)",
+          }}
+        >
+          {team.shortName}
+        </span>
       </button>
     </div>
   );
@@ -316,7 +341,11 @@ export function MatchPoster({
   const isSingle = teamMode === "single";
   const [feeOpen, setFeeOpen] = useState(false);
   const perPerson = matchInfo.feeEnabled
-    ? feePerPerson(matchInfo.feeTotal, squadSize, matchInfo.feeGoalkeepersPay)
+    ? feePerPerson(matchInfo.feeTotal, squadSize, {
+        goalkeepersPay: matchInfo.feeGoalkeepersPay,
+        // "Yalnızca takımımız" tek takım posterine özgü; iki takımda ücret maça bölünür.
+        teamOnly: isSingle && matchInfo.feeTeamOnly,
+      })
     : 0;
 
   // Poster her zaman yaklaşan maç içindir: kayıtlı tarih geçmişte kaldıysa
@@ -346,25 +375,26 @@ export function MatchPoster({
 
       <div className="relative z-10 h-full">
         {!isSingle && <PosterTitleDisplay />}
+        {isSingle && <SingleTeamHeader team={homeTeam} onLogoClick={onLogoClick} />}
 
         <div
           className="absolute"
-          style={{
-             top: isSingle ? "25%" : "14.5%",
-             left: isSingle ? "5%" : "7%",
-             width: isSingle ? "90%" : "86%",
-             height: isSingle ? "61%" : "63%",
-          }}
+          style={
+            isSingle
+              ? {
+                  top: `${SINGLE_PITCH_AREA.top}%`,
+                  left: "5%",
+                  width: "90%",
+                  height: `${SINGLE_PITCH_AREA.height}%`,
+                }
+              : { top: "14.5%", left: "7%", width: "86%", height: "63%" }
+          }
         >
-          <TeamPosterBlock
-            team={homeTeam}
-            side={teamMode === "single" ? "center" : "left"}
-            onLogoClick={onLogoClick}
-            centered={false}
-            singlePosition={isSingle}
-          />
-          {teamMode === "versus" && (
-            <TeamPosterBlock team={awayTeam} side="right" onLogoClick={onLogoClick} />
+          {!isSingle && (
+            <>
+              <TeamPosterBlock team={homeTeam} side="left" onLogoClick={onLogoClick} />
+              <TeamPosterBlock team={awayTeam} side="right" onLogoClick={onLogoClick} />
+            </>
           )}
 
           <div className="absolute inset-0 overflow-hidden">
