@@ -754,6 +754,8 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Poster İndir / paylaşım | Hazırlanırken animasyonlu "Poster hazırlanıyor…" katmanı; çıktıda "Düzenle" / "Başlık ekle" ipuçları yok |
 | Gizlilik → Uygulamaya dön | Yeni sekmede açıldıysa sekme kapanır (var olan sekmeye dönülür); aynı sekmedeyse geri gider |
 | Başlık penceresi → "Posterde göster" kapalı | Başlık posterden kalkar; yerine soluk "+ Başlık ekle" (JPEG'e girmez); yazılar ve stil saklanır |
+| Yeni poster / Posteri sıfırla | Başlık kapalı başlar, yalnızca soluk "+ Başlık ekle"; eski kayıtlarda başlık görünür kalır |
+| "+ Başlık ekle" | Pencere "Posterde göster" açık gelir; Kaydet → başlık görünür, Vazgeç → kapalı kalır |
 | Oyuncu numarası | Harf ve 3. basamak yazılamaz (yapıştırmada da); "07" → 7 |
 | Arka plan kaldırılırken | Fotoğraf değiştir / Geri al / Fotoğrafı kaldır pasif; işlem bitmeden fotoğraf değişse bile sonuç yanlış fotoğrafa yazılmaz |
 | Yedek kartları | Her iki modda 96 px (tek takımda küçülmez), iki sütun |

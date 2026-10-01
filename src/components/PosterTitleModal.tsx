@@ -26,7 +26,16 @@ const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
 const INPUT =
   "mt-1 w-full h-9 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/30";
 
-export function PosterTitleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function PosterTitleModal({
+  open,
+  onClose,
+  addingTitle = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** "+ Başlık ekle" ile açıldı: taslak başlık görünür başlar */
+  addingTitle?: boolean;
+}) {
   return (
     <ModalShell
       open={open}
@@ -35,18 +44,20 @@ export function PosterTitleModal({ open, onClose }: { open: boolean; onClose: ()
       panelClassName="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-3xl max-h-[94vh] shadow-2xl overflow-hidden flex flex-col"
     >
       {/* Her açılışta taslak güncel başlıktan yeniden başlar */}
-      {open && <PosterTitleEditor onClose={onClose} />}
+      {open && <PosterTitleEditor onClose={onClose} addingTitle={addingTitle} />}
     </ModalShell>
   );
 }
 
-function PosterTitleEditor({ onClose }: { onClose: () => void }) {
+function PosterTitleEditor({ onClose, addingTitle }: { onClose: () => void; addingTitle: boolean }) {
   const matchInfo = useAppStore((s) => s.matchInfo);
   const setMatchInfo = useAppStore((s) => s.setMatchInfo);
   const posterTheme = normalizePosterTheme(useAppStore((s) => s.posterTheme));
   const themeStyleId = defaultTitleStyleForTheme(posterTheme);
 
-  const [draft, setDraft] = useState<MatchInfo>(matchInfo);
+  const [draft, setDraft] = useState<MatchInfo>(() =>
+    addingTitle ? { ...matchInfo, titleHidden: false } : matchInfo
+  );
   const patch = (partial: Partial<MatchInfo>) => setDraft((d) => ({ ...d, ...partial }));
 
   const handleSave = () => {

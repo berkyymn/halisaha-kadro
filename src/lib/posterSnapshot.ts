@@ -52,6 +52,8 @@ export function createDefaultMatchInfo(): MatchInfo {
     titleLine1: "DERBİ",
     titleLine2: "GECESİ",
     ...DEFAULT_TITLE_STYLE,
+    // Yeni posterde başlık kapalı başlar; isteyen "+ Başlık ekle" ile açar.
+    titleHidden: true,
     venue: "HALI SAHA",
     time: DEFAULT_MATCH_TIME,
     date: todayDisplayDate(),

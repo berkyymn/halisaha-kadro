@@ -49,7 +49,7 @@ export function PosterTitleDisplay() {
         )}
       </div>
 
-      <PosterTitleModal open={open} onClose={() => setOpen(false)} />
+      <PosterTitleModal open={open} onClose={() => setOpen(false)} addingTitle={matchInfo.titleHidden} />
     </>
   );
 }
