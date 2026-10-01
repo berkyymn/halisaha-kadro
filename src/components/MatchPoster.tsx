@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { Calendar, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Calendar, MapPin, Plus, Wallet } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppStore } from "@/store/useAppStore";
 import { PitchPlayerLayer } from "./PitchPlayerLayer";
@@ -20,6 +20,8 @@ import { PosterTitleDisplay } from "./PosterTitleDisplay";
 import { StaticPosterBackground } from "./StaticPosterBackground";
 import { TeamLogoBadge } from "./TeamLogoBadge";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
+import { feePerPerson, formatLira } from "@/lib/matchFee";
+import { MatchFeeModal } from "./MatchFeeModal";
 
 /**
  * Logo boyutu ayarı bu poster genişliğindeki piksel boyutudur (≈1440px ekran).
@@ -150,8 +152,13 @@ function PosterFooter({
   onTimeChange,
   onDateChange,
   single = false,
+  feePerPerson = 0,
+  onFeeClick,
 }: {
   single?: boolean;
+  /** 0: ücret kapalı → yalnızca düzenleyicide "+ Saha ücreti" */
+  feePerPerson?: number;
+  onFeeClick: () => void;
   venue: string;
   time: string;
   date: string;
@@ -172,6 +179,7 @@ function PosterFooter({
     letterSpacing: "0.08em",
   } as const;
   const footerIconSize = `${size.icon}cqw`;
+  const showFee = feePerPerson > 0;
   const footerGap = `${size.gap}cqw`;
 
   return (
@@ -190,7 +198,11 @@ function PosterFooter({
         />
 
         <div
-          className="grid h-full grid-cols-[1.7fr_auto_0.8fr_auto_1fr] items-center overflow-hidden rounded-sm"
+          className={`grid h-full items-center overflow-hidden rounded-sm ${
+            showFee
+              ? "grid-cols-[1.5fr_auto_0.8fr_auto_1fr_auto_1.1fr]"
+              : "grid-cols-[1.7fr_auto_0.8fr_auto_1fr]"
+          }`}
           style={{
             background:
               "linear-gradient(180deg, rgba(28,28,34,0.96) 0%, rgba(10,10,14,0.98) 100%)",
@@ -213,14 +225,7 @@ function PosterFooter({
             />
           </div>
 
-          <div
-            className="h-[55%] w-px shrink-0"
-            style={{
-              background:
-                "linear-gradient(to bottom, transparent, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.3) 60%, transparent)",
-              transform: "skewX(-14deg)",
-            }}
-          />
+          <FooterDivider />
 
           <div className="flex items-center justify-center min-w-0 px-2 h-full">
             <PosterTimeField
@@ -233,14 +238,7 @@ function PosterFooter({
             />
           </div>
 
-          <div
-            className="h-[55%] w-px shrink-0"
-            style={{
-              background:
-                "linear-gradient(to bottom, transparent, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.3) 60%, transparent)",
-              transform: "skewX(-14deg)",
-            }}
-          />
+          <FooterDivider />
 
           <div className="flex items-center justify-center min-w-0 px-3 h-full" style={{ gap: footerGap }}>
             <Calendar className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
@@ -252,9 +250,53 @@ function PosterFooter({
               style={footerTextStyle}
             />
           </div>
+
+          {showFee && (
+            <>
+              <FooterDivider />
+              <div className="flex items-center justify-center min-w-0 px-2 h-full">
+                <button
+                  type="button"
+                  onClick={onFeeClick}
+                  title="Saha ücretini düzenle"
+                  className="poster-editable poster-editable-footer-accent flex h-full items-center justify-center whitespace-nowrap rounded px-1"
+                  style={{ ...footerTextStyle, gap: footerGap }}
+                >
+                  <Wallet className="text-red-500 shrink-0" strokeWidth={2.5} style={{ width: footerIconSize, height: footerIconSize }} />
+                  {single ? `${formatLira(feePerPerson)}/KİŞİ` : `KİŞİ BAŞI ${formatLira(feePerPerson)}`}
+                </button>
+              </div>
+            </>
+          )}
         </div>
+
+        {!showFee && (
+          // Ücret kapalı: düzenleyicide soluk ekleme düğmesi, JPEG'e girmez.
+          <button
+            type="button"
+            onClick={onFeeClick}
+            data-export-ignore="true"
+            className="absolute right-[3%] bottom-full mb-1.5 inline-flex items-center gap-1 rounded-full border border-dashed border-white/30 bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold text-white/80 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
+          >
+            <Plus className="w-3 h-3" />
+            Saha ücreti
+          </button>
+        )}
       </div>
     </div>
+  );
+}
+
+function FooterDivider() {
+  return (
+    <div
+      className="h-[55%] w-px shrink-0"
+      style={{
+        background:
+          "linear-gradient(to bottom, transparent, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.3) 60%, transparent)",
+        transform: "skewX(-14deg)",
+      }}
+    />
   );
 }
 
@@ -270,7 +312,12 @@ export function MatchPoster({
   const homeTeam = useAppStore((s) => s.homeTeam);
   const awayTeam = useAppStore((s) => s.awayTeam);
   const teamMode = useAppStore((s) => s.teamMode);
+  const squadSize = useAppStore((s) => s.squadSize);
   const isSingle = teamMode === "single";
+  const [feeOpen, setFeeOpen] = useState(false);
+  const perPerson = matchInfo.feeEnabled
+    ? feePerPerson(matchInfo.feeTotal, squadSize, matchInfo.feeGoalkeepersPay)
+    : 0;
 
   // Poster her zaman yaklaşan maç içindir: kayıtlı tarih geçmişte kaldıysa
   // (geçen haftanın kadrosu, buluttan gelen eski kayıt) bugüne çekilir.
@@ -327,6 +374,8 @@ export function MatchPoster({
 
         <PosterFooter
           single={isSingle}
+          feePerPerson={perPerson}
+          onFeeClick={() => setFeeOpen(true)}
           venue={matchInfo.venue}
           time={matchInfo.time}
           date={matchInfo.date}
@@ -344,6 +393,8 @@ export function MatchPoster({
           }}
         />
       </div>
+
+      <MatchFeeModal open={feeOpen} onClose={() => setFeeOpen(false)} />
     </div>
   );
 }

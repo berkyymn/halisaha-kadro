@@ -565,7 +565,7 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.
 - [x] Logo/forma penceresi yeniden tasarlandı: taslak + Kaydet/Vazgeç (sekme değiştirmek artık yüklenen logoyu silmiyor), game-icons dolgu semboller (28, CC BY), tüm seçenekler görsel önizlemeli, Türkçe ve sembolüyle eşleşen şablonlar, "Logonun renklerini kullan", Çapraz şerit forma
 - [x] Saha dizilimi ve kart: hatlar yayılır, kart postere orantılı ve büyük, takım renkli kart; tekli modda derinlik sınırı ve 4'lü hat çakışmaları düzeltildi (+103 yerleşim testi)
 - [x] Pilot bulguları (2026-10-01): paylaşım, başlık gizleme, numara, arka plan yarışı, yedek kartı, tarih/saat, gizlilik dönüşü, varsayılan tema/takımlar
-- [ ] Saha ücreti / kişi başı tutar (karar bekliyor)
+- [x] Saha ücreti / kişi başı tutar (isteğe bağlı, varsayılan kapalı; persist v38)
 - [ ] R3 Store refactor (tek oyuncu kaydı, `playerCardSize` göçle kalkacak)
 - [ ] R10 Safari/Firefox + pilot geri bildirimi (kullanıcı)
 
