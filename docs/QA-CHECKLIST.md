@@ -766,6 +766,24 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 44. Saha ücreti (2026-10-01)
+
+**Dosyalar:** `src/lib/matchFee.ts`, `src/components/MatchFeeModal.tsx`, `MatchPoster.tsx` (persist v38)
+
+| Adım | Beklenen |
+|------|----------|
+| Varsayılan | Ücret kapalı; alt şeridin sağ üstünde soluk "+ Saha ücreti" (JPEG'e girmez) |
+| Pencere: 2100 ₺, kaleciler öder (7v7) | "14 kişiye bölünür → Kişi başı ₺150" |
+| Kaleciler ödemez | 12 kişi → ₺175 |
+| Kuruşlu bölüm | Yukarı yuvarlanır (2000 / 14 → ₺143) |
+| Kaydet / Enter | Alt şeritte 4. hücre "KİŞİ BAŞI ₺…"; tek takımda "₺…/KİŞİ" |
+| Hücreye tıkla | Pencere açılır; "Posterden kaldır" ücreti kapatır |
+| Tutar boş / 0 | Kaydet pasif |
+
+- [x] Geçti (tarayıcı, iki mod)
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -795,6 +813,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |
 | 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |
 | 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |
 | 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |

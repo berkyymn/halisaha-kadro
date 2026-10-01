@@ -139,6 +139,12 @@ export interface MatchInfo {
   titleSubtitle: string;
   /** true: posterde başlık hiç gösterilmez */
   titleHidden: boolean;
+  /** Saha ücreti: açıksa alt şeritte kişi başı tutar gösterilir */
+  feeEnabled: boolean;
+  /** Toplam saha ücreti (₺, tam sayı) */
+  feeTotal: number;
+  /** false: kaleciler ücrete ortak olmaz (kişi başı daha az kişiye bölünür) */
+  feeGoalkeepersPay: boolean;
   titleStyleId: PosterTitleStyleId;
   titleEffectId: PosterTitleEffectId;
   titleFontSize: number;

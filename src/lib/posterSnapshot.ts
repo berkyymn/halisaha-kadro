@@ -1,5 +1,6 @@
 import { normalizePosterTheme } from "@/lib/posterThemes";
 import { clampTitleFontSize, DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
+import { clampFeeTotal } from "@/lib/matchFee";
 import { normalizeTeamLogo } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
 import { buildPersistedPlayerRegistry } from "@/lib/playerPool";
@@ -54,6 +55,9 @@ export function createDefaultMatchInfo(): MatchInfo {
     ...DEFAULT_TITLE_STYLE,
     // Yeni posterde başlık kapalı başlar; isteyen "+ Başlık ekle" ile açar.
     titleHidden: true,
+    feeEnabled: false,
+    feeTotal: 0,
+    feeGoalkeepersPay: true,
     venue: "HALI SAHA",
     time: DEFAULT_MATCH_TIME,
     date: todayDisplayDate(),
@@ -73,6 +77,9 @@ export function normalizeMatchInfo(info: Partial<MatchInfo> | undefined): MatchI
     ...rest,
     titleSubtitle: info.titleSubtitle ?? "",
     titleHidden: info.titleHidden === true,
+    feeEnabled: info.feeEnabled === true,
+    feeTotal: clampFeeTotal(info.feeTotal),
+    feeGoalkeepersPay: info.feeGoalkeepersPay !== false,
     titleStyleId: info.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
     titleEffectId: info.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
     titleFontSize: clampTitleFontSize(info.titleFontSize),
