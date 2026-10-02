@@ -444,6 +444,7 @@ export function BenchPanel() {
           onSave={(data) => setSlotPlayer("away", editingAwaySlot, data)}
           source="lineup"
           team="away"
+          teamName={awayTeam.shortName}
           teammateNumbers={awayTeam.playerIds
             .slice(0, squadSize)
             .filter((id, i) => id && i !== editingAwaySlot)

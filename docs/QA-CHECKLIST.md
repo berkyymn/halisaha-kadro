@@ -813,6 +813,24 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 47. Lansman öncesi denetim (2026-10-02)
+
+| Adım | Beklenen |
+|------|----------|
+| Logo boyutu 60 → 150 → 220 | Takım adı birlikte ölçeklenir (0,65× → 1× → 1,3×); tek takım şeridinde de |
+| Büyük logo (220) | Logo yukarı büyür, alt kenarı sabit: kaleci kartına binmez |
+| Senkron eşitliği | Ücret, başlık gizleme, logo tasarımı, kaptan, oyuncu konumu, kırpma, fotoğraf, yedek adı farkı "aynı kadro" sayılmaz (`snapshotEquivalence.test.ts`) |
+| İlk açılış çerez bandı | Yedek paneli genişliğinde; postere binmez |
+| Giriş penceresi | Giriş / Kayıt seçicisi diğer seçicilerle aynı (gri aktif sekme) |
+| Oyuncu penceresi (kadro) | Başlık "Oyuncu" + "TAKIM A · Kaleci/Kadro"; alt çubukta Vazgeç / Kaydet |
+| Oyuncu penceresi (yedek) | "Yedek havuzu"; solda "Yedekten sil" |
+| Fotoğraf alanı | Solda 120 px kırpma dairesi, sağda ipucu + yakınlaştırma + düğmeler; pencerede görülen kırpma kartta birebir aynı |
+| Başlık çubuğu | "↺ Sıfırla" yazılı düğme |
+
+- [x] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -842,6 +860,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-10-02 | Lansman denetimi: takım adı logo boyutuyla ölçeklenir, büyük logo kaleciye binmez, senkron eşitliği tüm içeriği karşılaştırır (veri kaybı riski), çerez bandı/giriş seçicisi | §47 + 9 eşitlik testi | Geçti |
 | 2026-10-02 | Kart gölgeleri orantılı, aşağıdaki sıra üstte (fotoğraf kararması); setPointerCapture koruması | §46 | Geçti |
 | 2026-10-01 | Tek takım: logo üst şeritte, saha %19–87, kartlar ~%15 büyük (logo–forvet çakışması giderildi); ücret 'Sadece takımımız' varsayılan (persist v39) | §45 + yerleşim testleri | Geçti |
 | 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |

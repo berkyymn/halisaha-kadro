@@ -96,6 +96,15 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
    - (Opsiyonel) Google ile girişte "hali-saha-kadro-97082.firebaseapp.com" yerine kendi domaininin görünmesi için `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` + OAuth redirect URI ayarı
    - `npm run deploy:hosting`
 
+### Canlıya çıkış — güncel sıra (2026-10-02)
+
+1. **App Check → Enforce** (Firebase Console → App Check → APIs → Cloud Firestore ve Cloud Storage; "Verified" ~%100 ise). Öncesinde localhost debug token'ı konsola ekli olmalı.
+2. **Tarayıcı turu** (kullanıcı): Safari ve Firefox'ta aç → poster indir, Paylaş → WhatsApp (panoya kopyala), fotoğraf yükle + arka plan kaldır, giriş yap / çıkış yap.
+3. **Domain al** → Firebase Console → Hosting → *Add custom domain* → DNS kayıtları (SSL otomatik).
+4. Domain eklenince: Authentication → Settings → *Authorized domains*; reCAPTCHA admin → alan adları; `firebase/storage.cors.json` origin + `gcloud storage buckets update … --cors-file`; `.env.local` → `NEXT_PUBLIC_SITE_URL=https://alanadi.com`.
+5. `npm run deploy:hosting` → yeni domainde duman testi (giriş, kayıt, indirme, paylaşım).
+6. Paylaşım: linki gruplara at; Sentry ve Analytics'i ilk 48 saat izle.
+
 ### App Check ve yedekleme (pilot öncesi)
 
 **Durum (2026-09-29):** App Check 1–3 ✅ (reCAPTCHA v3 anahtarı, konsol kaydı, canlıda deploy — token alışverişi doğrulandı); 4 yerel debug token `.env.local`'de sabit (`NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN`), konsola eklenmeli; 5 **Enforce** 1–2 gün metrik izledikten sonra. Firestore günlük yedek ✅ (7 gün saklama).

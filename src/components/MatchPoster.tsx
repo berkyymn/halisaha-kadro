@@ -22,6 +22,8 @@ import { TeamLogoBadge } from "./TeamLogoBadge";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { feePerPerson, formatLira } from "@/lib/matchFee";
 import { SINGLE_PITCH_AREA } from "@/lib/formationEngine";
+import { teamNameScale } from "@/lib/posterLayout";
+import { DEFAULT_LOGO_DISPLAY_SIZE } from "@/types";
 import { MatchFeeModal } from "./MatchFeeModal";
 
 /**
@@ -57,18 +59,26 @@ function TeamPosterBlock({
   const posterMetrics = usePosterMetrics();
   const teamLogoDisplaySize = scaledLogoSize(configuredLogoSize, posterMetrics.width, false);
   // Ad boyutu poster genişliğine bağlı: ekranda ve PNG çıktısında aynı oran.
-  const nameFontPx = posterMetrics.width * 0.018;
+  // Ad logo boyutuyla birlikte ölçeklenir (logo kaydırıcısı adı da büyütür).
+  const nameFontPx = posterMetrics.width * 0.018 * teamNameScale(configuredLogoSize);
   const nameFontSize = `${nameFontPx.toFixed(1)}px`;
   const nameGap = "0.375rem";
   // Ad logonun üstünde: blok, ad yüksekliği kadar yukarı kayar; logo eski
   // yerinde kalır ve ad kaleci kartının satırından uzak durur.
   const baseTop = "6%";
+  // Logo büyürken alt kenarı sabit kalır, yukarı (köşedeki ışık alanına) doğru
+  // büyür: büyük logo kaleci kartına binmez. Görsel logolar 1,12× çizilir.
+  const renderScale = team.logo.mode === "generated" ? 1 : 1.12;
+  const growPx =
+    (teamLogoDisplaySize -
+      scaledLogoSize(DEFAULT_LOGO_DISPLAY_SIZE, posterMetrics.width, false)) *
+    renderScale;
 
   return (
     <div
       className={`absolute z-20 ${isLeft ? "left-[-5%]" : "right-[-5%]"}`}
       style={{
-        top: `calc(${baseTop} - ${nameFontSize} - ${nameGap})`,
+        top: `calc(${baseTop} - ${nameFontSize} - ${nameGap} - ${growPx.toFixed(1)}px)`,
         width: "22%",
         maxWidth: Math.round(teamLogoDisplaySize + posterMetrics.width * 0.025),
       }}
@@ -156,7 +166,7 @@ function SingleTeamHeader({
           style={{
             // italik harfin sağa taşan ucu kesilmesin
             paddingRight: "0.15em",
-            fontSize: `${(posterMetrics.width * 0.06).toFixed(1)}px`,
+            fontSize: `${(posterMetrics.width * 0.06 * teamNameScale(configuredLogoSize)).toFixed(1)}px`,
             letterSpacing: "0.06em",
             textShadow: "0 2px 16px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.8)",
           }}

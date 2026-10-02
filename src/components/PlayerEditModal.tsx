@@ -28,6 +28,11 @@ import type { JerseyConfig, PhotoCrop, Player } from "@/types";
 import { PlayerAvatar } from "./PlayerAvatar";
 
 const DEFAULT_CROP: PhotoCrop = { scale: 1, panX: 0, panY: 0 };
+/** Kırpma dairesi (dış çap, 3px çerçeve). Kaydırma PHOTO_CROP_VIEWPORT_REF'e göre
+ *  saklanır: pencerede görülen kırpma kartta birebir aynı çıkar. */
+const CROP_VIEW_PX = 120;
+const CROP_INNER_PX = CROP_VIEW_PX - 6;
+const CROP_TO_REF = PHOTO_CROP_VIEWPORT_REF / CROP_INNER_PX;
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 
 function clampJerseyNumber(value: number): number {
@@ -58,6 +63,8 @@ interface PlayerEditModalProps {
   variant?: "light" | "dark";
   showCaptainToggle?: boolean;
   onRemoveFromBench?: () => void;
+  /** Pencere başlığındaki bağlam (takım adı); yedek havuzunda gösterilmez */
+  teamName?: string;
   defaultPlayerName?: string;
   source?: "lineup" | "bench";
   team?: "home" | "away";
@@ -90,6 +97,7 @@ function PlayerEditModalBody({
   source = "lineup",
   team,
   teammateNumbers = [],
+  teamName,
 }: Omit<PlayerEditModalProps, "open">) {
   const [name, setName] = useState(
     () =>
@@ -141,6 +149,10 @@ function PlayerEditModalBody({
       )
     : typedNumber;
   const displaySrc = cutoutUrl || photoSource;
+  const contextLabel =
+    source === "bench"
+      ? "Yedek havuzu"
+      : [teamName, slotIndex === 0 ? "Kaleci" : "Kadro"].filter(Boolean).join(" · ");
   const isCutout = Boolean(cutoutUrl);
 
   const handleFile = async (file: File) => {
@@ -305,21 +317,23 @@ function PlayerEditModalBody({
         className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-md max-h-[92vh] shadow-2xl overflow-hidden flex flex-col"
         {...panelProps}
       >
-        <div className="flex items-center justify-between px-5 py-3.5 shrink-0">
-          <h3 className="text-sm font-semibold text-white tracking-wide">
-            Oyuncu
-          </h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-white">Oyuncu</h3>
+            <p className="truncate text-[10px] text-zinc-500">{contextLabel}</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
             disabled={removingBg}
-            className="text-zinc-500 hover:text-white transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-40"
+            aria-label="Kapat"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-5 pb-5 space-y-4 overflow-y-auto min-h-0">
+        <div className="px-4 py-4 space-y-4 overflow-y-auto min-h-0">
           <div className="flex justify-center py-2 bg-zinc-950/50 rounded-xl">
             <PlayerAvatar
               player={previewPlayer}
@@ -417,13 +431,13 @@ function PlayerEditModalBody({
           </div>
 
           {hasPhoto && (
-            <div className="space-y-2.5 pt-1 border-t border-zinc-800/80">
-              <div className="relative mx-auto w-fit">
+            <div className="flex gap-4 pt-4 border-t border-zinc-800/80">
+              <div className="shrink-0">
                 <div
                   className="relative overflow-hidden rounded-full cursor-grab active:cursor-grabbing select-none ring-2 ring-zinc-600"
                   style={{
-                    width: 100,
-                    height: 100,
+                    width: CROP_VIEW_PX,
+                    height: CROP_VIEW_PX,
                     padding: 3,
                     background: `linear-gradient(135deg, ${jersey.primaryColor} 50%, ${jersey.secondaryColor} 50%)`,
                   }}
@@ -444,10 +458,10 @@ function PlayerEditModalBody({
                       ...c,
                       panX:
                         dragStart.current.panX +
-                        (e.clientX - dragStart.current.x),
+                        (e.clientX - dragStart.current.x) * CROP_TO_REF,
                       panY:
                         dragStart.current.panY +
-                        (e.clientY - dragStart.current.y),
+                        (e.clientY - dragStart.current.y) * CROP_TO_REF,
                     }));
                   }}
                   onPointerUp={() => setDragging(false)}
@@ -459,7 +473,7 @@ function PlayerEditModalBody({
                       alt=""
                       draggable={false}
                       className={getPhotoImgClassName(isCutout)}
-                      style={getPhotoDisplayStyle(crop, isCutout, PHOTO_CROP_VIEWPORT_REF)}
+                      style={getPhotoDisplayStyle(crop, isCutout, CROP_INNER_PX)}
                     />
                     {removingBg && (
                       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-1 px-2 text-center">
@@ -471,92 +485,100 @@ function PlayerEditModalBody({
                     )}
                   </div>
                 </div>
-                <p className="text-center text-[10px] text-zinc-600 mt-1.5">
-                  Sürükle · scroll ile yakınlaştır (boydan fotoğraflarda yüzü
-                  ortalamak için yakınlaştır)
-                </p>
               </div>
 
-              <div className="flex items-center gap-2 px-1">
-                <ZoomOut className="w-3 h-3 text-zinc-600 shrink-0" />
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  step={0.05}
-                  value={crop.scale}
-                  onChange={(e) =>
-                    setCrop((c) => ({
-                      ...c,
-                      scale: parseFloat(e.target.value),
-                    }))
-                  }
-                  className="flex-1 accent-green-600 h-1"
-                />
-                <ZoomIn className="w-3 h-3 text-zinc-600 shrink-0" />
-              </div>
-
-              {bgError && (
-                <p className="text-[11px] text-red-400/90 px-1 leading-snug">
-                  {bgError}
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
+                <p className="text-[11px] leading-snug text-zinc-400">
+                  Fotoğrafı sürükleyerek konumla; boydan fotoğraflarda yüzü ortalamak için yakınlaştır.
                 </p>
-              )}
+                <div className="flex items-center gap-2">
+                  <ZoomOut className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    step={0.05}
+                    value={crop.scale}
+                    onChange={(e) =>
+                      setCrop((c) => ({
+                        ...c,
+                        scale: parseFloat(e.target.value),
+                      }))
+                    }
+                    className="flex-1 accent-green-600 h-1"
+                    aria-label="Yakınlaştır"
+                  />
+                  <ZoomIn className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                </div>
 
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleRemoveBg}
-                  disabled={removingBg || !photoSource}
-                  title={!photoSource ? "Arka planı kaldırmak için orijinal fotoğrafı yeniden seçin" : undefined}
-                  className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg bg-zinc-800/80 text-[11px] text-zinc-300 hover:bg-zinc-700 disabled:opacity-40 ring-1 ring-zinc-700/80"
-                >
-                  <Scissors className="w-3 h-3" />
-                  {removingBg ? "İşleniyor…" : "Arka plan kaldır"}
-                </button>
-                {beforeCutout !== undefined && (
+                {bgError && (
+                  <p className="text-[11px] text-red-400/90 leading-snug">{bgError}</p>
+                )}
+
+                <div className="flex gap-1.5">
                   <button
                     type="button"
-                    onClick={undoCutout}
-                    disabled={removingBg}
-                    className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-zinc-800/80 text-[11px] text-amber-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
+                    onClick={handleRemoveBg}
+                    disabled={removingBg || !photoSource}
+                    title={!photoSource ? "Arka planı kaldırmak için orijinal fotoğrafı yeniden seçin" : undefined}
+                    className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg bg-zinc-800/80 text-[11px] text-zinc-300 hover:bg-zinc-700 disabled:opacity-40 ring-1 ring-zinc-700/80"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    Geri al
+                    <Scissors className="w-3 h-3" />
+                    {removingBg ? "İşleniyor…" : "Arka plan kaldır"}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={clearPhoto}
-                  disabled={removingBg}
-                  className="flex items-center justify-center h-8 w-8 rounded-lg bg-zinc-800/80 text-red-400/70 hover:text-red-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
-                  title="Fotoğrafı kaldır"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                  {beforeCutout !== undefined && (
+                    <button
+                      type="button"
+                      onClick={undoCutout}
+                      disabled={removingBg}
+                      className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-zinc-800/80 text-[11px] text-amber-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Geri al
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    disabled={removingBg}
+                    className="flex items-center justify-center h-8 w-8 rounded-lg bg-zinc-800/80 text-red-400/70 hover:text-red-400 hover:bg-zinc-700 ring-1 ring-zinc-700/80 disabled:opacity-40"
+                    title="Fotoğrafı kaldır"
+                    aria-label="Fotoğrafı kaldır"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
+        </div>
 
+        <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-t border-zinc-800">
           {onRemoveFromBench && (
-            <div className="flex flex-col gap-1.5 pt-1 border-t border-zinc-800/80">
-              <button
-                type="button"
-                onClick={() => {
-                  onRemoveFromBench();
-                }}
-                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-red-950/40 text-xs font-semibold text-red-400 hover:bg-red-950/60 ring-1 ring-red-900/50"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Yedekten sil
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onRemoveFromBench}
+              disabled={saving || removingBg}
+              className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-950/40 disabled:opacity-40"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Yedekten sil
+            </button>
           )}
-
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={removingBg}
+            className="h-9 px-4 rounded-lg bg-zinc-800 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
+          >
+            Vazgeç
+          </button>
           <button
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || removingBg}
-            className="w-full h-10 rounded-xl bg-green-600 text-sm font-semibold text-white hover:bg-green-500 active:bg-green-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="h-9 px-5 rounded-lg bg-green-600 text-xs font-semibold text-white hover:bg-green-500 disabled:opacity-50"
           >
             {saving ? "Kaydediliyor…" : "Kaydet"}
           </button>
