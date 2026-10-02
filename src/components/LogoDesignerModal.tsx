@@ -18,7 +18,7 @@ import {
   type LogoImagePreset,
 } from "@/lib/logoImagePresets";
 import type { JerseyConfig, TeamLogo } from "@/types";
-import { MAX_LOGO_DISPLAY_SIZE, MIN_LOGO_DISPLAY_SIZE } from "@/types";
+import { DEFAULT_LOGO_DISPLAY_SIZE, MAX_LOGO_DISPLAY_SIZE, MIN_LOGO_DISPLAY_SIZE } from "@/types";
 import { LogoDesignerCustomPanel } from "./LogoDesignerCustomPanel";
 import { LogoDesignerPresetPanel } from "./LogoDesignerPresetPanel";
 import { JerseyControls } from "./JerseyControls";
@@ -226,8 +226,19 @@ export function LogoDesignerModal({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-semibold text-zinc-300">Postere logo boyutu</span>
-                <span className="text-[10px] font-bold text-green-400 tabular-nums">
-                  {draft.logoDisplaySize}
+                <span className="flex items-center gap-2">
+                  {draft.logoDisplaySize !== DEFAULT_LOGO_DISPLAY_SIZE && (
+                    <button
+                      type="button"
+                      onClick={() => patchDraft({ logoDisplaySize: DEFAULT_LOGO_DISPLAY_SIZE })}
+                      className="text-[10px] font-semibold text-zinc-400 underline underline-offset-2 hover:text-white"
+                    >
+                      Varsayılan
+                    </button>
+                  )}
+                  <span className="text-[10px] font-bold text-green-400 tabular-nums">
+                    {draft.logoDisplaySize}
+                  </span>
                 </span>
               </div>
               <input

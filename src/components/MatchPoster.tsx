@@ -66,13 +66,15 @@ function TeamPosterBlock({
   // Ad logonun üstünde: blok, ad yüksekliği kadar yukarı kayar; logo eski
   // yerinde kalır ve ad kaleci kartının satırından uzak durur.
   const baseTop = "6%";
-  // Logo büyürken alt kenarı sabit kalır, yukarı (köşedeki ışık alanına) doğru
-  // büyür: büyük logo kaleci kartına binmez. Görsel logolar 1,12× çizilir.
+  // Varsayılandan büyük logo yukarı (köşedeki ışık alanına) doğru büyür, alt
+  // kenarı sabit kalır: kaleci kartına binmez. Küçük logo üstten sabit kalır;
+  // kalecinin hizasına inip üstünde boşluk bırakmaz. Görsel logolar 1,12× çizilir.
   const renderScale = team.logo.mode === "generated" ? 1 : 1.12;
-  const growPx =
-    (teamLogoDisplaySize -
-      scaledLogoSize(DEFAULT_LOGO_DISPLAY_SIZE, posterMetrics.width, false)) *
-    renderScale;
+  const growPx = Math.max(
+    0,
+    (teamLogoDisplaySize - scaledLogoSize(DEFAULT_LOGO_DISPLAY_SIZE, posterMetrics.width, false)) *
+      renderScale
+  );
 
   return (
     <div

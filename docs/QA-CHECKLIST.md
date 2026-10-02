@@ -817,15 +817,28 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 | Adım | Beklenen |
 |------|----------|
-| Logo boyutu 60 → 150 → 220 | Takım adı birlikte ölçeklenir (0,65× → 1× → 1,3×); tek takım şeridinde de |
+| Logo boyutu 60 → 120 → 220 | Takım adı birlikte ölçeklenir (0,65× → 1× → 1,3×); tek takım şeridinde de |
 | Büyük logo (220) | Logo yukarı büyür, alt kenarı sabit: kaleci kartına binmez |
 | Senkron eşitliği | Ücret, başlık gizleme, logo tasarımı, kaptan, oyuncu konumu, kırpma, fotoğraf, yedek adı farkı "aynı kadro" sayılmaz (`snapshotEquivalence.test.ts`) |
-| İlk açılış çerez bandı | Yedek paneli genişliğinde; postere binmez |
 | Giriş penceresi | Giriş / Kayıt seçicisi diğer seçicilerle aynı (gri aktif sekme) |
 | Oyuncu penceresi (kadro) | Başlık "Oyuncu" + "TAKIM A · Kaleci/Kadro"; alt çubukta Vazgeç / Kaydet |
 | Oyuncu penceresi (yedek) | "Yedek havuzu"; solda "Yedekten sil" |
 | Fotoğraf alanı | Solda 120 px kırpma dairesi, sağda ipucu + yakınlaştırma + düğmeler; pencerede görülen kırpma kartta birebir aynı |
 | Başlık çubuğu | "↺ Sıfırla" yazılı düğme |
+
+- [x] Geçti
+
+---
+
+## 48. Logo boyutu ve çerez bandı (2026-10-02)
+
+| Adım | Beklenen |
+|------|----------|
+| Yeni poster | Logo varsayılanı 120 (27" ekranda poster genişliğinin ~%13'ü) |
+| Logo penceresi, boyut ≠ 120 | "Varsayılan" düğmesi görünür; tıklayınca 120'ye döner |
+| Küçük logo (60) | Takım adının altında üstte kalır; kalecinin yanına inmez |
+| İlk açılış çerez bandı | Alt ortada, kayarak gelir; "Yeni oyuncu" düğmesini kapatmaz |
+| Reddet / Kabul et | Aynı boyutta; seçim kaydedilir, bant kapanır ve tekrar çıkmaz |
 
 - [x] Geçti
 
