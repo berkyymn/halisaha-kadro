@@ -31,7 +31,11 @@ export function usePlayerDrag({ onStart, onMove, onEnd }: UsePlayerDragOptions) 
       e.preventDefault();
 
       const target = e.currentTarget as HTMLElement;
-      target.setPointerCapture(e.pointerId);
+      try {
+        target.setPointerCapture(e.pointerId);
+      } catch {
+        // İşaretçi o an kaybolmuş olabilir (dokunma iptali): yakalama olmadan devam et.
+      }
 
       const rect = target.getBoundingClientRect();
       const offset = getOffset
