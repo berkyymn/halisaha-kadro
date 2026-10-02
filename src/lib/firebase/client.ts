@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { reportError } from "@/lib/errorReporting";
 
 const firebaseConfig = {
@@ -56,7 +56,7 @@ function startAppCheck(firebaseApp: FirebaseApp): void {
 
   try {
     initializeAppCheck(firebaseApp, {
-      provider: new ReCaptchaV3Provider(siteKey),
+      provider: new ReCaptchaEnterpriseProvider(siteKey),
       isTokenAutoRefreshEnabled: true,
     });
   } catch (error) {
