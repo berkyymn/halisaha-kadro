@@ -844,6 +844,23 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 49. Fotoğraf sürükle-bırak, profil menüsü, iletişim (2026-10-02)
+
+| Adım | Beklenen |
+|------|----------|
+| Oyuncu penceresine masaüstünden JPG/PNG sürükle | Pencere "Fotoğrafı bırak" vurgusu gösterir; bırakınca fotoğraf eklenir (Fotoğraf ekle ile aynı doğrulama) |
+| Görsel olmayan dosya / HEIC bırak | Hata mesajı; fotoğraf değişmez |
+| Arka plan kaldırılırken bırak | Yok sayılır |
+| Pencere dışına (karartılmış alana) bırak | Tarayıcı dosyayı açmaz, sayfa kaybolmaz |
+| Başlık: misafir | Yerel rozeti + Giriş yap + menü (İletişim, Gizlilik ve KVKK) |
+| Başlık: giriş yapmış | Senkron simgesi + e-posta menüsü (Hesap, İletişim, Gizlilik ve KVKK, Çıkış yap) |
+| İletişim formu | Konu + mesaj (10–2000 karakter) + isteğe bağlı e-posta; gönderince teşekkür; Firestore `feedback` koleksiyonuna yazılır |
+| `feedback` kuralları | Yalnızca oluşturma; okuma/güncelleme/silme yok; alan ve uzunluk doğrulaması |
+
+- [x] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash

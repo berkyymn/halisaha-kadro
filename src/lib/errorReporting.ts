@@ -24,6 +24,7 @@ export type ErrorArea =
   | "logo"
   | "auth"
   | "account-delete"
+  | "feedback"
   | "render";
 
 function environmentFor(hostname: string): string {

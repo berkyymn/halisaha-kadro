@@ -61,6 +61,11 @@ export default function PrivacyPage() {
               adresi, oyuncu isimleri veya fotoğraflar gönderilmez.
             </li>
             <li>
+              <strong className="text-white">İletişim mesajları:</strong> menüdeki
+              İletişim formundan gönderdiğin mesaj, konusu, yazdıysan e-posta adresin,
+              giriş yapıp yapmadığın ve tarayıcı bilgisi.
+            </li>
+            <li>
               <strong className="text-white">Kullanım istatistikleri:</strong> yalnızca
               onay verirsen, Google Analytics aracılığıyla anonimleştirilmiş kullanım
               verileri (hangi özelliklerin kullanıldığı, cihaz/tarayıcı türü).
@@ -83,6 +88,12 @@ export default function PrivacyPage() {
               Hataları tespit edip düzeltmek (KVKK m.5/2-f: meşru menfaat). Hata
               kayıtları Sentry (Functional Software, Inc.) altyapısında, Avrupa
               Birliği (Almanya) veri merkezinde, 90 gün saklanır; çerez kullanılmaz.
+            </li>
+            <li>
+              İletişim formundan gelen öneri, hata ve şikayetleri değerlendirmek ve
+              istersen sana dönüş yapmak (KVKK m.5/2-f: meşru menfaat). Mesajlar
+              Cloud Firestore&apos;da saklanır, en geç 1 yıl sonra silinir; silinmesini
+              istersen {LEGAL.contactEmail} adresine yazabilirsin.
             </li>
             <li>
               Uygulamayı geliştirmek için kullanım istatistiği toplamak (KVKK m.5/1:
@@ -113,7 +124,7 @@ export default function PrivacyPage() {
           <p>
             Firebase ve Google Analytics hizmet sağlayıcısı Google LLC&apos;nin
             sunucuları, arka plan kaldırma modelinin indirildiği IMG.LY GmbH sunucuları ve hata kayıtlarının tutulduğu Sentry (AB/Almanya) sunucuları yurt dışında bulunabilir. Giriş yaparak bulut kaydını
-            kullanman ve analitik çerezlere onay vermen halinde verilerin KVKK m.9
+            kullanman, iletişim formundan mesaj göndermen ve analitik çerezlere onay vermen halinde verilerin KVKK m.9
             kapsamında yurt dışına aktarılmasına açık rıza vermiş olursun. Giriş
             yapmadan ve analitiği reddederek uygulamayı yurt dışına veri aktarımı
             olmadan kullanabilirsin.
@@ -124,7 +135,7 @@ export default function PrivacyPage() {
           <p>
             Hesap verilerin ve posterin, hesabın silinene kadar saklanır. Hesabını
             ve tüm verilerini (bulut kadrosu, fotoğraflar, logolar) istediğin an
-            uygulamada sağ üstteki hesap simgesi → <strong className="text-white">Hesabımı sil</strong> ile
+            uygulamada sağ üstteki hesap menüsü → Hesap ayarları → <strong className="text-white">Hesabımı sil</strong> ile
             kalıcı olarak silebilirsin; silme anında gerçekleşir. Yardım için{" "}
             {LEGAL.contactEmail} adresine de yazabilirsin. Çıkış
             yaptığında bu cihazdaki kopya silinir.
