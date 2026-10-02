@@ -10,7 +10,7 @@ import {
   SINGLE_PITCH_AREA,
 } from "@/lib/formationEngine";
 import { getAutoCardSize } from "@/lib/posterLayout";
-import type { PosterMetrics } from "@/types";
+import { DEFAULT_LOGO_DISPLAY_SIZE, type PosterMetrics } from "@/types";
 
 /** 13" dizüstü, 15" ve 27" ekrandaki poster boyutları (16:10 ve 4:5) */
 const VERSUS_POSTERS: PosterMetrics[] = [
@@ -109,7 +109,7 @@ describe("saha dizilimi: kartlar üst üste binmez", () => {
 describe("takım adı ölçeği", () => {
   it("logo boyutuyla birlikte değişir; varsayılanda 1, uçlarda sınırlı", async () => {
     const { teamNameScale } = await import("@/lib/posterLayout");
-    expect(teamNameScale(150)).toBeCloseTo(1, 5);
+    expect(teamNameScale(DEFAULT_LOGO_DISPLAY_SIZE)).toBeCloseTo(1, 5);
     expect(teamNameScale(60)).toBeCloseTo(0.65, 5);
     expect(teamNameScale(220)).toBeCloseTo(1.3, 5);
     expect(teamNameScale(100)).toBeGreaterThan(0.65);

@@ -93,7 +93,7 @@ export type LogoIcon = "none" | EmblemId | LegacyLogoIcon;
 /** Eski kayıtlarda kalan kimlikler; yüklenirken normalizeLogoIcon ile eşlenir */
 export type LegacyLogoIcon = "phoenix" | "panther" | "claw" | "mountain" | "football";
 
-export const DEFAULT_LOGO_DISPLAY_SIZE = 150;
+export const DEFAULT_LOGO_DISPLAY_SIZE = 120;
 export const MIN_LOGO_DISPLAY_SIZE = 60;
 export const MAX_LOGO_DISPLAY_SIZE = 220;
 
