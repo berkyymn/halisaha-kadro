@@ -822,6 +822,10 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Senkron eşitliği | Ücret, başlık gizleme, logo tasarımı, kaptan, oyuncu konumu, kırpma, fotoğraf, yedek adı farkı "aynı kadro" sayılmaz (`snapshotEquivalence.test.ts`) |
 | İlk açılış çerez bandı | Yedek paneli genişliğinde; postere binmez |
 | Giriş penceresi | Giriş / Kayıt seçicisi diğer seçicilerle aynı (gri aktif sekme) |
+| Oyuncu penceresi (kadro) | Başlık "Oyuncu" + "TAKIM A · Kaleci/Kadro"; alt çubukta Vazgeç / Kaydet |
+| Oyuncu penceresi (yedek) | "Yedek havuzu"; solda "Yedekten sil" |
+| Fotoğraf alanı | Solda 120 px kırpma dairesi, sağda ipucu + yakınlaştırma + düğmeler; pencerede görülen kırpma kartta birebir aynı |
+| Başlık çubuğu | "↺ Sıfırla" yazılı düğme |
 
 - [x] Geçti
 

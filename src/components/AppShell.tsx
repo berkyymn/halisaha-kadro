@@ -152,10 +152,11 @@ export function AppShell() {
           <button
             type="button"
             onClick={() => setResetConfirmOpen(true)}
-            className="p-1.5 text-zinc-500 hover:text-white"
-            title="Posteri sıfırla"
+            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
+            title="Takımları, oyuncuları ve maç bilgilerini varsayılana döndür (yedekler korunur)"
           >
             <RotateCcw className="w-3.5 h-3.5" />
+            Sıfırla
           </button>
           <PosterExportControls />
         </div>
@@ -231,6 +232,7 @@ export function AppShell() {
           variant={editing.team === "home" ? "light" : "dark"}
           source="lineup"
           team={editing.team}
+          teamName={editCtx.teamConfig.shortName}
           teammateNumbers={teammateNumbers}
         />
       )}
