@@ -109,6 +109,8 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
 
 **Durum (2026-09-29):** App Check 1–3 ✅ (reCAPTCHA v3 anahtarı, konsol kaydı, canlıda deploy — token alışverişi doğrulandı); 4 yerel debug token `.env.local`'de sabit (`NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN`), konsola eklenmeli; 5 **Enforce** 1–2 gün metrik izledikten sonra. Firestore günlük yedek ✅ (7 gün saklama).
 
+**Düzeltme (2026-10-02):** Konsol uygulamayı **Fraud Defense (reCAPTCHA Enterprise)** sağlayıcısıyla kaydetmiş; kod `ReCaptchaV3Provider` kullandığı için canlıda token alışverişi 400 "App not registered" veriyordu (metriklerde doğrulanmış istek ~%0–6, yalnızca localhost debug token'ı). Kod `ReCaptchaEnterpriseProvider`'a geçti, aynı site anahtarıyla `exchangeRecaptchaEnterpriseToken` 200 döner. Deploy sonrası metrikleri 1–2 gün yeniden izle, sonra Enforce.
+
 **A. Firebase App Check** — Firestore/Storage'a yalnızca bu uygulamanın erişmesini sağlar; biri API anahtarını alıp kotayı tüketemez. Kod hazır (`src/lib/firebase/client.ts`), site anahtarı girilene kadar kapalı.
 
 1. https://www.google.com/recaptcha/admin/create → **reCAPTCHA v3** → alan adları: `hali-saha-kadro-97082.web.app`, `hali-saha-kadro-97082.firebaseapp.com`, `localhost` (domain alınınca onu da ekle) → *Site anahtarı* ve *Gizli anahtar*ı kopyala.
