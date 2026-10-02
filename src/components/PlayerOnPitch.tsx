@@ -269,13 +269,12 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         }
       }}
       className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:rounded-xl ${
-        isDragging
-          ? "z-50 cursor-grabbing"
-          : isGoalkeeper
-            ? "z-[25]"
-            : "z-20"
-      } ${isDragging ? "cursor-grabbing" : `cursor-${slotRules.cursor}`}`}
+        isDragging ? "cursor-grabbing" : `cursor-${slotRules.cursor}`
+      }`}
       style={{
+        // Aşağıdaki kart üstte: üst sıradaki kartın gölgesi alttaki fotoğrafa değil
+        // zemine düşer. Sürüklenen kart her şeyin üstünde.
+        zIndex: isDragging ? 60 : 20 + Math.round(effectiveY / 4),
         left: `${effectiveX}%`,
         top: `${effectiveY}%`,
         width: cardSize,

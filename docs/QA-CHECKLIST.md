@@ -801,6 +801,18 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 ---
 
+## 46. Kart gölgeleri (2026-10-02)
+
+| Adım | Beklenen |
+|------|----------|
+| Tek takım 2-3-1, komşu sıralarda fotoğraflı iki oyuncu | Alttaki fotoğraf üstteki kartın gölgesiyle kararmaz (iki fotoğraf aynı parlaklıkta) |
+| Kart gölgesi | Kart boyutuyla orantılı; aşağıdaki sıra üstte çizilir |
+| Sürükle / yer değiştir | Sürüklenen kart her şeyin üstünde; yer değiştirme çalışır |
+
+- [x] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash
@@ -830,6 +842,7 @@ npm run lint
 | 2026-09-14 | Misafir çoklu sekme senkronizasyonu ve giriş çatışması diyaloğu | #19 + build/lint | Build/lint geçti; manuel tarayıcı doğrulaması bekliyor |
 | 2026-09-14 | SEO / PWA / Analytics: meta tagler, OG/Twitter Card, favicon, manifest, robots, sitemap, GA4 entegrasyonu; performans: `html-to-image` ve `LogoDesignerModal` lazy load; erişilebilirlik: modal Escape, oyuncu kartı aria-label | #20 + #21 + #22 + build/lint | Build/lint geçti; canlı domain doğrulaması + GA4 ID girilmesi bekliyor |
 | 2026-09-14 | GA4 özel eventleri: tüm kullanıcı aksiyonları (kadrо, fotoğraf, arka plan, sürükle-bırak, yedek, logo, forma, tema, başlık, saha adı/tarih, auth, indirme) | #23 + build/lint | Build/lint geçti; canlıda event testi bekliyor |
+| 2026-10-02 | Kart gölgeleri orantılı, aşağıdaki sıra üstte (fotoğraf kararması); setPointerCapture koruması | §46 | Geçti |
 | 2026-10-01 | Tek takım: logo üst şeritte, saha %19–87, kartlar ~%15 büyük (logo–forvet çakışması giderildi); ücret 'Sadece takımımız' varsayılan (persist v39) | §45 + yerleşim testleri | Geçti |
 | 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |
 | 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |

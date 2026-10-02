@@ -124,7 +124,9 @@ export const PlayerAvatar = memo(function PlayerAvatar({
       style={{
         width: w,
         height: h,
-        filter: `drop-shadow(0 18px 28px ${CHROME.shadow}) drop-shadow(0 6px 12px rgba(0,0,0,0.55))`,
+        // Gölge kart boyutuyla orantılı ve kısa: yakın sıralarda alttaki kartın
+        // fotoğrafını karartmasın (eski sabit 18px/28px gölge tekli modda taşıyordu).
+        filter: `drop-shadow(0 ${(w * 0.07).toFixed(1)}px ${(w * 0.12).toFixed(1)}px rgba(0,0,0,0.55)) drop-shadow(0 ${(w * 0.02).toFixed(1)}px ${(w * 0.04).toFixed(1)}px rgba(0,0,0,0.45))`,
       }}
     >
       {/* Forma gövdesi — takım renkleri korunur, dış kenar krom vurgu */}
@@ -192,9 +194,9 @@ export const PlayerAvatar = memo(function PlayerAvatar({
           border: `${Math.max(1.5, w * 0.018)}px solid color-mix(in srgb, ${accent} 60%, ${CHROME.mid})`,
           boxShadow: `
             0 0 0 1px rgba(0,0,0,0.65),
-            0 5px 16px ${CHROME.shadow},
+            0 ${(w * 0.04).toFixed(1)}px ${(w * 0.1).toFixed(1)}px rgba(0,0,0,0.45),
             inset 0 3px 6px rgba(255,255,255,0.12),
-            inset 0 -4px 10px rgba(0,0,0,0.55)
+            inset 0 -3px 8px rgba(0,0,0,0.3)
           `,
         }}
       >
