@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   Camera,
   Crown,
+  ImagePlus,
   Loader2,
   RotateCcw,
   Scissors,
@@ -131,6 +132,9 @@ function PlayerEditModalBody({
   // Fotoğraf her değiştiğinde artar; bittiğinde fotoğrafı değişmiş olan arka
   // plan kaldırma işleminin sonucu yok sayılır (yanlış fotoğrafa yazılmasın).
   const photoVersionRef = useRef(0);
+  // Pencereye dosya sürüklenirken vurgu; iç öğelere girip çıkınca titremesin diye sayaç.
+  const [fileOver, setFileOver] = useState(false);
+  const fileDragDepth = useRef(0);
 
   const { backdropProps, panelProps, openFilePicker, clearPickingFile } =
     useModalBackdrop({
@@ -236,6 +240,42 @@ function PlayerEditModalBody({
     }
   };
 
+  const isFileDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
+
+  const fileDropProps = {
+    onDragEnter: (e: React.DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      fileDragDepth.current += 1;
+      if (!removingBg) setFileOver(true);
+    },
+    onDragOver: (e: React.DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = removingBg ? "none" : "copy";
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!isFileDrag(e)) return;
+      fileDragDepth.current = Math.max(0, fileDragDepth.current - 1);
+      if (fileDragDepth.current === 0) setFileOver(false);
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      fileDragDepth.current = 0;
+      setFileOver(false);
+      if (removingBg || saving) return;
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/") && !/\.hei[cf]$/i.test(file.name)) {
+        setPhotoError("Yalnızca fotoğraf bırakabilirsin (JPG, PNG veya WebP).");
+        return;
+      }
+      void handleFile(file);
+    },
+  };
+
   const undoCutout = () => {
     if (beforeCutout === undefined || removingBg) return;
     setCutoutUrl(beforeCutout);
@@ -312,11 +352,25 @@ function PlayerEditModalBody({
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
       {...backdropProps}
+      // Pencere dışına bırakılan dosyayı tarayıcı açmasın (sayfa kaybolur).
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => e.preventDefault()}
     >
       <div
-        className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-md max-h-[92vh] shadow-2xl overflow-hidden flex flex-col"
+        className="relative bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-md max-h-[92vh] shadow-2xl overflow-hidden flex flex-col"
         {...panelProps}
+        {...fileDropProps}
       >
+        {fileOver && (
+          <div
+            className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-green-500/80 bg-zinc-950/85 text-green-300"
+            aria-hidden
+          >
+            <ImagePlus className="h-8 w-8" />
+            <p className="text-sm font-semibold">Fotoğrafı bırak</p>
+            <p className="text-[11px] text-zinc-400">Oyuncunun fotoğrafı olarak eklenir</p>
+          </div>
+        )}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-white">Oyuncu</h3>
@@ -423,6 +477,11 @@ function PlayerEditModalBody({
                 e.target.value = "";
               }}
             />
+            {!hasPhoto && !photoError && (
+              <p className="px-1 text-[11px] text-zinc-500">
+                İpucu: fotoğrafı bu pencereye sürükleyip bırakabilirsin.
+              </p>
+            )}
             {photoError && (
               <p className="text-[11px] text-red-400/90 px-1 leading-snug" role="alert">
                 {photoError}

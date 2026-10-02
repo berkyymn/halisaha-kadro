@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ChevronDown,
   Cloud,
   CloudOff,
   HardDrive,
   Loader2,
   LogIn,
   LogOut,
+  Menu,
+  MessageSquare,
+  ShieldCheck,
   UserRound,
   X,
 } from "lucide-react";
@@ -15,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { ModalShell } from "@/components/ModalShell";
 import { AccountModal } from "@/components/AccountModal";
+import { ContactModal } from "@/components/ContactModal";
 import { describeSyncIndicator, type SyncIndicator } from "@/lib/cloud/syncIndicator";
 
 const TONE_CLASS: Record<SyncIndicator["tone"], string> = {
@@ -38,6 +43,12 @@ export function UserAuthButton() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unsyncedWarning, setUnsyncedWarning] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+
+  const openContact = () => {
+    trackEvent("contact_opened");
+    setContactOpen(true);
+  };
 
   if (loading && configured) {
     return (
@@ -81,6 +92,17 @@ export function UserAuthButton() {
           <LogIn className="w-3.5 h-3.5" />
           Giriş yap
         </button>
+        <HeaderMenu
+          label="Menü"
+          trigger={<Menu className="w-4 h-4" aria-hidden />}
+          triggerClassName="w-8 justify-center"
+        >
+          <MenuItem icon={<MessageSquare />} onSelect={openContact}>
+            İletişim
+          </MenuItem>
+          <PrivacyMenuItem />
+        </HeaderMenu>
+        <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
       </div>
     );
   }
@@ -123,27 +145,40 @@ export function UserAuthButton() {
             <Cloud className="w-3.5 h-3.5" />
           )}
         </span>
-        <button
-          type="button"
-          onClick={() => setAccountOpen(true)}
-          className="inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-          title="Hesap"
-          aria-label="Hesap"
+        <HeaderMenu
+          label="Hesap menüsü"
+          trigger={
+            <>
+              <UserRound className="w-3.5 h-3.5" aria-hidden />
+              <span className="hidden lg:inline max-w-[140px] truncate text-[11px]">{email}</span>
+              <ChevronDown className="w-3 h-3" aria-hidden />
+            </>
+          }
+          triggerClassName="gap-1.5 px-2"
+          header={
+            <div className="px-3 py-2.5 border-b border-zinc-800">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Giriş yapılan hesap</p>
+              <p className="truncate text-xs font-medium text-white">{email}</p>
+              <p className="mt-0.5 text-[10px] text-zinc-500">{syncTitle}</p>
+            </div>
+          }
         >
-          <UserRound className="w-3.5 h-3.5" aria-hidden />
-          <span className="hidden lg:inline max-w-[140px] truncate text-[11px]">{email}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirmOpen(true)}
-          className="inline-flex items-center gap-1 h-8 px-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800"
-          title="Çıkış yap"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
+          <MenuItem icon={<UserRound />} onSelect={() => setAccountOpen(true)}>
+            Hesap ayarları
+          </MenuItem>
+          <MenuItem icon={<MessageSquare />} onSelect={openContact}>
+            İletişim
+          </MenuItem>
+          <PrivacyMenuItem />
+          <div className="my-1 h-px bg-zinc-800" />
+          <MenuItem icon={<LogOut />} onSelect={() => setConfirmOpen(true)} tone="danger">
+            Çıkış yap
+          </MenuItem>
+        </HeaderMenu>
       </div>
 
       <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} user={user} />
+      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
 
       <ModalShell
         open={confirmOpen}
@@ -205,5 +240,116 @@ export function UserAuthButton() {
         </div>
       </ModalShell>
     </>
+  );
+}
+
+/** Başlıktaki açılır menü: dışarı tıklayınca ya da Esc ile kapanır. */
+function HeaderMenu({
+  label,
+  trigger,
+  triggerClassName = "",
+  header,
+  children,
+}: {
+  label: string;
+  trigger: ReactNode;
+  triggerClassName?: string;
+  header?: ReactNode;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        title={label}
+        className={`inline-flex items-center h-8 rounded-lg transition-colors ${
+          open ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+        } ${triggerClassName}`}
+      >
+        {trigger}
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-[95] mt-1.5 w-60 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1 shadow-2xl"
+          onClick={(e) => {
+            // Öğe seçilince menü kapanır.
+            if ((e.target as HTMLElement).closest("[role=menuitem]")) setOpen(false);
+          }}
+        >
+          {header && <div className="-mt-1 mb-1">{header}</div>}
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const MENU_ITEM_CLASS =
+  "flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs font-medium transition-colors [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0";
+
+function MenuItem({
+  icon,
+  onSelect,
+  tone = "default",
+  children,
+}: {
+  icon: ReactNode;
+  onSelect: () => void;
+  tone?: "default" | "danger";
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
+      className={`${MENU_ITEM_CLASS} ${
+        tone === "danger"
+          ? "text-red-400 hover:bg-red-950/40"
+          : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function PrivacyMenuItem() {
+  return (
+    <a
+      href="/gizlilik"
+      target="_blank"
+      rel="noopener"
+      role="menuitem"
+      className={`${MENU_ITEM_CLASS} text-zinc-300 hover:bg-zinc-800 hover:text-white`}
+    >
+      <ShieldCheck />
+      Gizlilik ve KVKK
+    </a>
   );
 }

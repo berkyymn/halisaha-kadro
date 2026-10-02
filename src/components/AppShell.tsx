@@ -139,14 +139,6 @@ export function AppShell() {
           Halı Saha Kadro
         </h1>
         <div className="flex items-center gap-2">
-          <a
-            href="/gizlilik"
-            target="_blank"
-            rel="noopener"
-            className="hidden md:inline text-[11px] text-zinc-500 hover:text-zinc-300"
-          >
-            Gizlilik
-          </a>
           <UserAuthButton />
           <div className="hidden sm:block h-5 w-px bg-zinc-800" />
           <button

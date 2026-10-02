@@ -5,5 +5,5 @@
 export const LEGAL = {
   controllerName: "Berkay Yaman",
   contactEmail: "berkyymn@gmail.com",
-  lastUpdated: "28.09.2026",
+  lastUpdated: "02.10.2026",
 } as const;
