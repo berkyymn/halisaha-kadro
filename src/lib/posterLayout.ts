@@ -2,7 +2,10 @@ import type { Formation } from "@/types";
 import type { PosterMetrics } from "@/types";
 import type { TeamMode } from "@/lib/posterSnapshot";
 import {
+  DEFAULT_LOGO_DISPLAY_SIZE,
+  MAX_LOGO_DISPLAY_SIZE,
   MAX_PLAYER_CARD_SIZE,
+  MIN_LOGO_DISPLAY_SIZE,
   MIN_PLAYER_CARD_SIZE,
 } from "@/types";
 import { getPitchMetrics, getSinglePitchMetrics, maxPlayersInRow } from "@/lib/formationEngine";
@@ -98,4 +101,19 @@ export function getTitleFontSize(metrics: PosterMetrics): string {
 
 export function maxColumnForFormation(formation?: Formation): number {
   return maxPlayersInRow(formation);
+}
+
+/**
+ * Takım adı logo boyutuyla birlikte büyür/küçülür: varsayılan logoda (150) 1×,
+ * en küçükte 0,65×, en büyükte 1,3×. Doğrusal ama sınırlı: küçük logoda ad
+ * okunur kalır, büyük logoda posteri ezmez.
+ */
+export function teamNameScale(logoDisplaySize: number): number {
+  const t = (logoDisplaySize - MIN_LOGO_DISPLAY_SIZE) / (MAX_LOGO_DISPLAY_SIZE - MIN_LOGO_DISPLAY_SIZE);
+  const atDefault = (DEFAULT_LOGO_DISPLAY_SIZE - MIN_LOGO_DISPLAY_SIZE) / (MAX_LOGO_DISPLAY_SIZE - MIN_LOGO_DISPLAY_SIZE);
+  const clamped = Math.min(1, Math.max(0, t));
+  // Parçalı doğrusal: [min, varsayılan] → [0,65, 1], [varsayılan, max] → [1, 1,3]
+  return clamped <= atDefault
+    ? 0.65 + (clamped / atDefault) * 0.35
+    : 1 + ((clamped - atDefault) / (1 - atDefault)) * 0.3;
 }

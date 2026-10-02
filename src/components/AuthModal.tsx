@@ -210,17 +210,17 @@ function AuthModalBody({
                 <div className="flex-1 h-px bg-zinc-800" />
               </div>
 
-              <div className="flex bg-zinc-800 rounded-lg p-0.5 text-[11px]">
+              <div className="flex gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950 p-0.5 text-[11px]" role="tablist">
                 <button
                   type="button"
                   onClick={() => {
                     setTab("login");
                     resetFeedback();
                   }}
-                  className={`flex-1 py-1.5 rounded-md font-semibold transition-colors ${
+                  className={`flex-1 h-8 rounded-md font-semibold transition-colors ${
                     tab === "login"
-                      ? "bg-green-600 text-white"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-zinc-700 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Giriş yap
@@ -231,10 +231,10 @@ function AuthModalBody({
                     setTab("register");
                     resetFeedback();
                   }}
-                  className={`flex-1 py-1.5 rounded-md font-semibold transition-colors ${
+                  className={`flex-1 h-8 rounded-md font-semibold transition-colors ${
                     tab === "register"
-                      ? "bg-green-600 text-white"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-zinc-700 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Kayıt ol

@@ -105,3 +105,15 @@ describe("saha dizilimi: kartlar üst üste binmez", () => {
     expect(ratio(VERSUS_POSTERS[2])).toBeCloseTo(ratio(VERSUS_POSTERS[1]), 2);
   });
 });
+
+describe("takım adı ölçeği", () => {
+  it("logo boyutuyla birlikte değişir; varsayılanda 1, uçlarda sınırlı", async () => {
+    const { teamNameScale } = await import("@/lib/posterLayout");
+    expect(teamNameScale(150)).toBeCloseTo(1, 5);
+    expect(teamNameScale(60)).toBeCloseTo(0.65, 5);
+    expect(teamNameScale(220)).toBeCloseTo(1.3, 5);
+    expect(teamNameScale(100)).toBeGreaterThan(0.65);
+    expect(teamNameScale(100)).toBeLessThan(1);
+    expect(teamNameScale(999)).toBeCloseTo(1.3, 5);
+  });
+});

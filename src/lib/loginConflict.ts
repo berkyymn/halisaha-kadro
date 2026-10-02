@@ -5,9 +5,11 @@ import { isCustomizedPlayer } from "@/lib/playerPool";
 export { isCustomizedPlayer };
 import { DEFAULT_AWAY_SHORT_NAME, DEFAULT_HOME_SHORT_NAME } from "@/lib/defaults";
 import { DEFAULT_POSTER_THEME } from "@/lib/posterThemes";
-import { DEFAULT_TITLE_STYLE } from "@/lib/posterTitleStyles";
 import { getDefaultFormationId } from "@/lib/formations";
-import type { JerseyConfig, Player, TeamLogo } from "@/types";
+import type { PitchPlayer, Player, TeamConfig, TeamLogo } from "@/types";
+import { normalizeTeamLogo } from "@/lib/logoUtils";
+import { normalizeJersey } from "@/lib/jerseyOptions";
+import { normalizeMatchInfo as normalizePosterMatchInfo } from "@/lib/posterSnapshot";
 import type { PosterSnapshot } from "@/lib/posterSnapshot";
 
 export type ConflictSummary = {
@@ -57,108 +59,73 @@ export function buildConflictSummary(
   };
 }
 
-function normalizePlayerIdentity(
-  snapshot: PosterSnapshot,
-  team: "home" | "away"
-) {
-  const teamConfig = team === "home" ? snapshot.homeTeam : snapshot.awayTeam;
-  return teamConfig.playerIds
-    .filter((id): id is string => Boolean(id))
-    .map((id) => {
-      const player = snapshot.savedPlayers[id];
-      return {
-        name: player?.name?.trim() || "",
-        number: player?.number ?? 0,
-        hasPhoto: player ? hasPlayerPhoto(player) : false,
-      };
-    });
+/** Medya kimliği: Storage yolu varsa o, yoksa gömülü verinin boyutu ya da adres. */
+function mediaRef(storagePath: string | undefined, url: string | undefined): string | null {
+  if (storagePath) return `path:${storagePath}`;
+  if (!url) return null;
+  return url.startsWith("data:") ? `inline:${url.length}` : `url:${url.split("?")[0]}`;
 }
 
-const DEFAULT_JERSEY = {
-  primaryColor: "#374151",
-  secondaryColor: "#111827",
-  style: "solid" as const,
-  numberColor: "#ffffff",
-};
-
-const DEFAULT_LOGO = {
-  mode: "generated" as const,
-  presetId: undefined as string | undefined,
-  initials: "?",
-  teamName: "",
-  primaryColor: "#374151",
-  secondaryColor: "#111827",
-  accentColor: "#e5e7eb",
-  icon: "none" as const,
-  showInitials: false,
-  showTeamName: false,
-  showIcon: false,
-};
-
-function normalizeTeam(snapshot: PosterSnapshot, team: "home" | "away") {
-  const config = team === "home" ? snapshot.homeTeam : snapshot.awayTeam;
-  const jersey = (config.jersey ?? {}) as Partial<JerseyConfig>;
-  const logo = (config.logo ?? {}) as Partial<TeamLogo>;
+function canonicalPlayer(player: Player | undefined) {
+  if (!player) return null;
   return {
-    name: config.name ?? "",
-    shortName: config.shortName ?? "",
-    atmosphereColor: config.atmosphereColor ?? "#000000",
-    jersey: {
-      primaryColor: jersey.primaryColor ?? DEFAULT_JERSEY.primaryColor,
-      secondaryColor: jersey.secondaryColor ?? DEFAULT_JERSEY.secondaryColor,
-      style: jersey.style ?? DEFAULT_JERSEY.style,
-      numberColor: jersey.numberColor ?? DEFAULT_JERSEY.numberColor,
-    },
-    logo: {
-      mode: logo.mode ?? DEFAULT_LOGO.mode,
-      presetId: logo.presetId ?? DEFAULT_LOGO.presetId,
-      initials: logo.initials ?? DEFAULT_LOGO.initials,
-      teamName: logo.teamName ?? DEFAULT_LOGO.teamName,
-      primaryColor: logo.primaryColor ?? DEFAULT_LOGO.primaryColor,
-      secondaryColor: logo.secondaryColor ?? DEFAULT_LOGO.secondaryColor,
-      accentColor: logo.accentColor ?? DEFAULT_LOGO.accentColor,
-      icon: logo.icon ?? DEFAULT_LOGO.icon,
-      showInitials: logo.showInitials ?? DEFAULT_LOGO.showInitials,
-      showTeamName: logo.showTeamName ?? DEFAULT_LOGO.showTeamName,
-      showIcon: logo.showIcon ?? DEFAULT_LOGO.showIcon,
-    },
-    players: normalizePlayerIdentity(snapshot, team),
+    name: player.name?.trim() ?? "",
+    number: player.number ?? 0,
+    crop: player.photoCrop ?? null,
+    cutout: mediaRef(player.cutoutStoragePath, player.cutoutUrl),
+    source: mediaRef(player.photoSourceStoragePath, player.photoSource),
   };
 }
 
-function normalizeMatchInfo(snapshot: PosterSnapshot) {
-  const matchInfo = snapshot.matchInfo ?? ({} as Partial<PosterSnapshot["matchInfo"]>);
+function canonicalTeam(team: TeamConfig) {
+  const { imageUrl, storagePath, ...logo } = normalizeTeamLogo(team.logo, team.shortName);
   return {
-    titleLine1: matchInfo.titleLine1 ?? "",
-    titleLine2: matchInfo.titleLine2 ?? "",
-    titleSubtitle: matchInfo.titleSubtitle ?? "",
-    titleHidden: matchInfo.titleHidden === true,
-    venue: matchInfo.venue ?? "",
-    time: matchInfo.time ?? "",
-    date: matchInfo.date ?? "",
-    titleStyleId: matchInfo.titleStyleId ?? DEFAULT_TITLE_STYLE.titleStyleId,
-    titleEffectId: matchInfo.titleEffectId ?? DEFAULT_TITLE_STYLE.titleEffectId,
-    titleFontSize: matchInfo.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize,
-    titleLetterSpacing: matchInfo.titleLetterSpacing ?? DEFAULT_TITLE_STYLE.titleLetterSpacing,
-    titleShadow: matchInfo.titleShadow ?? DEFAULT_TITLE_STYLE.titleShadow,
+    name: team.name ?? "",
+    shortName: team.shortName ?? "",
+    atmosphereColor: team.atmosphereColor ?? "",
+    captainId: team.captainId ?? null,
+    playerIds: team.playerIds,
+    jersey: normalizeJersey(team.jersey),
+    logo: { ...logo, image: mediaRef(storagePath, imageUrl) },
   };
 }
 
-function normalizeSnapshot(snapshot: PosterSnapshot) {
-  const defaultHomeFormation = getDefaultFormationId(snapshot.squadSize);
+const roundPos = (positions: PitchPlayer[] | undefined) =>
+  (positions ?? []).map((p) => ({
+    ...p,
+    x: p.x === undefined ? undefined : Math.round(p.x * 10) / 10,
+    y: p.y === undefined ? undefined : Math.round(p.y * 10) / 10,
+  }));
+
+/**
+ * Posterin içeriği (zaman damgası ve kullanılmayan alanlar hariç). İki kopya
+ * "eşit" sayılırsa senkron buluttakini alır; bu yüzden içerikteki her alan
+ * burada olmalı — eksik alan, o alandaki yerel değişikliğin kaybolması demek.
+ */
+function canonicalContent(snapshot: PosterSnapshot) {
+  const referenced = [
+    ...snapshot.homeTeam.playerIds,
+    ...snapshot.awayTeam.playerIds,
+    ...snapshot.benchPlayerIds,
+  ].filter((id): id is string => Boolean(id));
+  const players = [...new Set(referenced)]
+    .sort()
+    .map((id) => [id, canonicalPlayer(snapshot.savedPlayers[id])]);
   return {
     teamMode: snapshot.teamMode,
     squadSize: snapshot.squadSize,
-    playerCardSize: snapshot.playerCardSize,
     teamLogoDisplaySize: snapshot.teamLogoDisplaySize,
     posterTheme: snapshot.posterTheme,
     homeFormationId: snapshot.homeFormationId,
     awayFormationId: snapshot.awayFormationId,
-    defaultHomeFormation,
-    home: normalizeTeam(snapshot, "home"),
-    away: normalizeTeam(snapshot, "away"),
-    matchInfo: normalizeMatchInfo(snapshot),
-    benchCount: snapshot.benchPlayerIds.length,
+    matchInfo: normalizePosterMatchInfo(snapshot.matchInfo),
+    homeTeam: canonicalTeam(snapshot.homeTeam),
+    awayTeam: canonicalTeam(snapshot.awayTeam),
+    benchPlayerIds: snapshot.benchPlayerIds,
+    formatOverflow: snapshot.formatOverflow ?? null,
+    pitchPlayers: roundPos(snapshot.pitchPlayers),
+    singlePitchPlayers: roundPos(snapshot.singlePitchPlayers),
+    players,
   };
 }
 
@@ -166,10 +133,7 @@ export function areSnapshotsEquivalent(
   a: PosterSnapshot,
   b: PosterSnapshot
 ): boolean {
-  return (
-    JSON.stringify(normalizeSnapshot(a)) ===
-    JSON.stringify(normalizeSnapshot(b))
-  );
+  return JSON.stringify(canonicalContent(a)) === JSON.stringify(canonicalContent(b));
 }
 
 export function hasMeaningfulLocalChanges(snapshot: PosterSnapshot): boolean {
