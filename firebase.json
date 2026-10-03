@@ -1,12 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/firebase/firebase-tools/master/schema.json",
   "firestore": {
+    "predeploy": ["node scripts/check-deploy.mjs"],
     "rules": "firebase/firestore.rules"
   },
   "storage": {
+    "predeploy": ["node scripts/check-deploy.mjs"],
     "rules": "firebase/storage.rules"
   },
   "hosting": {
+    "predeploy": ["node scripts/check-deploy.mjs"],
     "public": "dist",
     "ignore": [
       "firebase.json",
