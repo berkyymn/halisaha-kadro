@@ -105,6 +105,8 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
 5. `npm run deploy:hosting` → yeni domainde duman testi (giriş, kayıt, indirme, paylaşım).
 6. Paylaşım: linki gruplara at; Sentry ve Analytics'i ilk 48 saat izle.
 
+**Durum (2026-10-02):** `halisahakadro.com` alındı (isimtescil; ayrıca .com.tr ve .xyz). DNS: A @ → 199.36.158.100, TXT @ → `hosting-site=hali-saha-kadro-97082`, CNAME www → `hali-saha-kadro-97082.web.app` (isimtescil → IP Bazlı DNS Yönetimi; "Host Name (DNS) Yönetimi" NS sayfasıdır, dokunma). Storage CORS'a iki domain eklendi ve bucket'a uygulandı; `NEXT_PUBLIC_SITE_URL` ve `FALLBACK_SITE_URL` yeni domain. 2026-10-03: `https://halisahakadro.com` Connected (Google Trust Services sertifikası), `www` → 301 ana adrese.
+
 ### App Check ve yedekleme (pilot öncesi)
 
 **Durum (2026-09-29):** App Check 1–3 ✅ (reCAPTCHA v3 anahtarı, konsol kaydı, canlıda deploy — token alışverişi doğrulandı); 4 yerel debug token `.env.local`'de sabit (`NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN`), konsola eklenmeli; 5 **Enforce** 1–2 gün metrik izledikten sonra. Firestore günlük yedek ✅ (7 gün saklama).

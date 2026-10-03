@@ -1,4 +1,4 @@
-const FALLBACK_SITE_URL = "https://hali-saha-kadro-97082.web.app";
+const FALLBACK_SITE_URL = "https://halisahakadro.com";
 
 function normalizeSiteUrl(raw: string): string {
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
