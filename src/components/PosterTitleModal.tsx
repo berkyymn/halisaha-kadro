@@ -100,8 +100,9 @@ function PosterTitleEditor({ onClose, addingTitle }: { onClose: () => void; addi
         </button>
       </div>
 
-      <div className="shrink-0 px-4 pt-3 pb-3 border-b border-zinc-800">
-        <div className={draft.titleHidden ? "opacity-40 grayscale transition" : "transition"}>
+      <div className="shrink-0 px-4 pt-3 pb-3 border-b border-zinc-800 phone-land:py-2">
+        {/* Yatay telefonda önizleme küçülür: düzenleme alanlarına yer kalsın. */}
+        <div className={`${draft.titleHidden ? "opacity-40 grayscale transition" : "transition"} phone-land:mx-auto phone-land:max-w-[min(20rem,45vw)]`}>
           <TitlePreview info={draft} backgroundSrc={getPosterThemeBackgroundSrc(posterTheme)} />
         </div>
       </div>

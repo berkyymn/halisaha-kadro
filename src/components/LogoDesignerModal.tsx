@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Palette, RotateCcw, Shirt, Sparkles, X } from "lucide-react";
 import { reportError } from "@/lib/errorReporting";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
@@ -79,6 +80,8 @@ export function LogoDesignerModal({
     initial.logo.mode === "upload" ? initial.logo : null
   );
   const [applyPresetJersey, setApplyPresetJersey] = useState(true);
+  // Telefon (dikey ya da yatay): önizleme küçük şerit, takım adı alanı hemen görünür.
+  const compactPreview = useMediaQuery("(max-width: 767px), (orientation: landscape) and (max-height: 520px)");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -190,20 +193,27 @@ export function LogoDesignerModal({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[272px_1fr]">
-          <aside className="border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950/60 p-4 flex flex-col gap-4 min-h-0 overflow-y-auto">
-            <div className="rounded-xl border border-zinc-800 bg-[radial-gradient(ellipse_at_top,rgba(63,63,70,0.55),rgba(9,9,11,0.9)_70%)] p-4 flex flex-col items-center gap-3">
-              <div className="h-[132px] flex items-center justify-center">
-                <TeamLogoBadge logo={draft.logo} shortName={draft.shortName} size={118} />
+        <div className="flex-1 min-h-0 grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-1 md:grid-cols-[272px_1fr]">
+          <aside className="border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950/60 p-4 flex flex-col gap-4 min-h-0 md:overflow-y-auto max-md:gap-3 max-md:p-3 phone-land:gap-2.5 phone-land:p-3">
+            {/* Dar ekranda (telefon) önizleme küçük, yatay şerit: takım adı alanı ekranda kalsın. */}
+            <div
+              className={`rounded-xl border border-zinc-800 bg-[radial-gradient(ellipse_at_top,rgba(63,63,70,0.55),rgba(9,9,11,0.9)_70%)] flex items-center ${
+                compactPreview ? "flex-row justify-center gap-5 p-2" : "flex-col gap-3 p-4"
+              }`}
+            >
+              <div className={`${compactPreview ? "h-[68px]" : "h-[132px]"} flex items-center justify-center`}>
+                <TeamLogoBadge logo={draft.logo} shortName={draft.shortName} size={compactPreview ? 64 : 118} />
               </div>
-              <p
-                className="text-center text-lg leading-none text-white tracking-wide uppercase truncate max-w-full"
-                style={{ fontFamily: "var(--font-display)" }}
-                lang="tr"
-              >
-                {draft.shortName || (teamSide === "home" ? "TAKIM A" : "TAKIM B")}
-              </p>
-              <JerseyIcon jersey={draft.jersey} number={10} size={64} numberAlign="right" />
+              {!compactPreview && (
+                <p
+                  className="text-center text-lg leading-none text-white tracking-wide uppercase truncate max-w-full"
+                  style={{ fontFamily: "var(--font-display)" }}
+                  lang="tr"
+                >
+                  {draft.shortName || (teamSide === "home" ? "TAKIM A" : "TAKIM B")}
+                </p>
+              )}
+              <JerseyIcon jersey={draft.jersey} number={10} size={compactPreview ? 44 : 64} numberAlign="right" />
             </div>
 
             <label className="block">

@@ -8,9 +8,14 @@ interface UsePlayerDragOptions {
   onStart?: () => void;
   onMove: (clientX: number, clientY: number) => void;
   onEnd: (clientX: number, clientY: number, moved: boolean) => void;
+  /**
+   * Tarayıcı hareketi devraldı (ör. telefonda liste kaydırma) ya da dokunma
+   * kesildi: bırakma veya tıklama sayılmaz, yalnızca durum sıfırlanır.
+   */
+  onCancel: () => void;
 }
 
-export function usePlayerDrag({ onStart, onMove, onEnd }: UsePlayerDragOptions) {
+export function usePlayerDrag({ onStart, onMove, onEnd, onCancel }: UsePlayerDragOptions) {
   const [dragging, setDragging] = useState(false);
   const [dragClientPos, setDragClientPos] = useState({ x: 0, y: 0 });
   const [dragClientOffset, setDragClientOffset] = useState({ x: 0, y: 0 });
@@ -94,10 +99,13 @@ export function usePlayerDrag({ onStart, onMove, onEnd }: UsePlayerDragOptions) 
     (e: React.PointerEvent) => finish(e),
     [finish]
   );
-  const handlePointerCancel = useCallback(
-    (e: React.PointerEvent) => finish(e),
-    [finish]
-  );
+  const handlePointerCancel = useCallback(() => {
+    if (!pointerDown.current) return;
+    pointerDown.current = false;
+    moved.current = false;
+    setDragging(false);
+    onCancel();
+  }, [onCancel]);
 
   return {
     dragging,

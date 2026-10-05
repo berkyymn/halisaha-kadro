@@ -34,9 +34,9 @@ export function ConsentBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Çerez tercihi"
-      className="consent-banner fixed bottom-5 left-1/2 z-[90] flex w-[min(44rem,calc(100%-2rem))] -translate-x-1/2 items-center gap-4 rounded-2xl border border-green-500/40 bg-zinc-900/95 py-3.5 pr-3.5 pl-4 text-white shadow-[0_18px_50px_rgba(0,0,0,0.6)] ring-1 ring-black/40 backdrop-blur"
+      className="consent-banner fixed bottom-5 left-1/2 z-[90] flex w-[min(44rem,calc(100%-2rem))] -translate-x-1/2 flex-col gap-3 rounded-2xl sm:flex-row sm:items-center sm:gap-4 border border-green-500/40 bg-zinc-900/95 py-3.5 pr-3.5 pl-4 text-white shadow-[0_18px_50px_rgba(0,0,0,0.6)] ring-1 ring-black/40 backdrop-blur"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/15 text-green-400">
+      <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/15 text-green-400 sm:flex">
         <Cookie className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -49,18 +49,19 @@ export function ConsentBanner() {
           </a>
         </p>
       </div>
-      <div className="flex shrink-0 gap-2">
+      {/* Telefonda metnin altında, eşit genişlikte iki düğme. */}
+      <div className="flex gap-2 sm:shrink-0">
         <button
           type="button"
           onClick={() => choose("denied")}
-          className="h-9 rounded-lg bg-zinc-800 px-4 text-xs font-semibold text-zinc-200 hover:bg-zinc-700"
+          className="h-10 flex-1 rounded-lg bg-zinc-800 px-4 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 sm:h-9 sm:flex-none"
         >
           Reddet
         </button>
         <button
           type="button"
           onClick={() => choose("granted")}
-          className="h-9 rounded-lg bg-green-600 px-4 text-xs font-semibold text-white hover:bg-green-500"
+          className="h-10 flex-1 rounded-lg bg-green-600 px-4 text-xs font-semibold text-white hover:bg-green-500 sm:h-9 sm:flex-none"
         >
           Kabul et
         </button>

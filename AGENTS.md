@@ -61,7 +61,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - `substituteTarget` (yedekle değiştir modu) sayfa yenilenince sıfırlanır.
 - İlk arka plan kaldırma ~40MB model indirir; internet gerekir.
 - Sürükleme durumu `useDragStore`'da; `useAppStore`'a runtime/sık değişen state ekleme (her set() tüm posteri diske yazar).
-- Mobil cihazlar `MobileGate` ile engellenir; web sürümü yalnızca masaüstü.
+- Telefonlar `LayoutModeGate` ile mobil düzeni (`MobileStage`) görür; masaüstü/tablet mevcut düzen. Masaüstünde denemek için `?mobil=1`.
 
 ## Özellik → dosya haritası
 

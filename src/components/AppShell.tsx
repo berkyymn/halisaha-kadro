@@ -19,6 +19,8 @@ import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
 import { ModalShell } from "./ModalShell";
 import { PosterExportControls } from "./PosterExportControls";
+import { useLayoutMode } from "./LayoutModeGate";
+import { MobileStage } from "./mobile/MobileStage";
 
 const PlayerEditModal = dynamic(
   () =>
@@ -29,6 +31,7 @@ const PlayerEditModal = dynamic(
 export function AppShell() {
   useGuestTabSync();
   const { user } = useAuth();
+  const isMobile = useLayoutMode() === "mobile";
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const resetGuestSession = useAppStore((s) => s.resetGuestSession);
@@ -133,41 +136,53 @@ export function AppShell() {
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-      <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
-        <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
-          <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
-          Halı Saha Kadro
-        </h1>
-        <div className="flex items-center gap-2">
-          <UserAuthButton />
-          <div className="hidden sm:block h-5 w-px bg-zinc-800" />
-          <button
-            type="button"
-            onClick={() => setResetConfirmOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
-            title="Takımları, oyuncuları ve maç bilgilerini varsayılana döndür (yedekler korunur)"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Sıfırla
-          </button>
-          <PosterExportControls />
-        </div>
-      </header>
+      {isMobile ? (
+        <MobileStage
+          background={mainBg}
+          onReset={() => setResetConfirmOpen(true)}
+          poster={
+            <MatchPoster onEditPlayer={handleEditPlayer} onLogoClick={handleLogoClick} />
+          }
+        />
+      ) : (
+        <>
+        <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
+          <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
+            <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
+            Halı Saha Kadro
+          </h1>
+          <div className="flex items-center gap-2">
+            <UserAuthButton />
+            <div className="hidden sm:block h-5 w-px bg-zinc-800" />
+            <button
+              type="button"
+              onClick={() => setResetConfirmOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
+              title="Takımları, oyuncuları ve maç bilgilerini varsayılana döndür (yedekler korunur)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Sıfırla
+            </button>
+            <PosterExportControls />
+          </div>
+        </header>
 
-      <PosterToolbar />
+        <PosterToolbar />
 
-      <main
-        className="flex-1 flex min-h-0 min-w-0"
-        style={{ background: mainBg }}
-      >
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size]">
-          <MatchPoster
-            onEditPlayer={handleEditPlayer}
-            onLogoClick={handleLogoClick}
-          />
-        </div>
-        <BenchPanel />
-      </main>
+        <main
+          className="flex-1 flex min-h-0 min-w-0"
+          style={{ background: mainBg }}
+        >
+          <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size]">
+            <MatchPoster
+              onEditPlayer={handleEditPlayer}
+              onLogoClick={handleLogoClick}
+            />
+          </div>
+          <BenchPanel />
+        </main>
+        </>
+      )}
 
       <ModalShell
         open={resetConfirmOpen}

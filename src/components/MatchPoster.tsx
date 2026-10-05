@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Calendar, MapPin, Plus, Wallet } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppStore } from "@/store/useAppStore";
@@ -20,6 +20,7 @@ import { PosterTitleDisplay } from "./PosterTitleDisplay";
 import { StaticPosterBackground } from "./StaticPosterBackground";
 import { TeamLogoBadge } from "./TeamLogoBadge";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
+import { POSTER_LOGICAL_SIZE, setPosterScale } from "@/lib/posterScale";
 import { feePerPerson, formatLira } from "@/lib/matchFee";
 import { SINGLE_PITCH_AREA } from "@/lib/formationEngine";
 import { teamNameScale } from "@/lib/posterLayout";
@@ -236,8 +237,10 @@ function PosterFooter({
 
         <div
           className={`grid h-full items-center overflow-hidden rounded-sm ${
+            // Ücret varken saat/tarih/ücret içerik kadar yer alır, kalan alan saha
+            // adının: sabit oranlarda dar tek takım posterinde tarih sıkışıyordu.
             showFee
-              ? "grid-cols-[1.5fr_auto_0.8fr_auto_1fr_auto_1.1fr]"
+              ? "grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto_auto]"
               : "grid-cols-[1.7fr_auto_0.8fr_auto_1fr]"
           }`}
           style={{
@@ -352,6 +355,30 @@ export function MatchPoster({
   const squadSize = useAppStore((s) => s.squadSize);
   const isSingle = teamMode === "single";
   const [feeOpen, setFeeOpen] = useState(false);
+  const logical = POSTER_LOGICAL_SIZE[isSingle ? "single" : "versus"];
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+
+  // Çerçeve genişliği değişince ölçek güncellenir (clientWidth: dönüşümden etkilenmez).
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const update = () => {
+      const width = frame.clientWidth;
+      if (width <= 0) return;
+      const next = width / logical.width;
+      setPosterScale(next);
+      setScale(next);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    window.addEventListener("resize", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [logical.width]);
   const perPerson = matchInfo.feeEnabled
     ? feePerPerson(matchInfo.feeTotal, squadSize, {
         goalkeepersPay: matchInfo.feeGoalkeepersPay,
@@ -369,19 +396,35 @@ export function MatchPoster({
   }, [matchInfo.date, matchInfo.time, setMatchInfo]);
 
   return (
+    // Çerçeve: ekrandaki yer (oranı bozmadan sığar; üst div container-type: size).
     <div
-      id="match-poster"
-      // PNG çıktısında klonlanan düğüm de Türkçe büyük harf kuralını (i → İ) kullansın.
-      lang="tr"
+      ref={frameRef}
+      data-poster-frame
       className="relative shrink-0 overflow-hidden"
       style={{
-        // Alana oranı bozmadan sığ: genişlik hem kapsayıcı genişliğiyle hem de
-        // yükseklik × oran ile sınırlı (üst div container-type: size).
         aspectRatio: isSingle ? "4 / 5" : "16 / 10",
         width: isSingle
           ? "min(100cqw, calc(100cqh * 0.8))"
           : "min(100cqw, calc(100cqh * 1.6))",
       }}
+    >
+    {/* Ölçekleyici: sabit boyutlu posteri çerçeveye sığdırır. Dönüşüm burada,
+        posterin kendisinde değil: indirilen poster ölçeksiz çizilsin. */}
+    <div
+      style={{
+        width: logical.width,
+        height: logical.height,
+        transform: `scale(${scale})`,
+        transformOrigin: "0 0",
+        visibility: scale > 0 ? "visible" : "hidden",
+      }}
+    >
+    <div
+      id="match-poster"
+      // PNG çıktısında klonlanan düğüm de Türkçe büyük harf kuralını (i → İ) kullansın.
+      lang="tr"
+      className="relative overflow-hidden"
+      style={{ width: logical.width, height: logical.height }}
     >
       <StaticPosterBackground />
 
@@ -437,6 +480,8 @@ export function MatchPoster({
       </div>
 
       <MatchFeeModal open={feeOpen} onClose={() => setFeeOpen(false)} />
+    </div>
+    </div>
     </div>
   );
 }

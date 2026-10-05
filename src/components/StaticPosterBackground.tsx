@@ -13,15 +13,19 @@ const SINGLE_THEME_BACKGROUNDS: Partial<Record<string, string>> = {
   "summer-cup": "/posters/vertical/summer_cup_vertical.jpeg",
 };
 
-export function StaticPosterBackground() {
+/** Posterin o anki tema görseli (tek takımda dikey sürüm). Mobil sahne arka planı da kullanır. */
+export function usePosterBackground() {
   const posterTheme = useAppStore((s) => s.posterTheme);
   const teamMode = useAppStore((s) => s.teamMode);
   const theme = normalizePosterTheme(posterTheme);
   const singleThemeSrc = SINGLE_THEME_BACKGROUNDS[theme];
   const hasSingleThemeAsset = teamMode === "single" && Boolean(singleThemeSrc);
-  const src = hasSingleThemeAsset
-    ? singleThemeSrc!
-    : getPosterThemeBackgroundSrc(theme);
+  const src = hasSingleThemeAsset ? singleThemeSrc! : getPosterThemeBackgroundSrc(theme);
+  return { src, theme, teamMode, hasSingleThemeAsset };
+}
+
+export function StaticPosterBackground() {
+  const { src, theme, teamMode, hasSingleThemeAsset } = usePosterBackground();
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">

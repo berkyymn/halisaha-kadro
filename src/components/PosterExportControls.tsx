@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Check, Copy, Download, ExternalLink, Share2, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { SignInNudge, canShowSignInNudge, markSignInNudgeShown } from "@/components/SignInNudge";
+import { noteFullscreenInterruption } from "@/lib/fullscreen";
+import { POSTER_EXPORTED_EVENT } from "@/components/mobile/InstallSuggestion";
 import { trackEvent } from "@/lib/analytics";
 import { reportError } from "@/lib/errorReporting";
 import {
@@ -18,6 +22,17 @@ import {
 type Notice = { text: string; detail?: string; action?: { label: string; url: string }; error?: boolean };
 type Channel = "whatsapp" | "instagram" | "x" | "copy" | "system";
 
+/** Geliştirmede teşhis için: html-to-image görsel yüklenemeyince Event fırlatır. */
+function describeExportError(err: unknown): string {
+  if (err instanceof Event) {
+    const target = err.target as { src?: string; tagName?: string } | null;
+    const src = (target?.src ?? "").replace(/^https?:\/\/[^/]+/, "");
+    return `${err.type} ${target?.tagName ?? ""} ${src.startsWith("data:") ? src.slice(0, 30) : src || "(boş)"}`;
+  }
+  if (err instanceof Error) return `${err.name}: ${err.message}`.slice(0, 160);
+  return String(err).slice(0, 160);
+}
+
 const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 const PASTE = IS_MAC ? "⌘V" : "Ctrl+V";
 
@@ -26,13 +41,16 @@ const PASTE = IS_MAC ? "⌘V" : "Ctrl+V";
  * önbellekte kalır. Paylaş menüsü açılınca çizim arka planda başlar: tarayıcılar
  * paylaşımı yalnızca tıklamadan kısa süre sonrasına kadar açtığı için.
  */
-export function PosterExportControls() {
+/** `compact`: mobilde yalnızca simgeler, alt alta (poster kenarında yer kaplamasın). */
+export function PosterExportControls({ compact = false }: { compact?: boolean } = {}) {
   const teamMode = useAppStore((s) => s.teamMode);
   const editVersion = useAppStore((s) => s.editVersion);
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [nudgeOpen, setNudgeOpen] = useState(false);
+  const { configured, user } = useAuth();
   const cacheRef = useRef<{ key: string; promise: Promise<Blob> } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const cacheKey = `${editVersion}:${teamMode}`;
@@ -83,24 +101,48 @@ export function PosterExportControls() {
   const run = async (task: () => Promise<void>, channel: Channel | "download") => {
     setMenuOpen(false);
     setBusy(true);
+    // Geliştirme teşhisi: html-to-image indiremediği kaynağı console.warn ile bildirir.
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn = (...args: unknown[]) => {
+        warnings.push(args.map(String).join(" ").slice(0, 160));
+        originalWarn(...args);
+      };
+    }
     try {
       await task();
       trackEvent(channel === "download" ? "poster_downloaded" : "poster_shared", { channel });
+      // Değer anı: poster hazır. Misafire hesabın ne kazandıracağını hatırlat.
+      const showNudge = configured && !user && canShowSignInNudge();
+      if (showNudge) {
+        markSignInNudgeShown();
+        setNudgeOpen(true);
+        trackEvent("signin_nudge_shown", { channel });
+      }
+      window.dispatchEvent(new CustomEvent(POSTER_EXPORTED_EVENT, { detail: { signInNudgeShown: showNudge } }));
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return; // paylaşım penceresi kapatıldı
       reportError(err, "export", { extra: { teamMode, channel } });
+      console.error("Poster export failed:", err);
       setNotice({
         error: true,
         text: "Poster hazırlanamadı",
-        detail: "Sayfayı yenileyip tekrar dene; sorun sürerse fotoğrafları yeniden yükle.",
+        detail:
+          "Sayfayı yenileyip tekrar dene; sorun sürerse fotoğrafları yeniden yükle." +
+          (process.env.NODE_ENV !== "production"
+            ? ` [geliştirme: ${channel} · ${describeExportError(err)}${warnings.length ? ` · uyarı: ${warnings.join(" | ")}` : ""}]`
+            : ""),
       });
     } finally {
+      console.warn = originalWarn;
       setBusy(false);
     }
   };
 
   const download = () =>
     run(async () => {
+      noteFullscreenInterruption();
       downloadBlob(await getJpeg());
     }, "download");
 
@@ -112,7 +154,8 @@ export function PosterExportControls() {
       } catch (err) {
         // Tarayıcı panoya yazmaya izin vermedi: poster yine de hazır, indir.
         if (!(err instanceof DOMException && err.name === "NotAllowedError")) throw err;
-        downloadBlob(await getJpeg());
+        noteFullscreenInterruption();
+      downloadBlob(await getJpeg());
         setNotice({
           ...notice,
           text: "Panoya kopyalanamadı, poster indirildi",
@@ -143,6 +186,7 @@ export function PosterExportControls() {
 
   const shareToInstagram = () =>
     run(async () => {
+      noteFullscreenInterruption();
       downloadBlob(await getJpeg());
       setNotice({
         text: "Poster indirildi",
@@ -154,20 +198,54 @@ export function PosterExportControls() {
   const shareWithSystem = () =>
     run(async () => {
       const file = new File([await getJpeg()], POSTER_FILENAME, { type: "image/jpeg" });
-      await navigator.share({ files: [file], title: "Halı Saha Kadro" });
+      try {
+        noteFullscreenInterruption();
+        await navigator.share({ files: [file], title: "Halı Saha Kadro" });
+      } catch (err) {
+        // Çizim uzun sürdüyse dokunuşun verdiği izin dolmuş olabilir; poster artık hazır.
+        if (!(err instanceof DOMException && err.name === "NotAllowedError")) throw err;
+        setNotice({ text: "Poster hazır", detail: "Göndermek için Paylaş'a bir kez daha dokun." });
+      }
     }, "system");
 
   const systemShareSupported =
     typeof File !== "undefined" &&
     canShareFile(new File([""], POSTER_FILENAME, { type: "image/jpeg" }));
+  // Telefonda Paylaş doğrudan sistem paylaşımını açar (WhatsApp, Instagram…).
+  const nativeShareFirst = compact && systemShareSupported;
+  // Sistem paylaşımı olmayan mobil tarayıcı (ör. Brave Android): galeriye indir, yol göster.
+  const mobileDownloadShare = () =>
+    run(async () => {
+      noteFullscreenInterruption();
+      downloadBlob(await getJpeg());
+      setNotice({
+        text: "Poster telefonuna indirildi",
+        detail: "WhatsApp'ta sohbeti aç → 📎 → Galeri (ya da Belge) ile posteri gönder.",
+      });
+    }, "download");
+
+  // Telefonda poster değişiklikten kısa süre sonra arka planda çizilir: paylaşım
+  // penceresi dokunuştan hemen sonra açılabilsin (tarayıcı izni birkaç saniye sürer).
+  useEffect(() => {
+    if (!nativeShareFirst) return;
+    const timer = window.setTimeout(() => void getJpeg().catch(() => undefined), 1500);
+    return () => window.clearTimeout(timer);
+    // getJpeg her render yeni; yalnızca poster değişince planla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nativeShareFirst, cacheKey]);
   const copySupported = typeof window !== "undefined" && canCopyImage();
 
   return (
     <>
-      <div ref={menuRef} className="relative flex items-center gap-1.5">
+      <div ref={menuRef} className={`relative flex items-center gap-1.5 ${compact ? "landscape:flex-col" : ""}`}>
         <button
           type="button"
           onClick={() => {
+            // Telefonda tek düğme: paylaşım yoksa (ör. Brave) doğrudan indir + yol göster.
+            if (compact && !nativeShareFirst) {
+              mobileDownloadShare();
+              return;
+            }
             const next = !menuOpen;
             setMenuOpen(next);
             if (next) void getJpeg().catch(() => undefined);
@@ -175,26 +253,58 @@ export function PosterExportControls() {
           disabled={busy}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+          aria-label="Paylaş"
+          className={`flex items-center justify-center gap-1.5 text-xs font-semibold disabled:opacity-50 ${
+            compact
+              ? "h-10 w-10 rounded-xl bg-green-700 text-white hover:bg-green-800"
+              : "rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-zinc-200 hover:bg-zinc-700"
+          }`}
         >
-          <Share2 className="w-3.5 h-3.5" />
-          Paylaş
+          <Share2 className={compact ? "w-4 h-4" : "w-3.5 h-3.5"} />
+          {!compact && "Paylaş"}
         </button>
+        {/* Telefonda indirme, Paylaş menüsünün içinde (o da bir paylaşma yolu). */}
+        {!compact && (
         <button
           type="button"
           onClick={download}
           disabled={busy}
-          className="flex items-center gap-1.5 rounded bg-green-700 px-3 py-1.5 text-xs font-semibold hover:bg-green-800 disabled:opacity-50"
+          aria-label="Poster İndir"
+          className={`flex items-center justify-center gap-1.5 bg-green-700 text-xs font-semibold hover:bg-green-800 disabled:opacity-50 ${
+            compact ? "h-10 w-10 rounded-xl" : "rounded px-3 py-1.5"
+          }`}
         >
-          <Download className="w-3.5 h-3.5" />
-          Poster İndir
+          <Download className={compact ? "w-4 h-4" : "w-3.5 h-3.5"} />
+          {!compact && "Poster İndir"}
         </button>
+        )}
 
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-[90] mt-1.5 w-64 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 shadow-2xl"
+            className={`absolute z-[90] w-64 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 shadow-2xl ${
+              compact
+                ? "right-0 top-full mt-1.5 landscape:right-full landscape:top-0 landscape:mt-0 landscape:mr-2"
+                : "right-0 top-full mt-1.5"
+            }`}
           >
+            {compact ? (
+              <>
+                <MenuItem
+                  icon={<Share2 className="w-4 h-4 text-green-400" />}
+                  label="Paylaş…"
+                  hint={ready ? "WhatsApp, Instagram ve diğerleri" : "Poster hazırlanıyor…"}
+                  onClick={shareWithSystem}
+                />
+                <MenuItem
+                  icon={<Download className="w-4 h-4 text-zinc-300" />}
+                  label="Telefona indir"
+                  hint="Galeriye / İndirilenler'e kaydet"
+                  onClick={download}
+                />
+              </>
+            ) : (
+            <>
             {copySupported && (
               <MenuItem icon={<Badge className="bg-[#25d366]">W</Badge>} label="WhatsApp" hint="Kopyala, sohbete yapıştır" onClick={shareToWhatsApp} />
             )}
@@ -215,16 +325,20 @@ export function PosterExportControls() {
                 disabled={!ready}
               />
             )}
+            </>
+            )}
           </div>
         )}
       </div>
 
       {busy && <PreparingOverlay />}
 
+      <div className="pointer-events-none fixed bottom-5 left-1/2 z-[115] flex w-[min(420px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-2 [&>*]:pointer-events-auto">
+      {nudgeOpen && !user && <SignInNudge onClose={() => setNudgeOpen(false)} />}
       {notice && (
         <div
           role="status"
-          className="fixed bottom-5 left-1/2 z-[115] w-[min(420px,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl backdrop-blur"
+          className="rounded-xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl backdrop-blur"
         >
           <div className="flex items-start gap-2.5">
             <span
@@ -265,6 +379,7 @@ export function PosterExportControls() {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }

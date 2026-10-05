@@ -357,7 +357,7 @@ function PlayerEditModalBody({
       onDrop={(e) => e.preventDefault()}
     >
       <div
-        className="relative bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-md max-h-[92vh] shadow-2xl overflow-hidden flex flex-col"
+        className="relative bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-md max-h-[92vh] phone-land:max-w-2xl phone-land:max-h-[96vh] shadow-2xl overflow-hidden flex flex-col"
         {...panelProps}
         {...fileDropProps}
       >
@@ -387,8 +387,8 @@ function PlayerEditModalBody({
           </button>
         </div>
 
-        <div className="px-4 py-4 space-y-4 overflow-y-auto min-h-0">
-          <div className="flex justify-center py-2 bg-zinc-950/50 rounded-xl">
+        <div className="px-4 py-4 space-y-4 overflow-y-auto min-h-0 phone-land:grid phone-land:grid-cols-[auto_1fr] phone-land:items-start phone-land:gap-x-4 phone-land:gap-y-3 phone-land:space-y-0 phone-land:py-3">
+          <div className="flex justify-center py-2 bg-zinc-950/50 rounded-xl phone-land:row-span-2 phone-land:px-3">
             <PlayerAvatar
               player={previewPlayer}
               jersey={jersey}
@@ -400,7 +400,7 @@ function PlayerEditModalBody({
             />
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 phone-land:col-start-2">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -478,7 +478,7 @@ function PlayerEditModalBody({
               }}
             />
             {!hasPhoto && !photoError && (
-              <p className="px-1 text-[11px] text-zinc-500">
+              <p className="px-1 text-[11px] text-zinc-500 [@media(pointer:coarse)]:hidden">
                 İpucu: fotoğrafı bu pencereye sürükleyip bırakabilirsin.
               </p>
             )}
@@ -490,10 +490,11 @@ function PlayerEditModalBody({
           </div>
 
           {hasPhoto && (
-            <div className="flex gap-4 pt-4 border-t border-zinc-800/80">
+            <div className="flex gap-4 pt-4 border-t border-zinc-800/80 phone-land:col-start-2 phone-land:pt-3">
               <div className="shrink-0">
                 <div
-                  className="relative overflow-hidden rounded-full cursor-grab active:cursor-grabbing select-none ring-2 ring-zinc-600"
+                  // touch-none: telefonda parmakla kaydırma pencere kaydırması sanılıp iptal edilmesin.
+                  className="relative overflow-hidden rounded-full cursor-grab active:cursor-grabbing select-none touch-none ring-2 ring-zinc-600"
                   style={{
                     width: CROP_VIEW_PX,
                     height: CROP_VIEW_PX,
@@ -502,7 +503,11 @@ function PlayerEditModalBody({
                   }}
                   onWheel={onWheel}
                   onPointerDown={(e) => {
-                    e.currentTarget.setPointerCapture(e.pointerId);
+                    try {
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    } catch {
+                      // İşaretçi o an kaybolmuş olabilir; yakalama olmadan devam et.
+                    }
                     setDragging(true);
                     dragStart.current = {
                       x: e.clientX,
