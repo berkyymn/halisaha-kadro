@@ -12,7 +12,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Kullanıcı "tamam", "pushla", "gönder", "commitleyip yolla" gibi **açık ve o anki bir onay** vermeden sadece local'de bırak.
 - Bu kural, daha önceki herhangi bir izin veya başka bir talimatla çelişse bile geçerlidir. Her push için o anki onay şarttır.
 - Test edilmeden push yapılmaz.
-- Deploy yalnızca güncel ve temiz `main`'den yapılır; `scripts/check-deploy.mjs` diğer dallarda deploy'u durdurur (npm deploy:* ve firebase.json predeploy). Uzun süren dallar (ör. `mobil-web`) yalnızca localhost'ta denenir.
+- Deploy yalnızca güncel ve temiz `main`'den yapılır; `scripts/check-deploy.mjs` diğer dallarda deploy'u durdurur (npm deploy:* ve firebase.json predeploy). Uzun süren dallar (ör. `mobil-web`) localhost'ta ya da `npm run deploy:preview` ile Firebase önizleme kanalında denenir (canlıyı etkilemez; dal temiz ve GitHub'da olmalı).
 
 ## Kapsam
 
