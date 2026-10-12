@@ -946,11 +946,15 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 | Ana ekrana ekle (iPhone) | Kart: 1) Paylaş (yoksa ⋯ menüsünde) 2) "Ana Ekrana Ekle"; ana ekran simgesinden açılınca adres çubuğu yok, üst düğmeler saat/çentik altında kalmaz |
 | Ana ekrana ekle önerisi (iPhone) | 2. ziyarette / poster indirince kart; Ekle → aynı adımlar; Şimdi değil → erteleme kuralları |
 | Ana ekrandan açılış (iPhone) | Beyaz parlama yok: sayfa ilk andan koyu zeminle açılır (`<html>` satır içi zemin + `color-scheme: dark`) |
+| Ana ekrandan açılış (iPhone) — açılış ekranı | iOS'un başlatma anında beyaz yerine koyu zeminde logo + "Halı Saha Kadro" (public/splash, cihaz boyutuna göre) |
 | Ana ekrandan açılış (iPhone) — bilinen | iPhone ana ekran uygulaması Safari'den ayrı depolama kullanır: misafirin Safari'deki kadrosu orada görünmez (giriş yapınca bulut kadrosu gelir) |
 | Ana ekrana ekle adımları (iPhone, misafir) | Kartta sarı not: "Kadronu uygulamada da görmek için önce giriş yap…"; giriş yapmışsa not yok |
 | Ana ekrana ekle (Android emülatör, `adb reverse` + `localhost`) | Menü → "Install app" penceresi → (yerelde) "Add to home screen" onayı → simge; simgeden koyu açılış ekranı, adres çubuksuz açılır |
 | Açılış (iPhone, başka sekme oturum deposunu kilitlese de) | En geç ~4 sn'de yerel kadroyla açılır; "Kadro yükleniyor"da kalmaz (`AUTH_WAIT_MS`) |
 | Google ile giriş (tüm platformlar) | Açılır pencere açılır, giriş tamamlanır (çözücü girişte yüklenir, açılışta değil) |
+| Giriş çakışma sorusu | Yalnızca bu cihazda bulutta olmayan oyuncu (isim/fotoğraf) varsa çıkar; sadece tema / saha / diziliş / tarih değiştiyse sorulmaz, bulut kadrosu yüklenir |
+| Çakışma kartları | "Bu cihaz" ve "Bulut" kartlarına tıklamak ilgili düğmeyle aynı seçimi yapar |
+| Birleştir | Bulut kadrosu yüklenir; bu cihazdaki yeni oyuncular yedeğe eklenir; buluttakiyle aynı isimdeki oyuncu tekrar eklenmez; aynı oyuncu bu cihazda farklı düzenlendiyse ayrı yedek olarak eklenir |
 | PC: tema ışıklandırması | Posterin çevresinde seçili temanın bulanık görseli (Derbi kırmızı-beyaz, Final Gecesi mavi, Karanlık Arena koyu, Summer Cup kum/deniz); tema / tek-iki takım değişince güncellenir; indirilen postere girmez; yedek paneli okunaklı |
 | Ana ekrana ekle önerisi + diğer bildirimler | Çerez bandı ya da "yan çevir" şeridi açıkken çıkmaz; onlar kapanınca gelir (üst üste binmez) |
 | Paylaş (iPhone, HTTPS) | Menü: "Paylaş…" ve "Fotoğraflara kaydet" (paylaşım menüsünde "Görüntüyü Kaydet") |

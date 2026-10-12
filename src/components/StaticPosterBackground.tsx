@@ -8,7 +8,8 @@ import { useAppStore } from "@/store/useAppStore";
 
 const SINGLE_THEME_BACKGROUNDS: Partial<Record<string, string>> = {
   "derby-night": "/posters/vertical/derby_night_vertical.jpeg",
-  "champions-night": "/posters/vertical/champions_league_vertical.jpeg",
+  // ?v: görsel değişince artır; tarayıcı 1 gün önbellekte tuttuğu eskisini göstermesin.
+  "champions-night": "/posters/vertical/champions_league_vertical.jpeg?v=2",
   "dark-arena": "/posters/vertical/dark_arena_vertical.jpeg",
   "summer-cup": "/posters/vertical/summer_cup_vertical.jpeg",
 };

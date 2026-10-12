@@ -19,6 +19,12 @@ const bebas = Bebas_Neue({
 
 
 
+/** iPhone ekranları: CSS genişlik × yükseklik × piksel oranı. */
+const IPHONE_SPLASH: [number, number, number][] = [
+  [440, 956, 3], [430, 932, 3], [428, 926, 3], [420, 912, 3], [414, 896, 3], [414, 896, 2],
+  [414, 736, 3], [402, 874, 3], [393, 852, 3], [390, 844, 3], [375, 812, 3], [375, 667, 2],
+];
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -88,6 +94,11 @@ export const metadata: Metadata = {
     title: "Halı Saha Kadro",
     // Opak: ana ekrandan açılınca sayfa saat/çentik şeridinin altında başlar, düğmeler altında kalmaz.
     statusBarStyle: "black",
+    // Ana ekrandan açılışta iOS beyaz ekran yerine koyu logo gösterir (public/splash).
+    startupImage: IPHONE_SPLASH.map(([w, h, r]) => ({
+      url: `/splash/iphone-${w * r}x${h * r}.png`,
+      media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`,
+    })),
   },
 };
 

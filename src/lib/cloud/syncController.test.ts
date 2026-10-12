@@ -116,6 +116,29 @@ describe("ilk yükleme", () => {
     expect(cloud.saves).toBe(0);
   });
 
+  it("REGRESYON: bekleyen değişiklik oyuncu değilse (ör. tarih bugüne çekildi) soru yok, bulut uygulanır", async () => {
+    const cloud = cloudWith((s) => renamePlayer(s, "Diğer Cihaz"), 7);
+    const local = new FakeLocal(testSnapshot());
+    local.edit((s) => ({ ...s, matchInfo: { ...s.matchInfo, date: "31/12/2099" } }));
+    const meta = memoryMeta({ owner: UID, synced: { [UID]: { editVersion: 0, revision: 5 } } });
+    const { controller } = setup({ local, cloud, meta });
+    controller.start(UID);
+    await settle();
+    expect(controller.getState().phase).toBe("ready");
+    expect(name(local.snapshot())).toBe("Diğer Cihaz");
+  });
+
+  it("misafir yalnızca tema / saha değiştirdiyse hesaba girerken soru yok", async () => {
+    const cloud = cloudWith((s) => renamePlayer(s, "Bulut"), 3);
+    const local = new FakeLocal(testSnapshot());
+    local.edit((s) => ({ ...s, posterTheme: "derby-night", matchInfo: { ...s.matchInfo, venue: "ALİBEYKÖY" } }));
+    const { controller } = setup({ local, cloud });
+    controller.start(UID);
+    await settle();
+    expect(controller.getState().phase).toBe("ready");
+    expect(name(local.snapshot())).toBe("Bulut");
+  });
+
   it("özelleştirilmiş misafir verisi hesaba girerken çatışma sorulur", async () => {
     const cloud = cloudWith((s) => renamePlayer(s, "Bulut"), 3);
     const local = new FakeLocal(testSnapshot());

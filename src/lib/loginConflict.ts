@@ -1,11 +1,9 @@
 import { hasPlayerPhoto } from "@/lib/playerPhotos";
 import { hasUsableUploadLogo } from "@/lib/teamLogoCloud";
 import { isCustomizedPlayer } from "@/lib/playerPool";
+import { createId } from "@/lib/id";
 
 export { isCustomizedPlayer };
-import { DEFAULT_AWAY_SHORT_NAME, DEFAULT_HOME_SHORT_NAME } from "@/lib/defaults";
-import { DEFAULT_POSTER_THEME } from "@/lib/posterThemes";
-import { getDefaultFormationId } from "@/lib/formations";
 import type { PitchPlayer, Player, TeamConfig, TeamLogo } from "@/types";
 import { normalizeTeamLogo } from "@/lib/logoUtils";
 import { normalizeJersey } from "@/lib/jerseyOptions";
@@ -136,51 +134,44 @@ export function areSnapshotsEquivalent(
   return JSON.stringify(canonicalContent(a)) === JSON.stringify(canonicalContent(b));
 }
 
-export function hasMeaningfulLocalChanges(snapshot: PosterSnapshot): boolean {
-  // Hiçbir zaman kaydedilmemişse (örn. ilk açılış) değişiklik yoktur.
-  if (!snapshot.localUpdatedAt) return false;
-
-  if (snapshot.benchPlayerIds.length > 0) return true;
-
-  const homeDefault = snapshot.homeTeam.shortName === DEFAULT_HOME_SHORT_NAME;
-  const awayDefault = snapshot.awayTeam.shortName === DEFAULT_AWAY_SHORT_NAME;
-  if (!homeDefault || !awayDefault) return true;
-
-  if (snapshot.matchInfo.venue !== "HALI SAHA") return true;
-  if (
-    snapshot.matchInfo.titleLine1 !== "DERBİ" ||
-    snapshot.matchInfo.titleLine2 !== "GECESİ"
-  ) {
-    return true;
-  }
-
-  if (snapshot.squadSize !== 7) return true;
-  if (snapshot.playerCardSize !== 100) return true;
-  if (snapshot.posterTheme !== DEFAULT_POSTER_THEME) return true;
-
-  const defaultHomeFormation = getDefaultFormationId(snapshot.squadSize);
-  if (
-    snapshot.homeFormationId !== defaultHomeFormation ||
-    snapshot.awayFormationId !== defaultHomeFormation
-  ) {
-    return true;
-  }
-
-  for (const player of Object.values(snapshot.savedPlayers)) {
-    if (isCustomizedPlayer(player)) return true;
-  }
-
-  return false;
+/** Posterde (kadroda ya da yedekte) görünen oyuncu kimlikleri. */
+function referencedPlayerIds(snapshot: PosterSnapshot): string[] {
+  return [
+    ...snapshot.homeTeam.playerIds,
+    ...snapshot.awayTeam.playerIds,
+    ...snapshot.benchPlayerIds,
+  ].filter((id): id is string => Boolean(id));
 }
 
 /**
+ * Giriş yapınca "bu cihaz mı, bulut mu?" yalnızca bu cihazda gerçekten
+ * oyuncu eklenmişse (isim ya da fotoğraf) sorulur. Yalnızca tema, saha adı ya
+ * da diziliş değiştirilmişse soru çıkmaz, bulut kadrosu yüklenir.
+ */
+export function hasMeaningfulLocalChanges(snapshot: PosterSnapshot): boolean {
+  // Hiçbir zaman kaydedilmemişse (örn. ilk açılış) değişiklik yoktur.
+  if (!snapshot.localUpdatedAt) return false;
+  return referencedPlayerIds(snapshot).some((id) => isCustomizedPlayer(snapshot.savedPlayers[id]));
+}
+
+const normalizedName = (player: Player | undefined) =>
+  (player?.name ?? "").trim().toLocaleLowerCase("tr-TR");
+
+/**
  * "Birleştir": bulut kadrosu temel alınır; bu cihazdaki özelleştirilmiş
- * oyunculardan bulutta olmayanlar yedeklere eklenmek üzere döndürülür.
+ * oyunculardan bulutta karşılığı olmayanlar yedeklere eklenmek üzere döndürülür.
+ * - Bulutta aynı isimde oyuncu varsa eklenmez (aynı kişi iki kez görünmesin).
+ * - Aynı oyuncu (aynı kimlik) bu cihazda farklı düzenlendiyse yeni kimlikle
+ *   eklenir: buluttaki sürüm korunur, bu cihazdaki değişiklik kaybolmaz.
  */
 export function collectLocalPlayersForMerge(
   local: PosterSnapshot,
   cloud: PosterSnapshot
 ): Player[] {
+  const cloudIds = referencedPlayerIds(cloud);
+  const knownNames = new Set(
+    cloudIds.map((id) => normalizedName(cloud.savedPlayers[id])).filter(Boolean)
+  );
   const ids = [
     ...local.homeTeam.playerIds.slice(0, local.squadSize),
     ...local.awayTeam.playerIds.slice(0, local.squadSize),
@@ -191,14 +182,18 @@ export function collectLocalPlayersForMerge(
   for (const id of ids) {
     if (!id || seen.has(id)) continue;
     seen.add(id);
-    if (cloud.savedPlayers[id]) continue;
     const player = local.savedPlayers[id];
     if (!isCustomizedPlayer(player)) continue;
+    const remote = cloud.savedPlayers[id];
+    if (remote && JSON.stringify(canonicalPlayer(remote)) === JSON.stringify(canonicalPlayer(player))) continue;
+    const name = normalizedName(player);
+    if (name && knownNames.has(name)) continue;
+    if (name) knownNames.add(name);
     // Bulut Storage yolları bu cihazdaki kopyaya ait değil; yeniden yüklenecek.
     const { cutoutStoragePath, photoSourceStoragePath, ...rest } = player;
     void cutoutStoragePath;
     void photoSourceStoragePath;
-    result.push(rest);
+    result.push(remote ? { ...rest, id: createId() } : rest);
   }
   return result;
 }

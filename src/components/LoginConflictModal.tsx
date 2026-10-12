@@ -48,16 +48,26 @@ function SummaryCard({
   summary,
   updatedAt,
   highlight = false,
+  actionLabel,
+  onSelect,
+  disabled = false,
 }: {
   title: string;
   icon: React.ElementType;
   summary: ConflictSummary;
   updatedAt?: string;
   highlight?: boolean;
+  actionLabel: string;
+  onSelect: () => void;
+  disabled?: boolean;
 }) {
+  // Kartın tamamı seçim düğmesi: alttaki düğmeyle aynı işi yapar.
   return (
-    <div
-      className={`flex-1 rounded-xl border p-4 space-y-3 ${
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={`flex-1 rounded-xl border p-4 space-y-3 text-left transition-colors hover:border-green-500/70 hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/70 disabled:opacity-50 ${
         highlight
           ? "bg-zinc-800/60 border-zinc-600"
           : "bg-zinc-900/60 border-zinc-700/80"
@@ -87,7 +97,8 @@ function SummaryCard({
           {formatDate(updatedAt ?? summary.lastUpdatedAt)}
         </p>
       </div>
-    </div>
+      <span className="block text-[12px] font-semibold text-green-400">{actionLabel} →</span>
+    </button>
   );
 }
 
@@ -122,12 +133,18 @@ export function LoginConflictModal({
             icon={Users}
             summary={localSummary}
             highlight
+            actionLabel="Bu cihazı kullan"
+            onSelect={() => onResolve("local")}
+            disabled={busy}
           />
           <SummaryCard
             title="Bulut"
             icon={Cloud}
             summary={cloudSummary}
             updatedAt={cloudUpdatedAt}
+            actionLabel="Bulutu kullan"
+            onSelect={() => onResolve("cloud")}
+            disabled={busy}
           />
         </div>
 
