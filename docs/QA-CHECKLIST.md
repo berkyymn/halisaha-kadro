@@ -747,7 +747,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 | Adım | Beklenen |
 |------|----------|
-| Yeni kullanıcı / Posteri sıfırla | Tema Şampiyonlar Ligi, başlık mavi; ev sahibi beyaz kartal, deplasman sarı-lacivert |
+| Yeni kullanıcı / Posteri sıfırla | Tema Final Gecesi, başlık mavi; ev sahibi beyaz kartal, deplasman sarı-lacivert |
 | Tema seçici | Daha büyük küçük resimler, sağda yazı yok |
 | Paylaş menüsü | WhatsApp / X: panoya kopyalar + "Web'i aç" bildirimi; Instagram: indirir + "Instagram'ı aç"; Panoya kopyala; destekleyen tarayıcıda "Diğer…" (sistem paylaşımı) |
 | Pano izni yoksa | Hata değil: poster indirilir, "sürükleyip bırak" bildirimi |
@@ -951,6 +951,7 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 | Ana ekrana ekle (Android emülatör, `adb reverse` + `localhost`) | Menü → "Install app" penceresi → (yerelde) "Add to home screen" onayı → simge; simgeden koyu açılış ekranı, adres çubuksuz açılır |
 | Açılış (iPhone, başka sekme oturum deposunu kilitlese de) | En geç ~4 sn'de yerel kadroyla açılır; "Kadro yükleniyor"da kalmaz (`AUTH_WAIT_MS`) |
 | Google ile giriş (tüm platformlar) | Açılır pencere açılır, giriş tamamlanır (çözücü girişte yüklenir, açılışta değil) |
+| PC: tema ışıklandırması | Posterin çevresinde seçili temanın bulanık görseli (Derbi kırmızı-beyaz, Final Gecesi mavi, Karanlık Arena koyu, Summer Cup kum/deniz); tema / tek-iki takım değişince güncellenir; indirilen postere girmez; yedek paneli okunaklı |
 | Ana ekrana ekle önerisi + diğer bildirimler | Çerez bandı ya da "yan çevir" şeridi açıkken çıkmaz; onlar kapanınca gelir (üst üste binmez) |
 | Paylaş (iPhone, HTTPS) | Menü: "Paylaş…" ve "Fotoğraflara kaydet" (paylaşım menüsünde "Görüntüyü Kaydet") |
 | Paylaş (iPhone, paylaşım yok / HTTP) | Poster oluşur; "İndir" sorusu; bildirim dosyanın Dosyalar → İndirilenler'e gittiğini söyler (Galeri değil) |

@@ -15,6 +15,7 @@ const LogoDesignerModal = dynamic(
   { ssr: false }
 );
 import { MatchPoster } from "./MatchPoster";
+import { usePosterBackground } from "./StaticPosterBackground";
 import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
 import { ModalShell } from "./ModalShell";
@@ -49,6 +50,7 @@ export function AppShell() {
   const teamLogoDisplaySize = useAppStore((s) => s.teamLogoDisplaySize);
   const setTeamLogoDisplaySize = useAppStore((s) => s.setTeamLogoDisplaySize);
 
+  const { src: themeBackdropSrc } = usePosterBackground();
   const mainBg = useMemo(() => {
     const hexToRgba = (hex: string, alpha: number) => {
       const sanitized = hex.replace("#", "");
@@ -170,16 +172,27 @@ export function AppShell() {
         <PosterToolbar />
 
         <main
-          className="flex-1 flex min-h-0 min-w-0"
+          className="relative flex-1 flex min-h-0 min-w-0 overflow-hidden"
           style={{ background: mainBg }}
         >
-          <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size]">
+          {/* Seçili temanın ışıklandırması posterin çevresine yayılır (mobil sahneyle aynı dil). */}
+          <img
+            src={themeBackdropSrc}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 select-none object-cover opacity-60 blur-2xl saturate-125"
+          />
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
+          <div className="relative flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size] [&>[data-poster-frame]]:shadow-[0_24px_60px_rgba(0,0,0,0.65)]">
             <MatchPoster
               onEditPlayer={handleEditPlayer}
               onLogoClick={handleLogoClick}
             />
           </div>
-          <BenchPanel />
+          <div className="relative flex min-h-0">
+            <BenchPanel />
+          </div>
         </main>
         </>
       )}
