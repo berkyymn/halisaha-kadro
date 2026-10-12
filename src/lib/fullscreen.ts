@@ -45,5 +45,8 @@ export function wasFullscreenInterrupted(withinMs = 4000): boolean {
 
 /** Ana ekrana eklenmiş uygulama olarak mı açıldı (adres çubuğu yok, tam ekran gereksiz). */
 export function isStandaloneApp(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches === true;
+  if (typeof window === "undefined") return false;
+  // iPhone ana ekrandan açılınca ayrıca navigator.standalone verir.
+  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return iosStandalone || window.matchMedia?.("(display-mode: standalone)").matches === true;
 }

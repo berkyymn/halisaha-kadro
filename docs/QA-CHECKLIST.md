@@ -932,6 +932,29 @@ Telefonla: Mac ile aynı Wi-Fi, `npm run dev:lan`, telefondan `http://<Mac IP>:3
 | Ana ekrana ekle önerisi (telefon) | Tarayıcı teklif ettiyse: 2. ziyarette (4 sn sonra) ya da poster indirince (giriş kartı çıkmadıysa) üstte kart; Ekle → kurulum penceresi; Şimdi değil → 7, sonra 30 gün, 3. redden sonra hiç; oturumda en fazla 1 |
 | Service worker (yalnızca canlı derleme) | `/sw.js` kayıt olur; önbellek yok, sayfalar ve geçişler normal; Firebase'de `no-cache` |
 
+### 7. tur — iPhone / Safari (2026-10-12)
+
+Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000` (127.0.0.1 değil). Dokunuş testleri iOS 26+ simülatörde; iOS 16.4/17 simülatörlerinde yalnızca görünüm kontrol edilebildi.
+
+| Adım | Beklenen |
+|------|----------|
+| Postere tarih / saat dokun (iPhone) | iOS tarih / saat seçicisi açılır, seçim postere yazılır; masaüstünde tıklama seçiciyi açar |
+| Oyuncu adı vb. alana dokun (iPhone) | Sayfa yakınlaşmaz; pencere tam genişlikte kalır, klavye kapanınca düzen normal |
+| Dokunduktan sonra poster alanları | Kesikli çerçeve takılı kalmaz (hover yalnızca fareli cihazlarda) |
+| Yan çevir şeridi (iPhone) | "Denetim Merkezi'nden dönme kilidini kapat"; Android'de "bildirim panelinden otomatik döndürme" |
+| Tam ekran düğmesi (iPhone) | Görünmez (Safari sayfaya tam ekran vermez); yerine Ayarlar → "Ana ekrana ekle" |
+| Ana ekrana ekle (iPhone) | Kart: 1) Paylaş (yoksa ⋯ menüsünde) 2) "Ana Ekrana Ekle"; ana ekran simgesinden açılınca adres çubuğu yok, üst düğmeler saat/çentik altında kalmaz |
+| Ana ekrana ekle önerisi (iPhone) | 2. ziyarette / poster indirince kart; Ekle → aynı adımlar; Şimdi değil → erteleme kuralları |
+| Ana ekrandan açılış (iPhone) | Beyaz parlama yok: sayfa ilk andan koyu zeminle açılır (`<html>` satır içi zemin + `color-scheme: dark`) |
+| Ana ekrandan açılış (iPhone) — bilinen | iPhone ana ekran uygulaması Safari'den ayrı depolama kullanır: misafirin Safari'deki kadrosu orada görünmez (giriş yapınca bulut kadrosu gelir) |
+| Ana ekrana ekle adımları (iPhone, misafir) | Kartta sarı not: "Kadronu uygulamada da görmek için önce giriş yap…"; giriş yapmışsa not yok |
+| Ana ekrana ekle (Android emülatör, `adb reverse` + `localhost`) | Menü → "Install app" penceresi → (yerelde) "Add to home screen" onayı → simge; simgeden koyu açılış ekranı, adres çubuksuz açılır |
+| Ana ekrana ekle önerisi + diğer bildirimler | Çerez bandı ya da "yan çevir" şeridi açıkken çıkmaz; onlar kapanınca gelir (üst üste binmez) |
+| Paylaş (iPhone, HTTPS) | Menü: "Paylaş…" ve "Fotoğraflara kaydet" (paylaşım menüsünde "Görüntüyü Kaydet") |
+| Paylaş (iPhone, paylaşım yok / HTTP) | Poster oluşur; "İndir" sorusu; bildirim dosyanın Dosyalar → İndirilenler'e gittiğini söyler (Galeri değil) |
+| Sürükleme (iPhone) | Takas, kenarda yedek çekmecesinin açılması ve yedeğe bırakma çalışır; boş yer tutucu yedeğe gitmez |
+| Ayarlar / yedek çekmecesi (iPhone) | Alt sayfa ve çekmece açılır-kapanır; Safari alt çubuğu düğmeleri örtmez |
+
 - [ ] Geçti (telefon testi bekliyor)
 
 ---

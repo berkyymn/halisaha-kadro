@@ -21,3 +21,10 @@ export function detectLayoutMode(): LayoutMode {
     window.matchMedia?.("(any-pointer: fine)").matches === false;
   return (phoneUa || touchOnly) && shortSide < PHONE_SHORT_SIDE_MAX ? "mobile" : "desktop";
 }
+
+/** iPhone / iPad (iPadOS kendini Mac gibi tanıtır; dokunmatik oluşundan ayırt edilir). */
+export function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}

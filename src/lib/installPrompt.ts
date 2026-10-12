@@ -3,7 +3,11 @@
  * sayfa yüklenirken `beforeinstallprompt` gönderir; erken yakalanıp saklanır,
  * kullanıcı menüden istediğinde gösterilir. Kurulan uygulama adres çubuğu
  * olmadan açılır: tam ekran gerekmez, indirme/dosya seçici bozmaz.
+ * iPhone bu olayı göndermez (tam ekran da yok): orada kullanıcıya Paylaş →
+ * "Ana Ekrana Ekle" adımları gösterilir (`installMode() === "ios"`).
  */
+import { isIosDevice } from "@/lib/deviceSupport";
+
 type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
 let deferred: InstallPromptEvent | null = null;
@@ -22,7 +26,13 @@ if (typeof window !== "undefined") {
 }
 
 export function canInstallApp(): boolean {
-  return deferred !== null;
+  return installMode() !== null;
+}
+
+/** "prompt": tarayıcının kurulum penceresi; "ios": elle adımlar; null: kurulamaz. */
+export function installMode(): "prompt" | "ios" | null {
+  if (deferred) return "prompt";
+  return isIosDevice() ? "ios" : null;
 }
 
 export function onInstallAvailabilityChange(listener: () => void): () => void {

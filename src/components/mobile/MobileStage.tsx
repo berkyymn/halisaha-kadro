@@ -21,8 +21,8 @@ import {
   noteFullscreenInterruption,
   wasFullscreenInterrupted,
 } from "@/lib/fullscreen";
-import { promptInstallApp } from "@/lib/installPrompt";
-import { InstallSuggestion, useInstallAvailable } from "@/components/mobile/InstallSuggestion";
+import { isIosDevice } from "@/lib/deviceSupport";
+import { InstallSuggestion, startAppInstall, useInstallAvailable } from "@/components/mobile/InstallSuggestion";
 
 /** Sahadan sürüklenen oyuncu sağ kenara bu kadar yaklaşınca yedek çekmecesi açılır. */
 const BENCH_EDGE_PX = 56;
@@ -183,8 +183,7 @@ export function MobileStage({
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
-                      trackEvent("install_prompt_opened");
-                      void promptInstallApp().then((ok) => ok && trackEvent("app_installed"));
+                      startAppInstall("menu");
                     }}
                     className="flex h-10 flex-1 items-center gap-2 rounded-lg bg-zinc-800 px-3 text-left text-xs font-semibold text-zinc-200 landscape:flex-none"
                   >
@@ -342,14 +341,19 @@ function RotateHint() {
       return false;
     }
   });
+  const [ios] = useState(isIosDevice);
   if (dismissed) return null;
   return (
-    <div className="absolute left-1/2 top-16 z-30 flex w-[min(380px,calc(100vw-1.5rem))] -translate-x-1/2 items-start gap-2.5 rounded-xl border border-zinc-700/70 bg-zinc-900/85 px-3 py-2.5 shadow-2xl backdrop-blur">
+    <div
+      data-rotate-hint
+      className="absolute left-1/2 top-16 z-30 flex w-[min(380px,calc(100vw-1.5rem))] -translate-x-1/2 items-start gap-2.5 rounded-xl border border-zinc-700/70 bg-zinc-900/85 px-3 py-2.5 shadow-2xl backdrop-blur">
       <Smartphone className="mt-0.5 h-5 w-5 shrink-0 rotate-90 text-green-400" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-white">Telefonu yan çevir, kartlar büyür</p>
         <p className="mt-0.5 text-[11px] leading-snug text-zinc-400">
-          Ekran dönmüyorsa bildirim panelinden otomatik döndürmeyi aç.
+          {ios
+            ? "Ekran dönmüyorsa Denetim Merkezi'nden dönme kilidini kapat."
+            : "Ekran dönmüyorsa bildirim panelinden otomatik döndürmeyi aç."}
         </p>
       </div>
       <button

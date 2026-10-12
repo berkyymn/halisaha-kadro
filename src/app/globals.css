@@ -57,9 +57,13 @@ input[type="number"]::-webkit-outer-spin-button {
   color: rgba(255, 255, 255, 0.35);
 }
 
-.poster-editable:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.06);
+/* Yalnızca fareli cihazlarda: dokunmatikte (iPhone) :hover dokunuştan sonra takılı
+   kalır ve kesikli çerçeve indirilen postere de girebilirdi. */
+@media (hover: hover) {
+  .poster-editable:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .poster-editable:focus {
@@ -97,13 +101,26 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 /* poster-editable ile aynı dil: üzerine gelince kesikli çerçeve */
-.poster-title-hit:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.04);
+@media (hover: hover) {
+  .poster-title-hit:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.04);
+  }
 }
 
 .poster-title-hit:focus-visible {
   border-color: rgba(34, 197, 94, 0.75);
+}
+
+/* iPhone Safari 16 pikselden küçük yazı alanına dokununca sayfayı yakınlaştırır ve
+   öyle bırakır (pencereler taşar). Dokunmatikte alanlar en az 16px; posterin kendi
+   alanları satır içi boyutunu korur (inline style bu kuraldan güçlüdür). */
+@media (pointer: coarse) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 #match-poster {

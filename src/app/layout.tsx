@@ -86,12 +86,15 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Halı Saha Kadro",
-    statusBarStyle: "black-translucent",
+    // Opak: ana ekrandan açılınca sayfa saat/çentik şeridinin altında başlar, düğmeler altında kalmaz.
+    statusBarStyle: "black",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: "#09090b",
+  // Tarayıcının varsayılan zemini de koyu: sayfa çizilmeden beyaz parlama olmasın.
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
 };
@@ -100,7 +103,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="tr" className={`${geist.variable} ${bebas.variable} h-full`}>
+    <html
+      lang="tr"
+      className={`${geist.variable} ${bebas.variable} h-full`}
+      // iPhone ana ekran uygulaması manifest rengini kullanmaz; CSS yüklenmeden de koyu açılsın.
+      style={{ backgroundColor: "#09090b" }}
+    >
       <head>
         {GA_ID && (
           <script

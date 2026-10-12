@@ -6,6 +6,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { SignInNudge, canShowSignInNudge, markSignInNudgeShown } from "@/components/SignInNudge";
 import { noteFullscreenInterruption } from "@/lib/fullscreen";
+import { isIosDevice } from "@/lib/deviceSupport";
 import { POSTER_EXPORTED_EVENT } from "@/components/mobile/InstallSuggestion";
 import { trackEvent } from "@/lib/analytics";
 import { reportError } from "@/lib/errorReporting";
@@ -213,15 +214,25 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
     canShareFile(new File([""], POSTER_FILENAME, { type: "image/jpeg" }));
   // Telefonda Paylaş doğrudan sistem paylaşımını açar (WhatsApp, Instagram…).
   const nativeShareFirst = compact && systemShareSupported;
+  // iPhone'da indirilen dosya Fotoğraflar'a gitmez; paylaşım menüsündeki "Görüntüyü Kaydet" gider.
+  const [ios] = useState(isIosDevice);
   // Sistem paylaşımı olmayan mobil tarayıcı (ör. Brave Android): galeriye indir, yol göster.
   const mobileDownloadShare = () =>
     run(async () => {
       noteFullscreenInterruption();
       downloadBlob(await getJpeg());
-      setNotice({
-        text: "Poster telefonuna indirildi",
-        detail: "WhatsApp'ta sohbeti aç → 📎 → Galeri (ya da Belge) ile posteri gönder.",
-      });
+      setNotice(
+        ios
+          ? {
+              // iPhone önce "İndir" diye sorar; dosya Fotoğraflar'a değil Dosyalar'a gider.
+              text: "Poster hazır",
+              detail: "Açılan soruda İndir'e dokun. Poster Dosyalar → İndirilenler'e kaydedilir; WhatsApp'ta 📎 → Belge ile gönderebilirsin.",
+            }
+          : {
+              text: "Poster telefonuna indirildi",
+              detail: "WhatsApp'ta sohbeti aç → 📎 → Galeri (ya da Belge) ile posteri gönder.",
+            }
+      );
     }, "download");
 
   // Telefonda poster değişiklikten kısa süre sonra arka planda çizilir: paylaşım
@@ -296,12 +307,21 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
                   hint={ready ? "WhatsApp, Instagram ve diğerleri" : "Poster hazırlanıyor…"}
                   onClick={shareWithSystem}
                 />
-                <MenuItem
-                  icon={<Download className="w-4 h-4 text-zinc-300" />}
-                  label="Telefona indir"
-                  hint="Galeriye / İndirilenler'e kaydet"
-                  onClick={download}
-                />
+                {ios ? (
+                  <MenuItem
+                    icon={<Download className="w-4 h-4 text-zinc-300" />}
+                    label="Fotoğraflara kaydet"
+                    hint="Açılan menüde “Görüntüyü Kaydet”"
+                    onClick={shareWithSystem}
+                  />
+                ) : (
+                  <MenuItem
+                    icon={<Download className="w-4 h-4 text-zinc-300" />}
+                    label="Telefona indir"
+                    hint="Galeriye / İndirilenler'e kaydet"
+                    onClick={download}
+                  />
+                )}
               </>
             ) : (
             <>
