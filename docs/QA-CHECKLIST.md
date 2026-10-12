@@ -949,6 +949,8 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 | Ana ekrandan açılış (iPhone) — bilinen | iPhone ana ekran uygulaması Safari'den ayrı depolama kullanır: misafirin Safari'deki kadrosu orada görünmez (giriş yapınca bulut kadrosu gelir) |
 | Ana ekrana ekle adımları (iPhone, misafir) | Kartta sarı not: "Kadronu uygulamada da görmek için önce giriş yap…"; giriş yapmışsa not yok |
 | Ana ekrana ekle (Android emülatör, `adb reverse` + `localhost`) | Menü → "Install app" penceresi → (yerelde) "Add to home screen" onayı → simge; simgeden koyu açılış ekranı, adres çubuksuz açılır |
+| Açılış (iPhone, başka sekme oturum deposunu kilitlese de) | En geç ~4 sn'de yerel kadroyla açılır; "Kadro yükleniyor"da kalmaz (`AUTH_WAIT_MS`) |
+| Google ile giriş (tüm platformlar) | Açılır pencere açılır, giriş tamamlanır (çözücü girişte yüklenir, açılışta değil) |
 | Ana ekrana ekle önerisi + diğer bildirimler | Çerez bandı ya da "yan çevir" şeridi açıkken çıkmaz; onlar kapanınca gelir (üst üste binmez) |
 | Paylaş (iPhone, HTTPS) | Menü: "Paylaş…" ve "Fotoğraflara kaydet" (paylaşım menüsünde "Görüntüyü Kaydet") |
 | Paylaş (iPhone, paylaşım yok / HTTP) | Poster oluşur; "İndir" sorusu; bildirim dosyanın Dosyalar → İndirilenler'e gittiğini söyler (Galeri değil) |

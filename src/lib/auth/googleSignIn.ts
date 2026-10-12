@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { browserPopupRedirectResolver, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/app";
 import { trackEvent } from "@/lib/analytics";
 
@@ -6,7 +6,8 @@ import { trackEvent } from "@/lib/analytics";
 export async function signInWithGoogle(source: "auth-modal" | "signin-nudge"): Promise<void> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-  await signInWithPopup(getFirebaseAuth(), provider);
+  // Çözücü burada verilir: Auth açılışta Google iframe'ini yüklemesin (lib/firebase/app).
+  await signInWithPopup(getFirebaseAuth(), provider, browserPopupRedirectResolver);
   trackEvent("sign_in_completed", { method: "google", is_new_user: false, source });
 }
 

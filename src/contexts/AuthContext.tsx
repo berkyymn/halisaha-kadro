@@ -16,6 +16,7 @@ import {
   onAuthStateChanged,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
+  browserPopupRedirectResolver,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
@@ -158,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             EmailAuthProvider.credential(current.email ?? "", options.password)
           );
         } else if (providers.includes("google.com")) {
-          await reauthenticateWithPopup(current, new GoogleAuthProvider());
+          await reauthenticateWithPopup(current, new GoogleAuthProvider(), browserPopupRedirectResolver);
         }
         await controller.waitForIdle();
         controller.stop();
