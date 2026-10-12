@@ -281,13 +281,20 @@ export class SyncController {
         this.lastCloud = doc.snapshot;
         this.enterReady();
         this.scheduleSave(0);
+      } else if (!this.wouldLosePlayers(localSnapshot, doc.snapshot)) {
+        // Bekleyen değişiklik oyuncu değil (ör. tarihin bugüne çekilmesi, tema): bulut yüklenir.
+        this.adoptCloud(doc);
       } else {
         this.enterConflict("concurrent-edit", localSnapshot, doc);
       }
       return;
     }
 
-    if (!policy.isCustomized(localSnapshot) || policy.equivalent(localSnapshot, doc.snapshot)) {
+    if (
+      !policy.isCustomized(localSnapshot) ||
+      policy.equivalent(localSnapshot, doc.snapshot) ||
+      !this.wouldLosePlayers(localSnapshot, doc.snapshot)
+    ) {
       this.adoptCloud(doc);
     } else {
       this.enterConflict("guest-data", localSnapshot, doc);
@@ -356,6 +363,14 @@ export class SyncController {
         (error) => this.deps.report?.(error, "cloud-load", "warning")
       );
     }
+  }
+
+  /**
+   * Kullanıcıya yalnızca bu cihazdaki oyuncular (isim / fotoğraf) bulutta
+   * yoksa sorulur; aksi hâlde bulut kadrosunu yüklemek hiçbir oyuncuyu kaybettirmez.
+   */
+  private wouldLosePlayers(local: PosterSnapshot, cloud: PosterSnapshot): boolean {
+    return this.deps.policy.mergeExtras(local, cloud).length > 0;
   }
 
   private enterConflict(reason: ConflictReason, local: PosterSnapshot, doc: ParsedCloudDocument): void {
@@ -531,7 +546,11 @@ export class SyncController {
     }
     if (!this.isCurrent(generation) || result.status !== "ok") return;
     const local = this.deps.local.snapshot();
-    if (!this.hasPendingEdits() || this.deps.policy.equivalent(local, result.doc.snapshot)) {
+    if (
+      !this.hasPendingEdits() ||
+      this.deps.policy.equivalent(local, result.doc.snapshot) ||
+      !this.wouldLosePlayers(local, result.doc.snapshot)
+    ) {
       this.adoptCloud(result.doc);
     } else {
       this.enterConflict("concurrent-edit", local, result.doc);

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getPosterScale } from "@/lib/posterScale";
 import {
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,7 @@ function BenchPlayerCard({
   onPointerMove,
   onPointerUp,
   onPointerCancel,
+  scrollable = false,
 }: {
   player: Player;
   jersey?: JerseyConfig;
@@ -62,6 +64,7 @@ function BenchPlayerCard({
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
+  scrollable?: boolean;
 }) {
   return (
     <div
@@ -74,7 +77,8 @@ function BenchPlayerCard({
       className={`group relative flex justify-center rounded-xl border bg-zinc-800/40 px-1 pt-2.5 pb-2 cursor-grab active:cursor-grabbing transition-colors select-none ${
         dragging ? "opacity-0 border-zinc-800/60" : "border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/70"
       }`}
-      style={{ touchAction: "none" }}
+      // Mobil çekmecede liste dikey kaydırılabilsin; sahaya sürükleme yatay hareketle başlar.
+      style={{ touchAction: scrollable ? "pan-y" : "none" }}
     >
       <div className="absolute top-1 right-1 z-10 flex flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <button
@@ -117,8 +121,15 @@ function BenchPlayerCard({
   );
 }
 
-export function BenchPanel() {
-  const [collapsed, setCollapsed] = useState(false);
+type BenchDrawer = { open: boolean; onOpenChange: (open: boolean) => void };
+
+/**
+ * Masaüstünde sağ kenar paneli. Mobilde (`drawer`) sahanın üstüne sağdan
+ * kayarak açılan çekmece; kapalıyken kenarda soluk bir tutamaç görünür.
+ */
+export function BenchPanel({ drawer }: { drawer?: BenchDrawer } = {}) {
+  const [collapsedState, setCollapsed] = useState(false);
+  const collapsed = drawer ? false : collapsedState;
   const [editingBenchId, setEditingBenchId] = useState<string | null>(null);
 
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
@@ -214,6 +225,8 @@ export function BenchPanel() {
     onStart: () => {
       const benchId = currentBenchId.current;
       if (benchId) setDraggingBenchId(benchId);
+      // Mobil: yedekten sahaya sürüklerken çekmece sahayı kapatmasın.
+      drawer?.onOpenChange(false);
     },
     onMove: (clientX, clientY) => {
       const benchId = currentBenchId.current;
@@ -225,6 +238,11 @@ export function BenchPanel() {
         pointer: { x: clientX, y: clientY },
         target: target ? { type: "pitch", ...target } : null,
       });
+    },
+    onCancel: () => {
+      currentBenchId.current = null;
+      setDraggingBenchId(null);
+      setDragIntent({ kind: "idle" });
     },
     onEnd: (clientX, clientY, moved) => {
       const benchId = currentBenchId.current;
@@ -290,9 +308,29 @@ export function BenchPanel() {
 
   return (
     <>
+      {drawer && !drawer.open && (
+        <button
+          type="button"
+          onClick={() => drawer.onOpenChange(true)}
+          className="absolute right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-zinc-700/70 bg-zinc-900/70 px-1.5 py-3 text-zinc-300 backdrop-blur"
+          aria-label="Yedekleri aç"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ writingMode: "vertical-rl" }}>
+            Yedekler ({benchEntries.length})
+          </span>
+        </button>
+      )}
       <aside
         data-bench-drop="true"
-        className={`shrink-0 w-60 sm:w-72 border-l border-zinc-800 bg-zinc-900/95 flex flex-col min-h-0 transition-colors ${
+        aria-hidden={drawer ? !drawer.open : undefined}
+        className={`${
+          drawer
+            ? `absolute right-0 top-0 bottom-0 z-40 w-[min(17rem,64vw)] landscape:w-[min(17rem,32vw)] shadow-2xl transition-[translate,background-color] duration-200 ${
+                drawer.open ? "translate-x-0" : "translate-x-full"
+              }`
+            : "shrink-0 w-60 sm:w-72 transition-colors"
+        } border-l border-zinc-800 ${drawer ? "bg-zinc-900" : "bg-zinc-900/95"} flex flex-col min-h-0 ${
           isBenchAreaTarget(dragIntent)
             ? "ring-2 ring-inset ring-green-500/40 bg-zinc-800/90"
             : ""
@@ -310,7 +348,7 @@ export function BenchPanel() {
           </div>
           <button
             type="button"
-            onClick={() => setCollapsed(true)}
+            onClick={() => (drawer ? drawer.onOpenChange(false) : setCollapsed(true))}
             className="p-1 text-zinc-500 hover:text-white"
             title="Gizle"
           >
@@ -351,6 +389,7 @@ export function BenchPanel() {
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerCancel}
+                  scrollable={Boolean(drawer)}
                 />
               ))}
             </div>
@@ -381,6 +420,7 @@ export function BenchPanel() {
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerCancel}
+                  scrollable={Boolean(drawer)}
                   />
                 ))}
               </div>
@@ -419,13 +459,16 @@ export function BenchPanel() {
               opacity: 0.9,
             }}
           >
-            <PlayerDragPreview
-              player={draggingPlayer}
-              jersey={draggingIsHiddenAway ? awayTeam.jersey : NEUTRAL_BENCH_JERSEY}
-              size={benchCardSize}
-              variant="dark"
-              overlay={isBenchCloneSubIn(dragIntent) ? "sub-in" : null}
-            />
+            {/* Sahadaki kart boyutunda görünsün (poster ekrana ölçekli sığdırılıyor). */}
+            <div style={{ transform: `scale(${getPosterScale()})` }}>
+              <PlayerDragPreview
+                player={draggingPlayer}
+                jersey={draggingIsHiddenAway ? awayTeam.jersey : NEUTRAL_BENCH_JERSEY}
+                size={benchCardSize}
+                variant="dark"
+                overlay={isBenchCloneSubIn(dragIntent) ? "sub-in" : null}
+              />
+            </div>
           </div>,
           document.body
         )}

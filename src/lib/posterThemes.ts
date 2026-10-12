@@ -22,7 +22,7 @@ export const POSTER_THEMES: Record<PosterThemeId, PosterThemeConfig> = {
   },
   "champions-night": {
     id: "champions-night",
-    label: "Şampiyonlar Ligi",
+    label: "Final Gecesi",
     backgroundSrc: "/posters/champions-night.png",
     thumbSrc: "/posters/thumbs/champions-night.jpg",
   },

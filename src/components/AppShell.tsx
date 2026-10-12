@@ -15,10 +15,13 @@ const LogoDesignerModal = dynamic(
   { ssr: false }
 );
 import { MatchPoster } from "./MatchPoster";
+import { usePosterBackground } from "./StaticPosterBackground";
 import { PosterToolbar } from "./PosterToolbar";
 import { UserAuthButton } from "./UserAuthButton";
 import { ModalShell } from "./ModalShell";
 import { PosterExportControls } from "./PosterExportControls";
+import { useLayoutMode } from "./LayoutModeGate";
+import { MobileStage } from "./mobile/MobileStage";
 
 const PlayerEditModal = dynamic(
   () =>
@@ -29,6 +32,7 @@ const PlayerEditModal = dynamic(
 export function AppShell() {
   useGuestTabSync();
   const { user } = useAuth();
+  const isMobile = useLayoutMode() === "mobile";
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const resetGuestSession = useAppStore((s) => s.resetGuestSession);
@@ -46,6 +50,7 @@ export function AppShell() {
   const teamLogoDisplaySize = useAppStore((s) => s.teamLogoDisplaySize);
   const setTeamLogoDisplaySize = useAppStore((s) => s.setTeamLogoDisplaySize);
 
+  const { src: themeBackdropSrc } = usePosterBackground();
   const mainBg = useMemo(() => {
     const hexToRgba = (hex: string, alpha: number) => {
       const sanitized = hex.replace("#", "");
@@ -133,41 +138,64 @@ export function AppShell() {
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-      <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
-        <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
-          <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
-          Halı Saha Kadro
-        </h1>
-        <div className="flex items-center gap-2">
-          <UserAuthButton />
-          <div className="hidden sm:block h-5 w-px bg-zinc-800" />
-          <button
-            type="button"
-            onClick={() => setResetConfirmOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
-            title="Takımları, oyuncuları ve maç bilgilerini varsayılana döndür (yedekler korunur)"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Sıfırla
-          </button>
-          <PosterExportControls />
-        </div>
-      </header>
+      {isMobile ? (
+        <MobileStage
+          background={mainBg}
+          onReset={() => setResetConfirmOpen(true)}
+          poster={
+            <MatchPoster onEditPlayer={handleEditPlayer} onLogoClick={handleLogoClick} />
+          }
+        />
+      ) : (
+        <>
+        <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
+          <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
+            <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
+            Halı Saha Kadro
+          </h1>
+          <div className="flex items-center gap-2">
+            <UserAuthButton />
+            <div className="hidden sm:block h-5 w-px bg-zinc-800" />
+            <button
+              type="button"
+              onClick={() => setResetConfirmOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
+              title="Takımları, oyuncuları ve maç bilgilerini varsayılana döndür (yedekler korunur)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Sıfırla
+            </button>
+            <PosterExportControls />
+          </div>
+        </header>
 
-      <PosterToolbar />
+        <PosterToolbar />
 
-      <main
-        className="flex-1 flex min-h-0 min-w-0"
-        style={{ background: mainBg }}
-      >
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size]">
-          <MatchPoster
-            onEditPlayer={handleEditPlayer}
-            onLogoClick={handleLogoClick}
+        <main
+          className="relative flex-1 flex min-h-0 min-w-0 overflow-hidden"
+          style={{ background: mainBg }}
+        >
+          {/* Seçili temanın ışıklandırması posterin çevresine yayılır (mobil sahneyle aynı dil). */}
+          <img
+            src={themeBackdropSrc}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 select-none object-cover opacity-60 blur-2xl saturate-125"
           />
-        </div>
-        <BenchPanel />
-      </main>
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
+          <div className="relative flex-1 flex items-center justify-center p-3 sm:p-4 min-h-0 min-w-0 [container-type:size] [&>[data-poster-frame]]:shadow-[0_24px_60px_rgba(0,0,0,0.65)]">
+            <MatchPoster
+              onEditPlayer={handleEditPlayer}
+              onLogoClick={handleLogoClick}
+            />
+          </div>
+          <div className="relative flex min-h-0">
+            <BenchPanel />
+          </div>
+        </main>
+        </>
+      )}
 
       <ModalShell
         open={resetConfirmOpen}

@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getPosterScale } from "@/lib/posterScale";
 import type { ResolvedFormationSlot } from "@/lib/formationEngine";
 import type { JerseyConfig, PitchPlayer, Player } from "@/types";
 import type { PitchMovementPolicy, SlotRules } from "@/lib/pitchInteraction";
@@ -167,7 +168,9 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
       }
 
       const benchTarget = findBenchDropTarget(clientX, clientY);
-      const swapTarget = computeSwapTarget(clientX, clientY);
+      // Mobilde yedek çekmecesi sahanın üstüne açılır: işaretçi çekmecedeyse
+      // alttaki saha kartıyla takas önerme (masaüstünde ikisi hiç çakışmaz).
+      const swapTarget = benchTarget ? null : computeSwapTarget(clientX, clientY);
       pendingSwapTarget.current = swapTarget;
 
       let target: DropTarget | null = null;
@@ -184,6 +187,10 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
 
       setDragIntent(buildDragIntent({ x: pointerX, y: pointerY }, target));
     },
+    onCancel: () => {
+      pendingSwapTarget.current = null;
+      setDragIntent({ kind: "idle" });
+    },
     onEnd: (clientX, clientY, moved) => {
       const swapTarget = pendingSwapTarget.current;
       pendingSwapTarget.current = null;
@@ -194,13 +201,13 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         return;
       }
 
-      if (swapTarget) {
+      const benchTarget = findBenchDropTarget(clientX, clientY);
+      if (swapTarget && !benchTarget) {
         swapPlayers(team, slotIndex, swapTarget.team, swapTarget.slotIndex);
         setDragIntent({ kind: "idle" });
         return;
       }
 
-      const benchTarget = findBenchDropTarget(clientX, clientY);
       if (benchTarget) {
         if (benchTarget.type === "bench-card") {
           const hiddenAwaySlot = findHiddenAwaySlot(
@@ -281,6 +288,8 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
         height: Math.round(cardSize * 1.48),
         opacity: dragging ? 0 : undefined,
         willChange: dragging ? "transform, left, top" : undefined,
+        // Dokunmatikte parmakla sürükleme sayfa kaydırma/yakınlaştırma sanılmasın.
+        touchAction: "none",
       }}
       onPointerDown={onPointerDown}
       onPointerMove={handlePointerMove}
@@ -333,6 +342,9 @@ export const PlayerOnPitch = memo(function PlayerOnPitch({
             top: dragClientPos.y - dragClientOffset.y,
             width: cardSize,
             opacity: 0.9,
+            // Poster ekrana ölçekli sığdırılıyor; kopya da sahadaki kart boyutunda görünsün.
+            transform: `scale(${getPosterScale()})`,
+            transformOrigin: "0 0",
           }}
         >
           <PlayerDragPreview

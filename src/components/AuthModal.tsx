@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Loader2, X } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
-  GoogleAuthProvider,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithPopup,
 } from "firebase/auth";
+import { signInWithGoogle } from "@/lib/auth/googleSignIn";
 import { getFirebaseAuth } from "@/lib/firebase/app";
 import { trackEvent } from "@/lib/analytics";
 import { mapAuthError } from "@/lib/cloud/errors";
@@ -100,11 +99,7 @@ function AuthModalBody({
     resetFeedback();
     setBusy(true);
     try {
-      const auth = getFirebaseAuth();
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-      await signInWithPopup(auth, provider);
-      trackEvent("sign_in_completed", { method: "google", is_new_user: false });
+      await signInWithGoogle("auth-modal");
       onClose();
     } catch (err) {
       setError(mapAuthError(err));

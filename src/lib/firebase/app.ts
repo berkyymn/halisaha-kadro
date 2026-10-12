@@ -1,6 +1,9 @@
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   connectAuthEmulator,
-  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
   type Auth,
 } from "firebase/auth";
 import {
@@ -22,7 +25,13 @@ let db: Firestore | null = null;
 
 export function getFirebaseAuth(): Auth {
   if (!auth) {
-    auth = getAuth(getFirebaseApp());
+    // getAuth() değil: o, iPhone Safari ve mobil tarayıcılarda açılışta Google giriş
+    // iframe'ini yükleyip bekler; Safari'de bu iframe takılınca uygulama "Kadro
+    // yükleniyor"da kalıyordu. Açılır pencere çözücüsü yalnızca girişte verilir
+    // (bkz. lib/auth/googleSignIn). Oturum saklama getAuth ile aynı.
+    auth = initializeAuth(getFirebaseApp(), {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+    });
     if (USE_FIREBASE_EMULATORS) {
       connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
     }

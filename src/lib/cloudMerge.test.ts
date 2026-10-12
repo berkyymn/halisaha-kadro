@@ -78,4 +78,48 @@ describe("giriş çatışması", () => {
     expect(out.map((x) => x.name)).toEqual(["Yerel Yıldız"]);
     expect(out[0].cutoutStoragePath).toBeUndefined();
   });
+
+  it("yalnızca tema / saha / diziliş değiştiyse soru sorulmaz", () => {
+    const snap = snapshot({
+      localUpdatedAt: new Date().toISOString(),
+      posterTheme: "derby-night",
+      homeFormationId: "7-2-3-1",
+      matchInfo: { ...createDefaultMatchInfo(), venue: "ALİBEYKÖY" },
+    });
+    expect(hasMeaningfulLocalChanges(snap)).toBe(false);
+  });
+
+  it("yedeğe isimli oyuncu eklendiyse soru sorulur", () => {
+    const snap = snapshot({ localUpdatedAt: new Date().toISOString() });
+    snap.savedPlayers["bench-1"] = p("bench-1", "Yedek Ahmet", 9);
+    snap.benchPlayerIds = ["bench-1"];
+    expect(hasMeaningfulLocalChanges(snap)).toBe(true);
+  });
+
+  it("birleştir: bulutta aynı isimde oyuncu varsa tekrar eklenmez", () => {
+    const cloud = snapshot();
+    const cloudId = cloud.homeTeam.playerIds[0];
+    cloud.savedPlayers[cloudId] = { ...cloud.savedPlayers[cloudId], name: "Mete" };
+    const local = snapshot();
+    local.savedPlayers["guest-2"] = p("guest-2", "  mete ", 31);
+    local.benchPlayerIds = ["guest-2"];
+    expect(collectLocalPlayersForMerge(local, cloud)).toEqual([]);
+  });
+
+  it("birleştir: aynı oyuncu bu cihazda farklı düzenlendiyse yeni kimlikle eklenir", () => {
+    const cloud = snapshot();
+    const id = cloud.homeTeam.playerIds[0];
+    cloud.savedPlayers[id] = { ...cloud.savedPlayers[id], name: "Ali" };
+    const local = { ...cloud, savedPlayers: { ...cloud.savedPlayers, [id]: { ...cloud.savedPlayers[id], name: "Veli" } } };
+    const out = collectLocalPlayersForMerge(local, cloud);
+    expect(out.map((x) => x.name)).toEqual(["Veli"]);
+    expect(out[0].id).not.toBe(id);
+  });
+
+  it("birleştir: bulutla aynı olan oyuncu eklenmez", () => {
+    const cloud = snapshot();
+    const id = cloud.homeTeam.playerIds[0];
+    cloud.savedPlayers[id] = { ...cloud.savedPlayers[id], name: "Ali" };
+    expect(collectLocalPlayersForMerge(cloud, cloud)).toEqual([]);
+  });
 });

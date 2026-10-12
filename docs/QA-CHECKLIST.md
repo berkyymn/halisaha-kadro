@@ -747,7 +747,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 | Adım | Beklenen |
 |------|----------|
-| Yeni kullanıcı / Posteri sıfırla | Tema Şampiyonlar Ligi, başlık mavi; ev sahibi beyaz kartal, deplasman sarı-lacivert |
+| Yeni kullanıcı / Posteri sıfırla | Tema Final Gecesi, başlık mavi; ev sahibi beyaz kartal, deplasman sarı-lacivert |
 | Tema seçici | Daha büyük küçük resimler, sağda yazı yok |
 | Paylaş menüsü | WhatsApp / X: panoya kopyalar + "Web'i aç" bildirimi; Instagram: indirir + "Instagram'ı aç"; Panoya kopyala; destekleyen tarayıcıda "Diğer…" (sistem paylaşımı) |
 | Pano izni yoksa | Hata değil: poster indirilir, "sürükleyip bırak" bildirimi |
@@ -858,6 +858,111 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | `feedback` kuralları | Yalnızca oluşturma; okuma/güncelleme/silme yok; alan ve uzunluk doğrulaması |
 
 - [x] Geçti
+
+---
+
+## 50. Mobil web — 1. tur (mobil-web dalı)
+
+Telefonla: Mac ile aynı Wi-Fi, `npm run dev:lan`, telefondan `http://<Mac IP>:3000`. Masaüstünde `?mobil=1`.
+
+| Adım | Beklenen |
+|------|----------|
+| Telefon dikey, iki takım | "Telefonu yan çevir" ekranı; "Tam ekran ve yatay aç" (Android) ve "Tek takım kadrosuna geç" |
+| Telefon yatay | Poster ekranı kaplar; solda ☰, sağ üstte Paylaş/İndir simgeleri, sağ kenarda "Yedekler" tutamacı |
+| ☰ menü | Hesap, Kadro, Format, Diziliş, Tema, Tam ekran, Sıfırla; dışına dokununca kapanır |
+| Yedekler tutamacı | Çekmece sağdan ~¼ genişlikte açılır |
+| Yedekten sahaya sürükle | Çekmece hemen kapanır; bırakılan yere oyuncu girer |
+| Sahadan sağ kenara sürükle | Çekmece kendiliğinden açılır; yedeğin üstüne bırakınca takas, çekmece kapanır |
+| Sürüklerken çekmeceden çık | Çekmece kapanır; sahadaki oyuncu üstüne bırakınca saha içi takas |
+| Oyuncuya dokun | Yatay iki sütunlu pencere (solda kart, sağda alanlar) |
+| Masaüstü | Düzen değişmedi (üst çubuk, sağ panel, yazılı Paylaş/Poster İndir) |
+
+### 2. tur (telefon geri bildirimi)
+
+| Adım | Beklenen |
+|------|----------|
+| Telefonda ilk açılış (hiç düzenlenmemiş kadro) | Tek takım modu, yedekler kapalı |
+| Küçük kartlarda oyuncu adı | "OYUNCU 7" gibi adlar kesilmeden görünür; uzun adlarda yazı küçülür |
+| Dikey menü | Tüm satırlar sığar (Hesap, Kadro, Format, Diziliş, Tema, Tam ekran, Sıfırla) |
+| Dikey yedek çekmecesi | Kartlar çekmeceye sığar; liste parmakla dikey kayar |
+| İki takım + yatay tam ekran → yedek düzenle → Fotoğraf ekle | Dosya seçici tam ekrandan çıkarsa da pencere kapanmaz, fotoğraf eklenir; "Tam ekrana dön" düğmesi çıkar |
+| Tek takımda Tam ekran | Ekran yataya kilitlenmez |
+| Kırpma dairesi | Parmakla kaydırınca fotoğraf kayar (sayfa kaymaz) |
+| Kartta kaydırma iptali | Dokunma iptal olursa oyuncu penceresi açılmaz |
+| Paylaş (Android) | Doğrudan sistem paylaşım penceresi (WhatsApp, Instagram…) |
+| Başlık penceresi yatay | Önizleme küçülür, alanlar görünür |
+
+### 3. tur
+
+| Adım | Beklenen |
+|------|----------|
+| Üst çubuk (telefon) | Solda Ayarlar (kaydırıcı simgesi) + Giriş yap / hesap + ☰ (İletişim, Gizlilik); sağda Paylaş, İndir |
+| ☰ / hesap menüsü | Sola hizalı açılır, ekranda kesilmez |
+| Dikey Ayarlar | Alttan kompakt panel: Kadro + Format yan yana, temalar tek satır, Tam ekran + Sıfırla yan yana |
+| Yatay tam ekranda fotoğraf ekle | Seçiciden dönünce ilk dokunuşta kendiliğinden tam ekrana döner; kutu çıkmaz |
+| Diziliş şeması | Kaleci turuncu, defans kırmızı, orta saha yeşil, forvet mavi; renk açıklaması + hücum oku; tek takımda dikey (hücum ↑) |
+| Paylaş, sistem paylaşımı olmayan mobil tarayıcı (Brave) | Poster indirilir, "WhatsApp → 📎 → Galeri" yönlendirmesi |
+| Misafir poster indirir/paylaşır | "Kadronu kaybetme" kartı; Giriş yap → giriş penceresi; Şimdi değil → 3 gün gösterilmez; giriş yapmışsa hiç çıkmaz |
+
+### 4. tur
+
+| Adım | Beklenen |
+|------|----------|
+| Giriş kartı | "Google ile devam et" tek dokunuşla giriş; "E-posta ile" giriş penceresi; X = Şimdi değil |
+| Giriş kartı sıklığı | Oturum başına en fazla 1; Şimdi değil → 3, sonra 7, sonra 30 gün |
+| İlk kullanım ipuçları (telefon) | 1) Oyuncuya dokun (okla karta işaret) 2) Yedekler tutamacı; ilk dokunuşta kaybolur, cihazda bir kez; pencere açıkken beklenir |
+| Telefon üst çubuk | Misafirde ☰ yok; dikeyde "Giriş yap", yatayda yalnızca simge; giriş yapınca kullanıcı simgesi (menü sola açılır) |
+| Ayarlar paneli | Diziliş açılır-kapanır; seçenekler panelin içinde aşağı açılır (üstüne binmez), seçince kapanır; açıklama metni yok (renkli nokta + ok); en altta İletişim · Gizlilik ve KVKK |
+| Mobil sahne zemini | Temanın bulanık görseli ekranın tamamına yayılır; poster ortada, gölgeli |
+| Tam ekran düğmesi | Üst çubukta (Ayarlar/hesap yanında); menüde yok; ana ekrandan açılan uygulamada görünmez |
+| Tam ekranda indir / paylaş / fotoğraf seç | Sistem tam ekrandan çıkarsa ilk dokunuşta kendiliğinden geri döner; kullanıcı kendisi çıktıysa dönmez |
+| Ana ekrana ekle (Android, HTTPS) | Ayarlar menüsünde "Ana ekrana ekle"; kurulan uygulama adres çubuğu olmadan açılır (manifest `display: standalone`) |
+| Tek ↔ iki takım geçişi | Ayarlar menüsü kapanır |
+| İki takım + dikey (5. tur) | Engelleyici ekran yok; poster dikeyde de düzenlenebilir; üstte kapatılabilir "Telefonu yan çevir, kartlar büyür" şeridi (oturum boyunca kapalı kalır); yatayda şerit yok |
+| Tam ekran (5. tur) | Yalnızca adres çubuğunu gizler; yön kilidi yok, ekran telefonun tutuluşuna göre döner |
+| Sabit poster boyutu (6. tur) | Poster her cihazda aynı iç boyutta (iki takım 1200×750, tek takım 640×800) yerleşir, ekrana ölçeklenir; kart/isim/yazı oranları cihazdan bağımsız; indirilen poster telefonda ve bilgisayarda aynı; masaüstü görünümü değişmedi |
+| Sürükleme (ölçekli poster) | Sürüklenen kopya sahadaki kart boyutunda; takas, yedek çekmecesi, serbest konum çalışır |
+| Pencereler | Tüm `ModalShell` pencereleri sayfa üstüne çizilir (poster içinden açılan başlık/ücret pencereleri küçülmez) |
+| Alt satır + saha ücreti | Saat, tarih ve ücret içerik kadar yer alır; tek takımda tarih sıkışmaz |
+| Çerez bandı (telefon) | Metin üstte, Reddet/Kabul et altta eşit genişlikte; ipuçları ancak tercih verilince çıkar |
+| Logo penceresi (telefon) | Önizleme küçük şerit (logo + forma); takım adı alanı açılır açılmaz görünür (dikey ve yatay); masaüstünde büyük önizleme |
+| Diziliş listesi | Şemalarda ok yok; listenin başında tek hareketli "Hücum yönü" göstergesi (tek takımda yukarı, iki takımda takıma göre sağ/sol); hareketi azalt ayarında sabit |
+| Menüde diziliş açıkken başka seçeneğe dokun | Liste kapanmaz, seçim uygulanır (ör. 8v8), menü açık kalır; arka plan yalnızca orada başlayan dokunuşla menüyü kapatır |
+| Telefonda Paylaş | Tek yeşil düğme; sistem paylaşımı varsa menü: "Paylaş…" (WhatsApp, Instagram…) ve "Telefona indir"; yoksa (Brave) doğrudan indir + WhatsApp yönlendirmesi. Masaüstünde Paylaş ve Poster İndir ayrı kalır |
+| Ana ekrana ekle önerisi (telefon) | Tarayıcı teklif ettiyse: 2. ziyarette (4 sn sonra) ya da poster indirince (giriş kartı çıkmadıysa) üstte kart; Ekle → kurulum penceresi; Şimdi değil → 7, sonra 30 gün, 3. redden sonra hiç; oturumda en fazla 1 |
+| Service worker (yalnızca canlı derleme) | `/sw.js` kayıt olur; önbellek yok, sayfalar ve geçişler normal; Firebase'de `no-cache` |
+
+### 7. tur — iPhone / Safari (2026-10-12)
+
+Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000` (127.0.0.1 değil). Dokunuş testleri iOS 26+ simülatörde; iOS 16.4/17 simülatörlerinde yalnızca görünüm kontrol edilebildi.
+
+| Adım | Beklenen |
+|------|----------|
+| Postere tarih / saat dokun (iPhone) | iOS tarih / saat seçicisi açılır, seçim postere yazılır; masaüstünde tıklama seçiciyi açar |
+| Oyuncu adı vb. alana dokun (iPhone) | Sayfa yakınlaşmaz; pencere tam genişlikte kalır, klavye kapanınca düzen normal |
+| Dokunduktan sonra poster alanları | Kesikli çerçeve takılı kalmaz (hover yalnızca fareli cihazlarda) |
+| Yan çevir şeridi (iPhone) | "Denetim Merkezi'nden dönme kilidini kapat"; Android'de "bildirim panelinden otomatik döndürme" |
+| Tam ekran düğmesi (iPhone) | Görünmez (Safari sayfaya tam ekran vermez); yerine Ayarlar → "Ana ekrana ekle" |
+| Ana ekrana ekle (iPhone) | Kart: 1) Paylaş (yoksa ⋯ menüsünde) 2) "Ana Ekrana Ekle"; ana ekran simgesinden açılınca adres çubuğu yok, üst düğmeler saat/çentik altında kalmaz |
+| Ana ekrana ekle önerisi (iPhone) | 2. ziyarette / poster indirince kart; Ekle → aynı adımlar; Şimdi değil → erteleme kuralları |
+| Ana ekrandan açılış (iPhone) | Beyaz parlama yok: sayfa ilk andan koyu zeminle açılır (`<html>` satır içi zemin + `color-scheme: dark`) |
+| Ana ekrandan açılış (iPhone) — açılış ekranı | iOS'un başlatma anında beyaz yerine koyu zeminde logo + "Halı Saha Kadro" (public/splash, cihaz boyutuna göre) |
+| Ana ekrandan açılış (iPhone) — bilinen | iPhone ana ekran uygulaması Safari'den ayrı depolama kullanır: misafirin Safari'deki kadrosu orada görünmez (giriş yapınca bulut kadrosu gelir) |
+| Ana ekrana ekle adımları (iPhone, misafir) | Kartta sarı not: "Kadronu uygulamada da görmek için önce giriş yap…"; giriş yapmışsa not yok |
+| Ana ekrana ekle (Android emülatör, `adb reverse` + `localhost`) | Menü → "Install app" penceresi → (yerelde) "Add to home screen" onayı → simge; simgeden koyu açılış ekranı, adres çubuksuz açılır |
+| Açılış (iPhone, başka sekme oturum deposunu kilitlese de) | En geç ~4 sn'de yerel kadroyla açılır; "Kadro yükleniyor"da kalmaz (`AUTH_WAIT_MS`) |
+| Google ile giriş (tüm platformlar) | Açılır pencere açılır, giriş tamamlanır (çözücü girişte yüklenir, açılışta değil) |
+| Giriş çakışma sorusu | Yalnızca bu cihazda bulutta olmayan oyuncu (isim/fotoğraf) varsa çıkar; sadece tema / saha / diziliş / tarih değiştiyse sorulmaz, bulut kadrosu yüklenir |
+| Çakışma kartları | "Bu cihaz" ve "Bulut" kartlarına tıklamak ilgili düğmeyle aynı seçimi yapar |
+| Birleştir | Bulut kadrosu yüklenir; bu cihazdaki yeni oyuncular yedeğe eklenir; buluttakiyle aynı isimdeki oyuncu tekrar eklenmez; aynı oyuncu bu cihazda farklı düzenlendiyse ayrı yedek olarak eklenir |
+| PC: tema ışıklandırması | Posterin çevresinde seçili temanın bulanık görseli (Derbi kırmızı-beyaz, Final Gecesi mavi, Karanlık Arena koyu, Summer Cup kum/deniz); tema / tek-iki takım değişince güncellenir; indirilen postere girmez; yedek paneli okunaklı |
+| Ana ekrana ekle önerisi + diğer bildirimler | Çerez bandı ya da "yan çevir" şeridi açıkken çıkmaz; onlar kapanınca gelir (üst üste binmez) |
+| Paylaş (iPhone, HTTPS) | Menü: "Paylaş…" ve "Fotoğraflara kaydet" (paylaşım menüsünde "Görüntüyü Kaydet") |
+| Paylaş (iPhone, paylaşım yok / HTTP) | Poster oluşur; "İndir" sorusu; bildirim dosyanın Dosyalar → İndirilenler'e gittiğini söyler (Galeri değil) |
+| Sürükleme (iPhone) | Takas, kenarda yedek çekmecesinin açılması ve yedeğe bırakma çalışır; boş yer tutucu yedeğe gitmez |
+| Ayarlar / yedek çekmecesi (iPhone) | Alt sayfa ve çekmece açılır-kapanır; Safari alt çubuğu düğmeleri örtmez |
+
+- [ ] Geçti (telefon testi bekliyor)
 
 ---
 

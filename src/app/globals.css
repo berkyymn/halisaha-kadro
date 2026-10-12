@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Yatay tutulan telefon: pencereler iki sütuna geçer. */
+@custom-variant phone-land (@media (orientation: landscape) and (max-height: 520px));
+
 :root {
   --background: #09090b;
   --foreground: #fafafa;
@@ -54,9 +57,13 @@ input[type="number"]::-webkit-outer-spin-button {
   color: rgba(255, 255, 255, 0.35);
 }
 
-.poster-editable:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.06);
+/* Yalnızca fareli cihazlarda: dokunmatikte (iPhone) :hover dokunuştan sonra takılı
+   kalır ve kesikli çerçeve indirilen postere de girebilirdi. */
+@media (hover: hover) {
+  .poster-editable:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .poster-editable:focus {
@@ -94,13 +101,26 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 /* poster-editable ile aynı dil: üzerine gelince kesikli çerçeve */
-.poster-title-hit:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.04);
+@media (hover: hover) {
+  .poster-title-hit:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.04);
+  }
 }
 
 .poster-title-hit:focus-visible {
   border-color: rgba(34, 197, 94, 0.75);
+}
+
+/* iPhone Safari 16 pikselden küçük yazı alanına dokununca sayfayı yakınlaştırır ve
+   öyle bırakır (pencereler taşar). Dokunmatikte alanlar en az 16px; posterin kendi
+   alanları satır içi boyutunu korur (inline style bu kuraldan güçlüdür). */
+@media (pointer: coarse) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 #match-poster {
@@ -139,6 +159,30 @@ input[type="number"]::-webkit-outer-spin-button {
 @media (prefers-reduced-motion: reduce) {
   .consent-banner {
     animation: none;
+  }
+}
+
+/* Diziliş listesinde hücum yönü: üç ok başı sırayla yanar, akış yönü belli olur. */
+@keyframes attack-flow {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateX(-1px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(1px);
+  }
+}
+
+.attack-chevron {
+  animation: attack-flow 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attack-chevron {
+    animation: none;
+    opacity: 0.8;
   }
 }
 

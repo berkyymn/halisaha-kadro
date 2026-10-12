@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useModalBackdrop } from "@/hooks/useModalBackdrop";
 
 type ModalShellProps = {
@@ -28,7 +29,9 @@ export function ModalShell({
 
   if (!open) return null;
 
-  return (
+  // Sayfanın en üstüne çizilir: poster gibi ölçeklenen bir katmanın içinden
+  // açılsa da pencere küçülmez ve ekrana sabit kalır.
+  return createPortal(
     <div
       className={`fixed inset-0 ${zIndexClass} flex items-center justify-center bg-black/80 p-4`}
       {...backdropProps}
@@ -36,6 +39,7 @@ export function ModalShell({
       <div className={panelClassName} {...panelProps}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

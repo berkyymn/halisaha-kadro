@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, UserRound, UsersRound } from "lucide-react";
+import { ChevronDown, ChevronRight, UserRound, UsersRound } from "lucide-react";
 import { getFormationsForSize } from "@/lib/formations";
 import { useAppStore } from "@/store/useAppStore";
 import { POSTER_THEME_LIST, normalizePosterTheme } from "@/lib/posterThemes";
-import type { Formation, SquadSize } from "@/types";
+import type { Formation, FormationRowRole, SquadSize } from "@/types";
 import { teamAccent } from "@/lib/teamColors";
 
 const LABEL = "text-[10px] font-bold uppercase tracking-wider text-zinc-500";
 
-export function PosterToolbar() {
+/** "bar": masaüstü üst çubuğu. "panel": mobil menüde alt alta gruplar. */
+export function PosterToolbar({ variant = "bar" }: { variant?: "bar" | "panel" }) {
+  const stacked = variant === "panel";
   const teamMode = useAppStore((s) => s.teamMode);
   const setTeamMode = useAppStore((s) => s.setTeamMode);
   const squadSize = useAppStore((s) => s.squadSize);
@@ -27,9 +29,9 @@ export function PosterToolbar() {
   const formations = getFormationsForSize(squadSize);
 
   return (
-    <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/90 px-4 py-2">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <Group label="Kadro">
+    <div className={stacked ? "" : "shrink-0 border-b border-zinc-800 bg-zinc-900/90 px-4 py-2"}>
+      <div className={stacked ? "flex flex-wrap gap-x-6 gap-y-4 landscape:flex-col landscape:flex-nowrap" : "flex flex-wrap items-center gap-x-5 gap-y-2"}>
+        <Group label="Kadro" stacked={stacked}>
           <Segmented
             value={teamMode}
             onChange={setTeamMode}
@@ -40,7 +42,7 @@ export function PosterToolbar() {
           />
         </Group>
 
-        <Group label="Format">
+        <Group label="Format" stacked={stacked}>
           <Segmented
             value={squadSize}
             onChange={(size: SquadSize) => setSquadSize(size)}
@@ -52,13 +54,15 @@ export function PosterToolbar() {
           />
         </Group>
 
-        <Group label="Diziliş">
+        <Group label="Diziliş" stacked={stacked} wide={stacked}>
           <FormationPicker
             teamName={homeTeam.shortName}
             color={teamAccent(homeTeam.jersey)}
             formations={formations}
             value={homeFormationId}
             onChange={setHomeFormation}
+            vertical={teamMode === "single"}
+            inline={stacked}
           />
           {teamMode === "versus" && (
             <FormationPicker
@@ -68,14 +72,15 @@ export function PosterToolbar() {
               value={awayFormationId}
               onChange={setAwayFormation}
               mirrored
+              inline={stacked}
             />
           )}
         </Group>
 
-        <div className="flex-1" />
+        {!stacked && <div className="flex-1" />}
 
-        <Group label="Tema">
-          <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Poster teması">
+        <Group label="Tema" stacked={stacked} wide={stacked}>
+          <div className={stacked ? "grid w-full grid-cols-4 gap-1.5 landscape:grid-cols-2" : "flex items-center gap-1.5"} role="radiogroup" aria-label="Poster teması">
             {POSTER_THEME_LIST.map((theme) => {
               const selected = posterTheme === theme.id;
               return (
@@ -87,7 +92,7 @@ export function PosterToolbar() {
                   aria-label={theme.label}
                   title={theme.label}
                   onClick={() => setPosterTheme(theme.id)}
-                  className={`relative h-9 w-[60px] overflow-hidden rounded-md border transition-all ${
+                  className={`relative overflow-hidden rounded-md border transition-all ${stacked ? "h-11 w-full landscape:h-12" : "h-9 w-[60px]"} ${
                     selected
                       ? "border-green-500 ring-2 ring-green-500/40"
                       : "border-zinc-700 opacity-70 hover:opacity-100 hover:border-zinc-500"
@@ -109,9 +114,20 @@ export function PosterToolbar() {
   );
 }
 
-function Group({ label, children }: { label: string; children: ReactNode }) {
+function Group({
+  label,
+  stacked = false,
+  wide = false,
+  children,
+}: {
+  label: string;
+  stacked?: boolean;
+  /** Panelde satırın tamamını kaplar (tema küçük resimleri). */
+  wide?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={stacked ? `flex flex-col items-start gap-1.5 ${wide ? "w-full" : ""}` : "flex items-center gap-2"}>
       <span className={LABEL}>{label}</span>
       {children}
     </div>
@@ -154,39 +170,72 @@ function Segmented<T extends string | number>({
 }
 
 /** Formasyonun küçük saha şeması: kaleci solda, hatlar sağa doğru. */
+/** Diziliş şemasında mevkiler: renkle ayırt edilir (tema/forma renginden bağımsız). */
+const ROLE_STYLE: Record<FormationRowRole, { color: string; label: string }> = {
+  GK: { color: "#fb923c", label: "Kaleci" },
+  DEF: { color: "#f87171", label: "Defans" },
+  MID: { color: "#4ade80", label: "Orta saha" },
+  ATT: { color: "#60a5fa", label: "Forvet" },
+};
+
 function FormationDiagram({
   formation,
-  color,
   mirrored = false,
+  vertical = false,
 }: {
   formation: Formation;
-  color: string;
   mirrored?: boolean;
+  /** Tek takım posteri: kaleci altta, hücum yukarı. */
+  vertical?: boolean;
 }) {
   const rows = formation.rows;
+  const dots = rows.flatMap((row, rowIndex) => {
+    const depth = 7 + (rowIndex / Math.max(1, rows.length - 1)) * 44;
+    return Array.from({ length: row.count }, (_, i) => {
+      const spread = row.count === 1 ? 0.5 : i / (row.count - 1);
+      const along = vertical ? 6 + spread * 22 : 6 + spread * 22;
+      const point = vertical
+        ? { x: along, y: 60 - depth }
+        : { x: mirrored ? 60 - depth : depth, y: along };
+      return { key: `${rowIndex}-${i}`, ...point, color: ROLE_STYLE[row.role].color };
+    });
+  });
+
+  if (vertical) {
+    return (
+      <svg viewBox="0 0 34 60" className="h-12 w-7" aria-hidden>
+        <rect x="1" y="1" width="32" height="58" rx="3" fill="#14532d" stroke="#3f6212" strokeWidth="1" />
+        <line x1="1" y1="1" x2="33" y2="1" stroke="#4d7c0f" strokeWidth="1" />
+        {dots.map((d) => (
+          <circle key={d.key} cx={d.x} cy={d.y} r="3" fill={d.color} stroke="rgba(0,0,0,0.7)" strokeWidth="0.8" />
+        ))}
+      </svg>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 60 40" className="h-9 w-14" aria-hidden>
-      <rect x="1" y="1" width="58" height="38" rx="3" fill="#14532d" stroke="#3f6212" strokeWidth="1" />
-      <line x1={mirrored ? 1 : 59} y1="1" x2={mirrored ? 1 : 59} y2="39" stroke="#4d7c0f" strokeWidth="1" />
-      {rows.flatMap((row, rowIndex) => {
-        const depth = 7 + (rowIndex / Math.max(1, rows.length - 1)) * 44;
-        const x = mirrored ? 60 - depth : depth;
-        return Array.from({ length: row.count }, (_, i) => {
-          const y = row.count === 1 ? 20 : 7 + (i / (row.count - 1)) * 26;
-          return (
-            <circle
-              key={`${rowIndex}-${i}`}
-              cx={x}
-              cy={y}
-              r="3"
-              fill={rowIndex === 0 ? "#e4e4e7" : color}
-              stroke="rgba(0,0,0,0.6)"
-              strokeWidth="0.8"
-            />
-          );
-        });
-      })}
+    <svg viewBox="0 0 60 34" className="h-8 w-14" aria-hidden>
+      <rect x="1" y="1" width="58" height="32" rx="3" fill="#14532d" stroke="#3f6212" strokeWidth="1" />
+      <line x1={mirrored ? 1 : 59} y1="1" x2={mirrored ? 1 : 59} y2="33" stroke="#4d7c0f" strokeWidth="1" />
+      {dots.map((d) => (
+        <circle key={d.key} cx={d.x} cy={d.y} r="3" fill={d.color} stroke="rgba(0,0,0,0.7)" strokeWidth="0.8" />
+      ))}
     </svg>
+  );
+}
+
+/** Tek, hareketli hücum yönü göstergesi (her şemada ayrı ok yerine). */
+function AttackDirection({ direction }: { direction: "up" | "right" | "left" }) {
+  const rotate = direction === "up" ? "-rotate-90" : direction === "left" ? "rotate-180" : "";
+  return (
+    <div className="col-span-full flex items-center gap-2 px-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+      <span className={`flex items-center ${rotate}`} aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <ChevronRight key={i} className="attack-chevron -mx-1 h-3.5 w-3.5 text-green-400" style={{ animationDelay: `${i * 0.18}s` }} />
+        ))}
+      </span>
+      Hücum yönü
+    </div>
   );
 }
 
@@ -197,6 +246,8 @@ function FormationPicker({
   value,
   onChange,
   mirrored = false,
+  vertical = false,
+  inline = false,
 }: {
   teamName: string;
   color: string;
@@ -204,13 +255,18 @@ function FormationPicker({
   value: string;
   onChange: (id: string) => void;
   mirrored?: boolean;
+  vertical?: boolean;
+  /** Mobil panel: seçenekler düğmenin altında akış içinde açılır (hiçbir şeyin üstüne binmez). */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const current = formations.find((f) => f.id === value) ?? formations[0];
 
   useEffect(() => {
-    if (!open) return;
+    // Panelde (inline) dışarı dokununca kapanmaz: alttan açılan menü kısalıp
+    // parmağın altından kayar, dokunuş arkadaki "menüyü kapat" alanına düşerdi.
+    if (!open || inline) return;
     const onPointerDown = (e: PointerEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -223,10 +279,10 @@ function FormationPicker({
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, inline]);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={inline ? "w-full" : "relative"}>
       <button
         type="button"
         aria-haspopup="listbox"
@@ -247,8 +303,13 @@ function FormationPicker({
         <div
           role="listbox"
           aria-label={`${teamName} dizilişi`}
-          className="absolute left-0 top-full z-[80] mt-1.5 grid w-[248px] grid-cols-3 gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 p-2 shadow-2xl"
+          className={
+            inline
+              ? "mt-1.5 grid w-[min(100%,320px)] grid-cols-5 gap-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1.5"
+              : "absolute left-0 top-full z-[80] mt-1.5 grid w-[248px] grid-cols-3 gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 p-2 shadow-2xl"
+          }
         >
+          <AttackDirection direction={vertical ? "up" : mirrored ? "left" : "right"} />
           {formations.map((formation) => {
             const selected = formation.id === value;
             return (
@@ -267,7 +328,7 @@ function FormationPicker({
                     : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-600"
                 }`}
               >
-                <FormationDiagram formation={formation} color={color} mirrored={mirrored} />
+                <FormationDiagram formation={formation} mirrored={mirrored} vertical={vertical} />
                 <span className={`text-[11px] font-bold tabular-nums ${selected ? "text-green-400" : "text-zinc-300"}`}>
                   {formation.name}
                 </span>

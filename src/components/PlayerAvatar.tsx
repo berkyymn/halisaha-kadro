@@ -105,6 +105,14 @@ export const PlayerAvatar = memo(function PlayerAvatar({
 
   const compact = w < 92;
   const nameH = showName ? h * (compact ? 0.14 : 0.16) : 0;
+  // Küçük kartta (telefon, dar ekran) etiket kartın biraz dışına taşar ve yazı
+  // ada göre küçülür: "OYUNCU 7" gibi adlar "OYUNCU…" diye kesilmesin.
+  const plateW = w * (compact ? 1.14 : 0.92);
+  const plateName = name?.trim() || "—";
+  const baseNameFont = Math.max(compact ? 9 : 10, w * (compact ? 0.15 : 0.18));
+  // Bebas Neue + 0.05em aralık ≈ karakter başına 0.47em.
+  const fitNameFont = (plateW - 8) / (Math.max(1, plateName.length) * 0.47);
+  const nameFont = compact ? Math.max(7, Math.min(baseNameFont, fitNameFont)) : baseNameFont;
 
   const numberColor = jersey.numberColor || "#ffffff";
   const accent = teamAccent(jersey);
@@ -248,7 +256,7 @@ export const PlayerAvatar = memo(function PlayerAvatar({
           className="absolute left-1/2 z-40 flex -translate-x-1/2 items-center justify-center overflow-hidden"
           style={{
             bottom: 0,
-            width: w * 0.92,
+            width: plateW,
             height: nameH,
             borderRadius: w * 0.06,
             background: "linear-gradient(180deg, rgba(24,24,27,0.97), rgba(0,0,0,0.97))",
@@ -258,7 +266,7 @@ export const PlayerAvatar = memo(function PlayerAvatar({
               inset 0 1px 0 rgba(229,231,235,0.1),
               0 4px 14px ${CHROME.shadow}
             `,
-            padding: "0 5px",
+            padding: compact ? "0 3px" : "0 5px",
           }}
         >
           <span
@@ -266,14 +274,14 @@ export const PlayerAvatar = memo(function PlayerAvatar({
             className="w-full truncate text-center uppercase text-white"
             style={{
               fontFamily: DISPLAY_FONT,
-              fontSize: Math.max(compact ? 9 : 10, w * (compact ? 0.15 : 0.18)),
+              fontSize: nameFont,
               lineHeight: 1,
               letterSpacing: "0.05em",
               paddingTop: "0.08em",
               textShadow: "0 1px 3px rgba(0,0,0,0.9)",
             }}
           >
-            {name?.trim() || "—"}
+            {plateName}
           </span>
         </div>
       )}

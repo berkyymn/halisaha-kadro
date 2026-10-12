@@ -29,7 +29,12 @@ const TONE_CLASS: Record<SyncIndicator["tone"], string> = {
   error: "text-red-400 bg-red-950/40 cursor-help",
 };
 
-export function UserAuthButton() {
+/**
+ * `compact`: mobil üst çubuk — "Yerel" rozeti gizlenir, düğmeler 40 px yüksekliğinde,
+ * açılır menü sola hizalanır (ekranın sol kenarında kesilmesin).
+ */
+export function UserAuthButton({ compact = false }: { compact?: boolean } = {}) {
+  const menuAlign = compact ? "left" : "right";
   const {
     configured,
     user,
@@ -74,7 +79,7 @@ export function UserAuthButton() {
     return (
       <div className="flex items-center gap-1.5 shrink-0">
         <span
-          className="inline-flex items-center gap-1 h-8 px-2 rounded-lg border border-zinc-700 bg-zinc-800 text-[11px] font-medium text-zinc-400"
+          className={`${compact ? "hidden" : "inline-flex"} items-center gap-1 h-8 px-2 rounded-lg border border-zinc-700 bg-zinc-800 text-[11px] font-medium text-zinc-400`}
           title="Misafir modu: veriler sadece bu tarayıcıda saklanıyor."
         >
           <HardDrive className="w-3.5 h-3.5" />
@@ -86,22 +91,29 @@ export function UserAuthButton() {
             trackEvent("auth_modal_opened");
             openAuthModal();
           }}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-zinc-600 bg-zinc-800 hover:bg-zinc-700 hover:border-zinc-500 text-[11px] font-semibold text-white shrink-0"
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-zinc-600 bg-zinc-800 hover:bg-zinc-700 hover:border-zinc-500 font-semibold text-white shrink-0 ${
+            compact ? "h-10 min-w-10 justify-center px-3 text-xs bg-zinc-900/75 backdrop-blur landscape:px-0" : "h-8 px-2.5 text-[11px]"
+          }`}
           title="Hesabınla giriş yap, verilerin bulutta saklansın"
+          aria-label="Giriş yap"
         >
-          <LogIn className="w-3.5 h-3.5" />
-          Giriş yap
+          <LogIn className={compact ? "w-4 h-4" : "w-3.5 h-3.5"} />
+          {/* Yatay telefonda yalnızca simge: iki takımlı posterin üstüne binmesin. */}
+          <span className={compact ? "landscape:hidden" : undefined}>Giriş yap</span>
         </button>
+        {!compact && (
         <HeaderMenu
+          align={menuAlign}
           label="Menü"
           trigger={<Menu className="w-4 h-4" aria-hidden />}
-          triggerClassName="w-8 justify-center"
+          triggerClassName={compact ? "h-10 w-10 justify-center rounded-xl border border-zinc-700/70 bg-zinc-900/75 backdrop-blur" : "h-8 w-8 justify-center rounded-lg"}
         >
           <MenuItem icon={<MessageSquare />} onSelect={openContact}>
             İletişim
           </MenuItem>
           <PrivacyMenuItem />
         </HeaderMenu>
+        )}
         <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
       </div>
     );
@@ -135,7 +147,7 @@ export function UserAuthButton() {
     <>
       <div className="flex items-center gap-1.5 shrink-0">
         <span
-          className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${TONE_CLASS[indicator.tone]}`}
+          className={`${compact ? "hidden" : "inline-flex"} items-center justify-center w-7 h-7 rounded-md ${TONE_CLASS[indicator.tone]}`}
           title={syncTitle}
           aria-label={syncTitle}
         >
@@ -146,15 +158,16 @@ export function UserAuthButton() {
           )}
         </span>
         <HeaderMenu
+          align={menuAlign}
           label="Hesap menüsü"
           trigger={
             <>
-              <UserRound className="w-3.5 h-3.5" aria-hidden />
-              <span className="hidden lg:inline max-w-[140px] truncate text-[11px]">{email}</span>
-              <ChevronDown className="w-3 h-3" aria-hidden />
+              <UserRound className={compact ? "w-4 h-4" : "w-3.5 h-3.5"} aria-hidden />
+              {!compact && <span className="hidden lg:inline max-w-[140px] truncate text-[11px]">{email}</span>}
+              {!compact && <ChevronDown className="w-3 h-3" aria-hidden />}
             </>
           }
-          triggerClassName="gap-1.5 px-2"
+          triggerClassName={compact ? "h-10 w-10 justify-center rounded-xl border border-zinc-700/70 bg-zinc-900/75 backdrop-blur" : "h-8 gap-1.5 px-2 rounded-lg"}
           header={
             <div className="px-3 py-2.5 border-b border-zinc-800">
               <p className="text-[10px] uppercase tracking-wider text-zinc-500">Giriş yapılan hesap</p>
@@ -245,6 +258,7 @@ export function UserAuthButton() {
 
 /** Başlıktaki açılır menü: dışarı tıklayınca ya da Esc ile kapanır. */
 function HeaderMenu({
+  align = "right",
   label,
   trigger,
   triggerClassName = "",
@@ -255,6 +269,7 @@ function HeaderMenu({
   trigger: ReactNode;
   triggerClassName?: string;
   header?: ReactNode;
+  align?: "left" | "right";
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -285,7 +300,7 @@ function HeaderMenu({
         aria-expanded={open}
         aria-label={label}
         title={label}
-        className={`inline-flex items-center h-8 rounded-lg transition-colors ${
+        className={`inline-flex items-center transition-colors ${
           open ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
         } ${triggerClassName}`}
       >
@@ -294,7 +309,9 @@ function HeaderMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-[95] mt-1.5 w-60 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1 shadow-2xl"
+          className={`absolute top-full z-[95] mt-1.5 w-60 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1 shadow-2xl ${
+            align === "left" ? "left-0" : "right-0"
+          }`}
           onClick={(e) => {
             // Öğe seçilince menü kapanır.
             if ((e.target as HTMLElement).closest("[role=menuitem]")) setOpen(false);

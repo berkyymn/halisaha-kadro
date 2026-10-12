@@ -1,34 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAppStore } from "@/store/useAppStore";
+import { POSTER_LOGICAL_SIZE } from "@/lib/posterScale";
 import type { PosterMetrics } from "@/types";
 
-const DEFAULT_METRICS: PosterMetrics = { width: 1280, height: 800 };
-
+/** Posterin sabit iç boyutu (ekran boyutundan bağımsız; bkz. lib/posterScale). */
 export function usePosterMetrics(): PosterMetrics {
-  const [metrics, setMetrics] = useState(DEFAULT_METRICS);
-
-  useEffect(() => {
-    const el = document.getElementById("match-poster");
-    if (!el) return;
-
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        setMetrics({ width: rect.width, height: rect.height });
-      }
-    };
-
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    window.addEventListener("resize", update);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-
-  return metrics;
+  const teamMode = useAppStore((s) => s.teamMode);
+  return POSTER_LOGICAL_SIZE[teamMode];
 }

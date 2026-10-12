@@ -9,6 +9,9 @@ import {
   onAppStoreHydrated,
 } from "@/store/useAppStore";
 
+/** Oturum kontrolü için en fazla bekleme (sonra yerel kadroyla açılır). */
+const AUTH_WAIT_MS = 4000;
+
 type AppBootstrapGateProps = {
   children: ReactNode;
 };
@@ -26,7 +29,18 @@ export function AppBootstrapGate({ children }: AppBootstrapGateProps) {
     });
   }, [storeReady]);
 
-  const appReady = storeReady && !authLoading && !cloudLoading;
+  // iPhone Safari'de askıya alınmış başka bir sekme Firebase'in oturum deposunu
+  // kilitli tutabiliyor; oturum kontrolü hiç bitmeyince uygulama yükleme
+  // ekranında kalıyordu. Belli bir süreden sonra yerel kadroyla açılır; oturum
+  // sonradan gelirse senkron her zamanki gibi başlar.
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+  useEffect(() => {
+    if (!authLoading) return;
+    const timer = window.setTimeout(() => setAuthTimedOut(true), AUTH_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [authLoading]);
+
+  const appReady = storeReady && (!authLoading || authTimedOut) && !cloudLoading;
   const migrationTriggeredRef = useRef(false);
 
   useEffect(() => {
