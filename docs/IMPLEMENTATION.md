@@ -80,15 +80,15 @@ Single-page **football pitch poster editor** for amateur league matches (halı s
 
 ```
 page.tsx
-└── MobileGate            → phones/tablets get "Mobil uygulamamız yakında"; app never boots
+└── LayoutModeGate        → detectLayoutMode(): "mobile" (phones) | "desktop"; registers /sw.js in production
     └── AppProviders
 AppProviders
 ├── AuthProvider          → Firebase auth; starts/stops SyncController; exposes `sync` state; renders LoginConflictModal
-├── AppBootstrapGate      → waits: store hydrate + auth + first cloud load (`sync.phase === "loading" && !sync.error`)
+├── AppBootstrapGate      → waits: store hydrate + auth (max AUTH_WAIT_MS = 4s) + first cloud load (`sync.phase === "loading" && !sync.error`)
 │   └── idle: compressAllSavedPlayers() once
 └── AuthModal
 
-AppShell
+AppShell                  → layout "mobile" → MobileStage (full-screen poster, sheet menu, bench drawer); "desktop" → below
 ├── PosterToolbar
 ├── MatchPoster           → id="match-poster" (export target)
 ├── BenchPanel
@@ -579,7 +579,7 @@ Does the feature change what gets saved locally?
 
 | Area | Contract |
 |------|----------|
-| Mobile | `MobileGate` (`src/lib/deviceSupport.ts`) wraps the app in `src/app/page.tsx`. Phones/tablets (UA, iPadOS touch Mac, coarse-only pointer) see a coming-soon screen. `/gizlilik` is outside the gate. |
+| Mobile | ~~`MobileGate` coming-soon screen~~ → replaced on 2026-10-12 by the mobile web layout (see §16). |
 | Analytics / KVKK | GA4 Consent Mode default `denied`; `gtag.js` loads only after "Kabul et" (`ConsentBanner`, `setAnalyticsConsent`). `trackEvent` is a no-op without consent. |
 | Legal | `/gizlilik` static page; controller name/e-mail in `src/lib/legal.ts` (must be filled before launch). |
 | Site URL | `src/lib/siteUrl.ts` ← `NEXT_PUBLIC_SITE_URL`; drives metadataBase, `app/robots.ts`, `app/sitemap.ts`. |
@@ -600,3 +600,19 @@ Does the feature change what gets saved locally?
 ---
 
 *Last aligned with persist v36, the SyncController cloud layer (R4/R5) and the title editor redesign.*
+
+## 16. Mobile web (2026-10-12, PR #19)
+
+| Area | Contract |
+|------|----------|
+| Layout choice | `LayoutModeGate` + `detectLayoutMode()` (`src/lib/deviceSupport.ts`): phone UA or touch-only with short side < 600px → `MobileStage`; desktop/tablet keep the desktop shell. `?mobil=1` / `?mobil=0` forces. |
+| Fixed poster size | `POSTER_LOGICAL_SIZE` (`src/lib/posterScale.ts`): versus 1200×750, single 640×800. `MatchPoster` = frame → scaler (`transform: scale`) → `#match-poster`; export uses `offsetWidth`, so output is identical on every device. `usePosterMetrics` returns the fixed size. |
+| Modals | `ModalShell` portals to `document.body` (not scaled with the poster). |
+| Mobile stage | `src/components/mobile/MobileStage.tsx`: themed blurred backdrop, settings sheet (landscape: drawer), bench drawer with edge auto-open, rotate hint, optional fullscreen (Android only; restored after download/picker), hints, install suggestion. |
+| iPhone | No Fullscreen API → "Ana ekrana ekle" steps (`InstallSuggestion`, `installMode() === "ios"`); home-screen app has separate storage from Safari (guest note shown). Splash screens: `public/splash`, `appleWebApp.startupImage` in `layout.tsx`. Inputs ≥16px on coarse pointers (no zoom); date/time use transparent overlay inputs (`PosterDateField`/`PosterTimeField`). |
+| Auth init | `initializeAuth` without popup resolver (`src/lib/firebase/app.ts`); resolver passed at `signInWithPopup` / `reauthenticateWithPopup`. Boot waits for auth at most 4s (a suspended Safari tab can lock Firebase's IndexedDB). |
+| Share | Phone: one Share button → system share + download (iPhone: "Fotoğraflara kaydet" via share sheet). Desktop menu unchanged. |
+| Login conflict | Asked only if `collectLocalPlayersForMerge(local, cloud)` is non-empty (local player name/photo missing in cloud); merge skips same-name players and re-ids locally edited same-id players. |
+| Theme assets | Single-mode vertical posters in `public/posters/vertical`; bump `?v=` in `StaticPosterBackground` when an image changes (1-day cache). |
+| Testing | `docs/PLATFORM-KARSILASTIRMA.md`, QA §50. |
+
