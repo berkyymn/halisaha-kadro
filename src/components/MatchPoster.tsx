@@ -21,6 +21,9 @@ import { StaticPosterBackground } from "./StaticPosterBackground";
 import { TeamLogoBadge } from "./TeamLogoBadge";
 import { usePosterMetrics } from "@/hooks/usePosterMetrics";
 import { POSTER_LOGICAL_SIZE, setPosterScale } from "@/lib/posterScale";
+
+/** Alt bandın altındaki şerit (iç boyut pikseli): imza burada durur. */
+const POSTER_SIGNATURE_HEIGHT = 12;
 import { feePerPerson, formatLira } from "@/lib/matchFee";
 import { SINGLE_PITCH_AREA } from "@/lib/formationEngine";
 import { teamNameScale } from "@/lib/posterLayout";
@@ -427,6 +430,23 @@ export function MatchPoster({
       style={{ width: logical.width, height: logical.height }}
     >
       <StaticPosterBackground />
+
+      {/* İmza: paylaşılan her poster siteye geri yönlendirsin. Alt bandın altındaki
+          ince şeritte, göze batmadan; indirilen görsele de girer. */}
+      <div
+        aria-hidden
+        // Alan adı: Türkçe büyük harf kuralı "i"yi "İ" yapmasın.
+        lang="en"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center justify-center font-sans font-semibold uppercase text-white/60"
+        style={{
+          height: POSTER_SIGNATURE_HEIGHT,
+          fontSize: 8.5,
+          letterSpacing: "0.22em",
+          textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+        }}
+      >
+        halisahakadro.com
+      </div>
 
       <div className="relative z-10 h-full">
         {!isSingle && <PosterTitleDisplay />}

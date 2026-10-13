@@ -496,9 +496,11 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 
 - [ ] Geçti
 
-## 28. Mobil kapı (L6)
+## 28. Mobil kapı (L6) — KALDIRILDI (2026-10-12)
 
-**Dosyalar:** `src/components/MobileGate.tsx`, `src/components/AppProviders.tsx`
+> Bu bölüm geçersiz: `MobileGate` kaldırıldı, telefonlar mobil düzeni görür. Güncel testler §50'de.
+
+**Dosyalar (eski):** `src/components/MobileGate.tsx`, `src/components/AppProviders.tsx`
 
 | Adım | Beklenen |
 |------|----------|
@@ -963,6 +965,17 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 | Ayarlar / yedek çekmecesi (iPhone) | Alt sayfa ve çekmece açılır-kapanır; Safari alt çubuğu düğmeleri örtmez |
 
 - [ ] Geçti (telefon testi bekliyor)
+
+---
+
+## 51. Poster imzası (2026-10-13)
+
+| Adım | Beklenen |
+|------|----------|
+| Poster (tek / iki takım, tüm temalar) | Alt bandın altında ortada küçük, yarı saydam "HALISAHAKADRO.COM"; alt bantla, oyuncularla ve saha ücretiyle çakışmaz |
+| Poster indir / paylaş (PC ve telefon) | İndirilen görselde imza var ve okunuyor |
+
+- [ ] Geçti
 
 ---
 

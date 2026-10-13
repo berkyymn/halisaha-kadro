@@ -523,7 +523,7 @@ Ayrıntı: `docs/LAUNCH-PLAN.md`.
 - [x] Yedekler tarafsız formada (`NEUTRAL_BENCH_JERSEY`)
 - [x] Saat seçici (`PosterTimeField`, `normalizeMatchTime`)
 - [x] Tek takım modunda rakip takımın özel oyuncuları yedek panelinde; sürükle-bırak ile swap
-- [x] Mobil/tablet kapısı (`MobileGate`)
+- [x] Mobil/tablet kapısı (`MobileGate`) — *2026-10-12: mobil web sürümüyle değişti (Phase 39)*
 - [x] Giriş çatışması: yerel (branding dahil), bulut (tam değiştir), birleştir (yerel oyuncular yedeğe)
 - [x] Sürükleme state'i ayrı store'da (persist yazımı yok)
 - [x] Posteri sıfırla onayı + oyuncu kaydı düzeltmesi
@@ -570,6 +570,30 @@ Ayrıntı: `docs/LAUNCH-PLAN.md` R1–R10; QA §38–§40; `docs/IMPLEMENTATION.
 - [ ] R10 Safari/Firefox + pilot geri bildirimi (kullanıcı)
 
 ---
+
+## Phase 39 — Mobil web (2026-10-12, PR #19, canlıda)
+
+Ayrıntı: `docs/IMPLEMENTATION.md` §16, `docs/PLATFORM-KARSILASTIRMA.md`, QA §50.
+
+- [x] Telefon düzeni (`MobileStage`), sabit poster iç boyutu, mobil paylaşım, yedek çekmecesi, ipuçları
+- [x] Android tam ekran, ana ekrana ekle (Android kurulum + iPhone adımları), iPhone açılış ekranları
+- [x] iPhone Safari: tarih/saat seçici, yakınlaşma, takılı hover, oturum beklemesi (4 sn), Google iframe'i girişte
+- [x] PC'de tema ışıklandırması; Final Gecesi tek takım görseli + tema adı
+- [x] Giriş çakışması yalnızca oyuncu kaybında; birleştir düzeltmeleri; tıklanabilir kartlar
+- [ ] Giriş yapmış kullanıcıda yavaş yenileme (Cmd+Shift+R) — süre ölçülecek
+- [ ] Final Gecesi kubbesi hâlâ starball'a benziyor (kullanıcı: isim değişikliği yeterli, sonra bakılabilir)
+- [ ] PC isim etiketi genişliği ve diziliş listesi mobil tasarımla değişti — kullanıcı kararı bekliyor
+
+## Phase 40 — Büyüme / SEO (2026-10-13)
+
+Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklineup.com/tr, halisaha.art, tactixsquad.com/tr, kurkadro.com, lineupapp.com.tr (maç posteri), footballlineupbuilder.com/tr, varsistemi.com, takimkur.com.tr. Hepsi ücretsiz; çoğunun blogu / hedefli sayfaları var. Bizim farkımız: stadyum temalı premium poster, arka planı temizlenmiş oyuncu fotoğrafı, logo/forma tasarımı, bulut kaydı. Bing'de halisahakadro.com "halı saha takım posteri" 2., "halı saha kadro" 8. sırada (2026-10-13).
+
+- [x] Poster imzası: alt bandın altında "HALISAHAKADRO.COM" (indirilen görselde de) — QA §51
+- [ ] Google Search Console (domain mülkü, DNS TXT) + site haritası gönderimi (kullanıcı)
+- [ ] Ana sayfada arama motorunun okuyacağı içerik (H1, 3 adım, SSS) + JSON-LD `WebApplication` — statik HTML şu an yalnızca "Yükleniyor…"
+- [ ] Hedefli sayfalar: halı saha maç posteri, 7'li / 8'li dizilişler, kadro kur
+- [ ] Paylaşım metnine site linki
+- [ ] Halı saha işletmesi pilotu (QR), Reels/TikTok (kullanıcı)
 
 ## Cross-cutting constraints (applied across phases)
 
