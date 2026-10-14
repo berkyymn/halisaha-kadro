@@ -590,8 +590,11 @@ Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklin
 
 - [x] Poster imzası: alt bandın üstünde solda "HALISAHAKADRO.COM" (indirilen görselde de) — QA §51
 - [ ] Google Search Console (domain mülkü, DNS TXT) + site haritası gönderimi (kullanıcı)
-- [ ] Ana sayfada arama motorunun okuyacağı içerik (H1, 3 adım, SSS) + JSON-LD `WebApplication` — statik HTML şu an yalnızca "Yükleniyor…"
-- [ ] Hedefli sayfalar: halı saha maç posteri, 7'li / 8'li dizilişler, kadro kur
+- [x] Ana sayfa: sunucuda çizilen (görsel olarak gizli) h1 + açıklama, JSON-LD `WebApplication`, sayfa başlığı "Halı Saha Kadro Kur – Ücretsiz Kadro ve Maç Posteri" — QA §52
+- [x] Rehber sayfası `/hali-saha-kadro-kur` (3 adım, özellikler, SSS, örnek poster `public/ornek/`), site haritasında, menüde "Nasıl kullanılır"
+- [x] Diziliş rehberi: `/hali-saha-dizilisleri` + 6 / 7 / 8 kişilik sayfalar (17 diziliş şeması, güçlü/zayıf yan, kime uygun, SSS); "Bu dizilişle kadro kur" → `/?dizilis=<id>` uygulamayı o dizilişle açar
+- [x] Hesap menüsü sadeleşti (e-posta / bulut durumu satırları kaldırıldı; PC'de bulut simgesi ipucu, telefonda yalnızca sorun varsa uyarı)
+- [ ] 2-4 hafta sonra Search Console verisine göre yeni sayfa kararı (ör. "halı saha maç posteri", kurallar)
 - [ ] Paylaşım metnine site linki
 - [ ] Halı saha işletmesi pilotu (QR), Reels/TikTok (kullanıcı)
 

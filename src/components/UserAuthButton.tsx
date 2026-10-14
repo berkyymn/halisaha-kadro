@@ -6,6 +6,7 @@ import {
   Cloud,
   CloudOff,
   HardDrive,
+  CircleHelp,
   Loader2,
   LogIn,
   LogOut,
@@ -111,6 +112,7 @@ export function UserAuthButton({ compact = false }: { compact?: boolean } = {}) 
           <MenuItem icon={<MessageSquare />} onSelect={openContact}>
             İletişim
           </MenuItem>
+          <HowToMenuItem />
           <PrivacyMenuItem />
         </HeaderMenu>
         )}
@@ -169,11 +171,18 @@ export function UserAuthButton({ compact = false }: { compact?: boolean } = {}) 
           }
           triggerClassName={compact ? "h-10 w-10 justify-center rounded-xl border border-zinc-700/70 bg-zinc-900/75 backdrop-blur" : "h-8 gap-1.5 px-2 rounded-lg"}
           header={
-            <div className="px-3 py-2.5 border-b border-zinc-800">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Giriş yapılan hesap</p>
-              <p className="truncate text-xs font-medium text-white">{email}</p>
-              <p className="mt-0.5 text-[10px] text-zinc-500">{syncTitle}</p>
-            </div>
+            // Hesap ve "bulut güncel" bilgisi menüde gösterilmez (PC'de bulut simgesinin
+            // ipucunda). Telefonda bulut simgesi yok: yalnızca kayıt sorunu varsa uyarı.
+            compact && (indicator.tone === "warn" || indicator.tone === "error") ? (
+              <p
+                role="status"
+                className={`border-b border-zinc-800 px-3 py-2 text-[11px] leading-snug ${
+                  indicator.tone === "error" ? "text-red-400" : "text-amber-400"
+                }`}
+              >
+                {syncTitle}
+              </p>
+            ) : undefined
           }
         >
           <MenuItem icon={<UserRound />} onSelect={() => setAccountOpen(true)}>
@@ -182,6 +191,7 @@ export function UserAuthButton({ compact = false }: { compact?: boolean } = {}) 
           <MenuItem icon={<MessageSquare />} onSelect={openContact}>
             İletişim
           </MenuItem>
+          <HowToMenuItem />
           <PrivacyMenuItem />
           <div className="my-1 h-px bg-zinc-800" />
           <MenuItem icon={<LogOut />} onSelect={() => setConfirmOpen(true)} tone="danger">
@@ -353,6 +363,21 @@ function MenuItem({
       {icon}
       {children}
     </button>
+  );
+}
+
+function HowToMenuItem() {
+  return (
+    <a
+      href="/hali-saha-kadro-kur"
+      target="_blank"
+      rel="noopener"
+      role="menuitem"
+      className={`${MENU_ITEM_CLASS} text-zinc-300 hover:bg-zinc-800 hover:text-white`}
+    >
+      <CircleHelp />
+      Nasıl kullanılır
+    </a>
   );
 }
 

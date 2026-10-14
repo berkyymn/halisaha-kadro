@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Maximize2, MessageSquare, Minimize2, RotateCcw, ShieldCheck, SlidersHorizontal, Smartphone, X } from "lucide-react";
+import { CircleHelp, Maximize2, MessageSquare, Minimize2, RotateCcw, ShieldCheck, SlidersHorizontal, Smartphone, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useDragStore } from "@/store/useDragStore";
 import { BenchPanel } from "@/components/BenchPanel";
@@ -218,6 +218,10 @@ export function MobileStage({
                   <MessageSquare className="h-3.5 w-3.5" />
                   İletişim
                 </button>
+                <a href="/hali-saha-kadro-kur" target="_blank" rel="noopener" className="inline-flex items-center gap-1 hover:text-zinc-300">
+                  <CircleHelp className="h-3.5 w-3.5" />
+                  Nasıl kullanılır
+                </a>
                 <a href="/gizlilik" target="_blank" rel="noopener" className="inline-flex items-center gap-1 hover:text-zinc-300">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Gizlilik ve KVKK

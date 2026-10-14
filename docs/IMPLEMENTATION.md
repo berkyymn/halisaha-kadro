@@ -616,3 +616,13 @@ Does the feature change what gets saved locally?
 | Theme assets | Single-mode vertical posters in `public/posters/vertical`; bump `?v=` in `StaticPosterBackground` when an image changes (1-day cache). |
 | Testing | `docs/PLATFORM-KARSILASTIRMA.md`, QA §50. |
 
+## 17. Arama motoru içeriği (2026-10-14)
+
+| Area | Contract |
+|------|----------|
+| Home page | `app/page.tsx` renders a server-side `sr-only` header (single `h1` + description; no focusable elements in it) and a `WebApplication` JSON-LD before the client `LayoutModeGate`, so the static HTML is not only "Yükleniyor…". No hidden keyword lists — the text must describe the page truthfully. The desktop app bar title is a `<p>` (only one `h1`). |
+| Guide pages | Plain server pages in the privacy-page style (`app/hali-saha-kadro-kur`). Each has its own `metadata` (absolute title, description, canonical), a "Hemen kadro kur" `Link` to `/`, and is listed in `app/sitemap.ts`. Linked from the phone menu footer and the desktop account menu ("Nasıl kullanılır"). |
+| Sample images | `public/ornek/` — generated from the app with default players only (no real people's photos). |
+| Formation guide | Content in `src/lib/formationGuide.ts` (ids must match `lib/formations.ts`; `formationGuide.test.ts` enforces). Pages: `app/hali-saha-dizilisleri` (hub) and `6-kisilik` / `7-kisilik` / `8-kisilik` using `components/guide/FormatGuidePage`; diagrams by `FormationPitch` (role colors = toolbar). |
+| Formation deep link | `/?dizilis=<formationId>` → `useFormationDeepLink` (in `AppShell`, i.e. after store hydrate + first cloud load) calls the same store actions as the toolbar (`setSquadSize`, `setHomeFormation`, `setAwayFormation` in versus), then removes the param with `history.replaceState`. Unknown ids are ignored. |
+
