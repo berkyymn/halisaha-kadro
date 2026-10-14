@@ -13,7 +13,7 @@ Her madde için test adımları `docs/QA-CHECKLIST.md` §24–§33'tedir.
 - [x] **L3** Yedek oyuncular tarafsız (gri/siyah/beyaz) formayla gösterilir; sahaya girince takım formasını alır
 - [x] **L4** Saat alanı serbest metin değil; saat ikonu/alanı ile saat seçici açılır, format `SS:DD`
 - [x] **L5** Tek takım modunda ikinci takımın oyuncuları kaybolmaz: yedekler panelinde ayrı grup olarak görünür, sürükle-bırak ile kadroya alınabilir
-- [x] **L6** Mobil / tablet girişinde uygulama kapalı; "Mobil uygulamamız yakında" ekranı + PC'den kullanım yönlendirmesi
+- [x] **L6** Mobil / tablet girişinde uygulama kapalı; "Mobil uygulamamız yakında" ekranı + PC'den kullanım yönlendirmesi — *2026-10-12: yerini mobil web sürümü aldı (PR #19, canlıda)*
 - [x] **L7** Giriş çatışması seçenekleri gerçekten işlevsel:
   - "Bu cihazı kullan" → yerel kadro + logo/forma buluta yazılır
   - "Bulutu kullan" → yerel veri tamamen buluttakiyle değişir (yerel foto/logo karışmaz)
@@ -157,3 +157,12 @@ Sıra önemli: önce testler (refactor'ların güvenlik ağı), sonra refactor'l
 - [x] **R8** Uygulama içi hesap silme: Hesap → Hesabımı sil; yeniden doğrulama → senkron durur → Storage (sahipsizler dahil) → doküman → Auth → cihaz. Emülatörde uçtan uca ✅; rules 15/15 ✅. Yan bulgu: logo yüklenince çıkan yanlış "buluta kaydedilemedi" uyarısı düzeltildi
 - [x] **R9** JPEG poster çıktısı (%92, 2400×1500 ≈ 0,7 MB; önce PNG 5,6 MB)
 - [ ] **R10** Safari/Firefox kontrolü, pilot grup geri bildirimleri
+
+## Mobil web — canlıda (2026-10-12)
+
+- [x] Telefon düzeni, iPhone/Android uyumu, ana ekrana ekleme (PR #19), `main`'den deploy
+- [x] Storage CORS repodaki dosyaya döndürüldü (önizleme adresi çıkarıldı)
+- [~] Önizleme kanalı adresi (`hali-saha-kadro-97082--mobil-d4ze6z7u.web.app`) Auth ve reCAPTCHA listelerinde **bilerek bırakıldı**: sonraki özellikler `npm run deploy:preview` ile telefonda denenir. Önizlemede fotoğraf yüklemek gerekirse bucket CORS'una geçici olarak eklenir.
+- [ ] App Check Enforce (metrikler oturunca)
+- [ ] .com.tr / .xyz yönlendirme alan adları
+
