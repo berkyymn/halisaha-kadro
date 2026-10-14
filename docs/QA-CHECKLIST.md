@@ -979,6 +979,38 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 
 ---
 
+## 52. Arama motoru içeriği (2026-10-14)
+
+| Adım | Beklenen |
+|------|----------|
+| Ana sayfa görünümü (PC ve telefon) | Değişmedi; yeni görünür öğe yok |
+| `dist/index.html` (statik HTML) | `<h1>` "Halı Saha Kadro Kur…", kısa açıklama ve `application/ld+json` (WebApplication) içerir; `<title>` "Halı Saha Kadro Kur – Ücretsiz Kadro ve Maç Posteri" |
+| `/hali-saha-kadro-kur` | Koyu temalı rehber sayfası: başlık, 3 adım, özellikler, SSS, "Hemen kadro kur" düğmesi ana sayfayı açar; telefonda yatay kaydırma yok |
+| Menü bağlantısı | Telefon menüsünün altında ve PC hesap menüsünde "Nasıl kullanılır" → rehber yeni sekmede |
+| `sitemap.xml` | `/hali-saha-kadro-kur` listede |
+
+- [ ] Geçti
+
+### Diziliş rehberi (2026-10-14)
+
+| Adım | Beklenen |
+|------|----------|
+| `/hali-saha-dizilisleri` | Üç format kartı (6 / 7 / 8 kişilik), her biri ilgili sayfaya gider |
+| `/hali-saha-dizilisleri/7-kisilik` (6 ve 8 için de) | Her diziliş için dikey saha şeması (kaleci altta, roller renkli), açıklama, "Bu dizilişle kadro kur" düğmesi; telefonda yatay kaydırma yok |
+| "Bu dizilişle kadro kur" | Uygulama o format ve dizilişle açılır (iki takımda iki takım da), adres çubuğundan `?dizilis=` silinir; özel oyuncular kaybolmaz (format küçülürse yedeğe iner) |
+| Geçersiz `?dizilis=abc` | Uygulama normal açılır, hiçbir şey değişmez |
+| `sitemap.xml` | 4 rehber sayfası listede |
+
+### Hesap menüsü sadeleştirme (2026-10-14)
+
+| Adım | Beklenen |
+|------|----------|
+| Giriş yapmışken hesap simgesine tıkla (PC ve telefon) | Menüde "Giriş yapılan hesap", e-posta ve bulut durumu satırları yok; doğrudan Hesap ayarları, İletişim, Nasıl kullanılır, Gizlilik, Çıkış yap |
+| PC: bulut simgesinin üstüne gel | İpucu: "Bulut kaydı güncel" / "Buluta kaydediliyor" / hata metni |
+| Telefon: bulut kaydında hata ya da uyarı varken menüyü aç | Menünün üstünde tek satır sarı/kırmızı durum metni (normalde görünmez) |
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash

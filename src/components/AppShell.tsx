@@ -7,6 +7,7 @@ import { RotateCcw } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGuestTabSync } from "@/hooks/useGuestTabSync";
+import { useFormationDeepLink } from "@/hooks/useFormationDeepLink";
 import { trackEvent } from "@/lib/analytics";
 import { BenchPanel } from "./BenchPanel";
 const LogoDesignerModal = dynamic(
@@ -31,6 +32,7 @@ const PlayerEditModal = dynamic(
 
 export function AppShell() {
   useGuestTabSync();
+  useFormationDeepLink();
   const { user } = useAuth();
   const isMobile = useLayoutMode() === "mobile";
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -149,10 +151,11 @@ export function AppShell() {
       ) : (
         <>
         <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
-          <h1 className="flex items-center gap-2 text-sm font-black tracking-wide">
+          {/* Sayfanın tek h1'i sunucuda çizilen başlıktır (app/page.tsx). */}
+          <p className="flex items-center gap-2 text-sm font-black tracking-wide">
             <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
             Halı Saha Kadro
-          </h1>
+          </p>
           <div className="flex items-center gap-2">
             <UserAuthButton />
             <div className="hidden sm:block h-5 w-px bg-zinc-800" />
