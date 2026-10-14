@@ -972,7 +972,7 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 
 | Adım | Beklenen |
 |------|----------|
-| Poster (tek / iki takım, tüm temalar) | Alt bandın altında ortada küçük, yarı saydam "HALISAHAKADRO.COM"; alt bantla, oyuncularla ve saha ücretiyle çakışmaz |
+| Poster (tek / iki takım, tüm temalar) | Alt bandın hemen üstünde, sol kenarına hizalı küçük, yarı saydam "HALISAHAKADRO.COM" (noktasız I); alt bantla, oyuncularla ve saha ücretiyle çakışmaz |
 | Poster indir / paylaş (PC ve telefon) | İndirilen görselde imza var ve okunuyor |
 
 - [ ] Geçti

@@ -588,7 +588,7 @@ Ayrıntı: `docs/IMPLEMENTATION.md` §16, `docs/PLATFORM-KARSILASTIRMA.md`, QA �
 
 Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklineup.com/tr, halisaha.art, tactixsquad.com/tr, kurkadro.com, lineupapp.com.tr (maç posteri), footballlineupbuilder.com/tr, varsistemi.com, takimkur.com.tr. Hepsi ücretsiz; çoğunun blogu / hedefli sayfaları var. Bizim farkımız: stadyum temalı premium poster, arka planı temizlenmiş oyuncu fotoğrafı, logo/forma tasarımı, bulut kaydı. Bing'de halisahakadro.com "halı saha takım posteri" 2., "halı saha kadro" 8. sırada (2026-10-13).
 
-- [x] Poster imzası: alt bandın altında "HALISAHAKADRO.COM" (indirilen görselde de) — QA §51
+- [x] Poster imzası: alt bandın üstünde solda "HALISAHAKADRO.COM" (indirilen görselde de) — QA §51
 - [ ] Google Search Console (domain mülkü, DNS TXT) + site haritası gönderimi (kullanıcı)
 - [ ] Ana sayfada arama motorunun okuyacağı içerik (H1, 3 adım, SSS) + JSON-LD `WebApplication` — statik HTML şu an yalnızca "Yükleniyor…"
 - [ ] Hedefli sayfalar: halı saha maç posteri, 7'li / 8'li dizilişler, kadro kur
