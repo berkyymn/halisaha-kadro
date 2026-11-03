@@ -70,6 +70,13 @@ export default function PrivacyPage() {
               onay verirsen, Google Analytics aracılığıyla anonimleştirilmiş kullanım
               verileri (hangi özelliklerin kullanıldığı, cihaz/tarayıcı türü).
             </li>
+            <li>
+              <strong className="text-white">Anonim toplam sayılar:</strong> günlük
+              kaç poster indirildiği / paylaşıldığı, uygulamanın kaç kez açıldığı ve
+              çerez tercihlerinin toplamı (ör. &quot;bugün 37 poster&quot;). Yalnızca
+              sayılar tutulur; kimlik, IP adresi, cihaz bilgisi veya çerez kullanılmaz,
+              kişisel veri içermez.
+            </li>
           </ul>
           <p>
             Oyuncu fotoğrafları başka kişilere ait olabilir. Fotoğrafını eklediğin

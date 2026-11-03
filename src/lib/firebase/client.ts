@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { getToken, initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from "firebase/app-check";
 import { reportError } from "@/lib/errorReporting";
 
 const firebaseConfig = {
@@ -21,6 +21,7 @@ export function isFirebaseConfigured(): boolean {
 }
 
 let app: FirebaseApp | null = null;
+let appCheck: AppCheck | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!isFirebaseConfigured()) {
@@ -55,7 +56,7 @@ function startAppCheck(firebaseApp: FirebaseApp): void {
   }
 
   try {
-    initializeAppCheck(firebaseApp, {
+    appCheck = initializeAppCheck(firebaseApp, {
       provider: new ReCaptchaEnterpriseProvider(siteKey),
       isTokenAutoRefreshEnabled: true,
     });
@@ -63,3 +64,19 @@ function startAppCheck(firebaseApp: FirebaseApp): void {
     reportError(error, "auth", { level: "warning", extra: { op: "app-check" } });
   }
 }
+
+/**
+ * SDK dışındaki istekler (ör. REST ile kullanım sayacı) için App Check belirteci.
+ * App Check kapalıysa ya da belirteç alınamazsa null; istek yine gönderilir.
+ */
+export async function getAppCheckTokenSafe(): Promise<string | null> {
+  if (!isFirebaseConfigured()) return null;
+  getFirebaseApp();
+  if (!appCheck) return null;
+  try {
+    return (await getToken(appCheck, false)).token;
+  } catch {
+    return null;
+  }
+}
+

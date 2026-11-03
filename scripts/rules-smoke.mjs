@@ -57,6 +57,33 @@ async function upload(uid, path, bytes, type) {
   return res.status;
 }
 
+// Anonim kullanım sayacı (stats/{gün}): kimliksiz, yalnızca 1'er artış.
+async function bump(day, fields, by = 1) {
+  const res = await fetch(`${FS.replace(/\/documents$/, "/documents:commit")}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ writes: [{ transform: {
+      document: `projects/${PROJECT}/databases/(default)/documents/stats/${day}`,
+      fieldTransforms: fields.map((fieldPath) => ({ fieldPath, increment: { integerValue: String(by) } })),
+    } }] }),
+  });
+  return res.status;
+}
+
+async function setStats(day, fields) {
+  const res = await fetch(`${FS}/stats/${day}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fields }),
+  });
+  return res.status;
+}
+
+async function readStats(day) {
+  const res = await fetch(`${FS}/stats/${day}`);
+  return res.status;
+}
+
+const statsDay = `2099-01-${String(new Date().getSeconds()).padStart(2, "0")}`;
+
 const uid = `smoke-${Date.now()}`;
 const cases = [
   ["ilk kayıt (revision 1)", () => write(uid, uid, doc({ revision: 1 })), 200],
@@ -74,6 +101,14 @@ const cases = [
   ["başkasının klasörünü listeleme", () => listFolder(uid, `users/baska/`), 403],
   ["başkasının dokümanını silme", () => remove(uid, "baska-kullanici"), 403],
   ["kendi dokümanını silme (hesap silme)", () => remove(uid, uid), 200],
+  ["sayaç: ilk artış (doküman oluşur)", () => bump(statsDay, ["posters", "whatsapp"]), 200],
+  ["sayaç: ikinci artış", () => bump(statsDay, ["posters", "posters_mobile", "download"]), 200],
+  ["sayaç: 5 artış", () => bump(statsDay, ["posters"], 5), 403],
+  ["sayaç: tanımsız alan", () => bump(statsDay, ["hacked"]), 403],
+  ["sayaç: 5'ten fazla alan", () => bump(statsDay, ["posters", "download", "x", "copy", "system"]), 403],
+  ["sayaç: değeri elle yazma", () => setStats(statsDay, { posters: { integerValue: "999" } }), 403],
+  ["sayaç: tarih dışı doküman", () => bump("hepsi", ["posters"]), 403],
+  ["sayaç: okuma kapalı", () => readStats(statsDay), 403],
 ];
 
 let failed = 0;

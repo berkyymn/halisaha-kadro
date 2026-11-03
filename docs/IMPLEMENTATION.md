@@ -626,3 +626,11 @@ Does the feature change what gets saved locally?
 | Formation guide | Content in `src/lib/formationGuide.ts` (ids must match `lib/formations.ts`; `formationGuide.test.ts` enforces). Pages: `app/hali-saha-dizilisleri` (hub) and `6-kisilik` / `7-kisilik` / `8-kisilik` using `components/guide/FormatGuidePage`; diagrams by `FormationPitch` (role colors = toolbar). |
 | Formation deep link | `/?dizilis=<formationId>` → `useFormationDeepLink` (in `AppShell`, i.e. after store hydrate + first cloud load) calls the same store actions as the toolbar (`setSquadSize`, `setHomeFormation`, `setAwayFormation` in versus), then removes the param with `history.replaceState`. Unknown ids are ignored. |
 
+## 18. Paylaşım ve kullanım sayacı (2026-10-19)
+
+| Area | Contract |
+|------|----------|
+| Share message | `lib/shareMessage.ts`: `buildShareMessage(matchInfo)` (venue omitted when default "HALI SAHA"), `xShareUrl`, `posterFileName`. Desktop WhatsApp copies the image and offers `whatsapp://send` (app) / WhatsApp Web without text — `wa.me?text` cannot attach images and users sent the bare link; X opens prefilled (pasted image joins the same post). Phone system share sends `files + text` (iOS "Fotoğraflara kaydet" sends the image only). |
+| Clipboard | `copyImageToClipboard` races a 15 s timeout → `NotAllowedError` → download fallback (overlay never hangs). |
+| Usage counter | `lib/usageStats.ts` `countUsage(...)` → Firestore REST `documents:commit` field increments on `stats/<YYYY-MM-DD Istanbul>`; no SDK/IndexedDB, App Check header when available; only production build on the live host (skips localhost / preview `--` hosts), emulator in emulator mode. Rules allow only listed fields, +1 each, ≤4 per write, no reads. Read in Firebase Console → Firestore → `stats`. |
+| Past time / date | Poster footer pickers reject a past choice instead of snapping: `PosterTimeField` `isPast` (`isPastMatchTime`: today and ≤ now) and `PosterDateField` `min` → value unchanged, `FieldWarning` (inside the footer cell, `data-export-ignore`) shows the reason for 3.5 s. Native `min` alone is not enough (iPhone wheel ignores it). Stale saved dates are still moved to today with `clampMatchTimeForDate`. |

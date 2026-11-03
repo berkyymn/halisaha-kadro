@@ -1011,6 +1011,40 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 
 ---
 
+## 53. Paylaşım mesajı, dosya adı, poster sayacı (2026-10-19)
+
+| Adım | Beklenen |
+|------|----------|
+| PC → Paylaş → WhatsApp | Poster panoya kopyalanır; bildirimde "WhatsApp uygulamasını aç" (`whatsapp://`) ve "WhatsApp Web'i aç"; hazır metin YOK (wa.me görsel taşıyamaz, kullanıcı yalnızca linki gönderiyordu); sohbete yapıştırınca poster gider, site adresi poster imzasında |
+| Telefon mesaj metni | "⚽ Maç kadromuz hazır! 14/10 22:00 · ALİBEYKÖY. Kadronu sen de kur: halisahakadro.com"; saha adı varsayılan ("HALI SAHA") ya da boşsa saha yazılmaz |
+| PC → Paylaş → X | Poster kopyalanır; "X'i aç" gönderi kutusunu mesajla doldurur; yapıştırılan poster aynı gönderiye eklenir |
+| Telefon, paylaşım menüsü yok (Brave / http) | Poster indirilir; "WhatsApp'ı aç" uygulamayı metinsiz açar, poster galeriden eklenir |
+| Telefon → Paylaş… (Android / iPhone) | Sistem paylaşımı poster + mesaj metniyle açılır; WhatsApp'ta posterin altında mesaj görünür; Instagram yalnızca görseli alır |
+| iPhone → Fotoğraflara kaydet | Yalnızca görsel (metin yok), "Görüntüyü Kaydet" görünür |
+| İndirilen dosya adı | `kadro-<takım>-<gg-aa-yyyy>.jpg` (iki takımda `kadro-<a>-vs-<b>-…`); Türkçe harfler sadeleşir |
+| Poster sayacı | Her başarılı indirme / paylaşımda `stats/<gün>` dokümanında `posters` ve kanal sayacı 1 artar; çerez tercihinden bağımsız; yalnızca canlı derlemede ve önizleme / localhost dışında (emülatörde de) |
+| Oturum ve çerez sayacı | Sekme başına 1 `sessions` (+ telefonda `sessions_mobile`); çerez bandında Kabul / Reddet → `consent_granted` / `consent_denied` |
+| Sayaç kuralları | Okuma kapalı; alan dışı yazım, 1'den farklı artış ve tarih dışı doküman adı reddedilir (`node scripts/rules-smoke.mjs`) |
+| Analytics olayları | `share_action_opened` (bildirim düğmesi), `poster_export_failed`, Google girişinde gerçek `is_new_user` |
+
+- [ ] Geçti
+
+---
+
+## 54. Geçmiş saat / tarih uyarısı (2026-11-03)
+
+| Adım | Beklenen |
+|------|----------|
+| Tarih bugün, saat şu andan önce seçilir (iPhone çark / Android saat / PC) | Saat değişmez; saat alanının üstünde ~3,5 sn "Geçmiş saat seçilemez" görünür (eskiden sessizce bir sonraki çeyrek saate atlıyordu; gece 23:30'dan sonra her seçim 23:45 oluyordu) |
+| Tarih bugün, ileri saat | Saat değişir, uyarı yok |
+| Tarih yarın ve sonrası | Her saat seçilebilir |
+| Geçmiş tarih seçilir (Android / PC; iPhone `min`'i yok sayar) | Tarih değişmez; "Geçmiş tarih seçilemez" görünür |
+| İndirilen poster | Uyarı postere çıkmaz (`data-export-ignore`) |
+
+- [ ] Geçti
+
+---
+
 ## Otomatik kontroller (her değişiklikte)
 
 ```bash

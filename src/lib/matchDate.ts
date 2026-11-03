@@ -58,6 +58,12 @@ export function nextQuarterHour(now = new Date()): string {
   return `${pad(Math.floor(rounded / 60))}:${pad(rounded % 60)}`;
 }
 
+/** Maç bugünse ve saat şu andan önceyse (ya da şu an) geçmiştir. */
+export function isPastMatchTime(date: string, time: string, now = new Date()): boolean {
+  if (!isTodayMatchDate(date, now)) return false;
+  return normalizeMatchTime(time) <= `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 /** Maç bugünse geçmiş bir saat seçilemez: geçmişteyse bir sonraki çeyrek saate çekilir. */
 export function clampMatchTimeForDate(date: string, time: string, now = new Date()): string {
   const normalized = normalizeMatchTime(time);

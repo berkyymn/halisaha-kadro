@@ -594,6 +594,12 @@ Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklin
 - [x] Rehber sayfası `/hali-saha-kadro-kur` (3 adım, özellikler, SSS, örnek poster `public/ornek/`), site haritasında, menüde "Nasıl kullanılır"
 - [x] Diziliş rehberi: `/hali-saha-dizilisleri` + 6 / 7 / 8 kişilik sayfalar (17 diziliş şeması, güçlü/zayıf yan, kime uygun, SSS); "Bu dizilişle kadro kur" → `/?dizilis=<id>` uygulamayı o dizilişle açar
 - [x] Hesap menüsü sadeleşti (e-posta / bulut durumu satırları kaldırıldı; PC'de bulut simgesi ipucu, telefonda yalnızca sorun varsa uyarı)
+- [x] Paylaşım mesajı (telefon sistem paylaşımı + X metni; masaüstü WhatsApp metinsiz: uygulama / Web düğmesi; varsayılan saha adı yazılmaz), tarihli dosya adı, pano zaman aşımı
+- [x] Çerezsiz anonim sayaç `stats/<gün>` (oturum, poster, kanal, çerez tercihi) — REST, kurallar `match /stats/{day}`; konsoldan okunur
+- [x] Analytics: `share_action_opened`, `poster_export_failed`, Google girişinde gerçek `is_new_user`
+- [x] Not: Android emülatöründe dışa aktarılan poster karanlık çıkıyor (emülatöre özgü; gerçek Android cihazda sorun yok, 2026-10-19 kullanıcı doğruladı) — poster çıktısını emülatörde doğrulama
+- [x] Geçmiş saat / tarih seçilince sessiz atlama yerine "Geçmiş saat seçilemez" / "Geçmiş tarih seçilemez" uyarısı; değer değişmez (eskiden bugünün geçmiş saati sonraki çeyreğe, 23:30'dan sonra hep 23:45'e atlıyordu) (2026-11-03)
+- [x] Search Console: diziliş hub + 6/7/8 kişilik sayfalar için dizine ekleme istendi (2026-11-03)
 - [ ] 2-4 hafta sonra Search Console verisine göre yeni sayfa kararı (ör. "halı saha maç posteri", kurallar)
 - [ ] Paylaşım metnine site linki
 - [ ] Halı saha işletmesi pilotu (QR), Reels/TikTok (kullanıcı)
