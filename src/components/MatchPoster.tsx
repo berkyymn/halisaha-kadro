@@ -10,6 +10,7 @@ import { PosterTimeField } from "./PosterTimeField";
 import {
   clampMatchTimeForDate,
   isPastMatchDate,
+  isPastMatchTime,
   isTodayMatchDate,
   nextQuarterHour,
   todayDisplayDate,
@@ -272,6 +273,7 @@ function PosterFooter({
             <PosterTimeField
               value={time}
               min={isTodayMatchDate(date) ? nextQuarterHour() : undefined}
+              isPast={(t) => isPastMatchTime(date, t)}
               onChange={onTimeChange}
               style={footerTextStyle}
               iconSize={footerIconSize}

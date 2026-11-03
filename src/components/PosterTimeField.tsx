@@ -1,6 +1,6 @@
 "use client";
 
-import { openNativePicker } from "./PosterDateField";
+import { FieldWarning, openNativePicker, useFieldWarning } from "./PosterDateField";
 import { Clock } from "lucide-react";
 import { normalizeMatchTime } from "@/lib/matchDate";
 
@@ -15,7 +15,10 @@ export function PosterTimeField({
   iconSize,
   gap,
   min,
+  isPast,
 }: {
+  /** Seçilen saat geçmişte mi (maç bugünse); öyleyse saat değişmez, uyarı görünür */
+  isPast?: (time: string) => boolean;
   /** HH:MM — maç bugünse şu andan önceki saatler seçicide pasif */
   min?: string;
   value: string;
@@ -25,6 +28,7 @@ export function PosterTimeField({
   gap: string;
 }) {
   const time = normalizeMatchTime(value);
+  const [warning, warn] = useFieldWarning();
 
   return (
     <div className="relative flex h-full items-center justify-center">
@@ -45,7 +49,15 @@ export function PosterTimeField({
           value={time}
           min={min}
           onChange={(e) => {
-            if (e.target.value) onChange(normalizeMatchTime(e.target.value));
+            if (!e.target.value) return;
+            const next = normalizeMatchTime(e.target.value);
+            // Seçiciler `min`'i her zaman uygulamaz (iPhone çarkı): sessizce
+            // başka saate atlamak yerine seçimi reddedip nedenini söyle.
+            if (isPast?.(next)) {
+              warn("Geçmiş saat seçilemez");
+              return;
+            }
+            onChange(next);
           }}
           onClick={(e) => openNativePicker(e.currentTarget)}
           data-export-ignore="true"
@@ -55,6 +67,7 @@ export function PosterTimeField({
           style={{ fontSize: 16 }}
         />
       </div>
+      <FieldWarning message={warning} />
     </div>
   );
 }

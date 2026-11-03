@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clampMatchTimeForDate,
+  isPastMatchTime,
   displayDateToIso,
   isPastMatchDate,
   isoDateToDisplay,
@@ -53,6 +54,13 @@ describe("geçmiş tarih ve saat", () => {
     expect(clampMatchTimeForDate("01/10/2026", "17:00", now)).toBe("18:15");
     expect(clampMatchTimeForDate("01/10/2026", "21:00", now)).toBe("21:00");
     expect(clampMatchTimeForDate("02/10/2026", "09:00", now)).toBe("09:00");
+  });
+
+  it("bugünün geçmiş saati geçmiştir; ileri saat ve başka gün değil", () => {
+    expect(isPastMatchTime("01/10/2026", "17:00", now)).toBe(true);
+    expect(isPastMatchTime("01/10/2026", "18:07", now)).toBe(true);
+    expect(isPastMatchTime("01/10/2026", "18:15", now)).toBe(false);
+    expect(isPastMatchTime("02/10/2026", "09:00", now)).toBe(false);
   });
 
   it("gece yarısına yakın en fazla 23:45", () => {

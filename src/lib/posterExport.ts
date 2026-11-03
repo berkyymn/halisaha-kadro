@@ -55,8 +55,18 @@ export function canCopyImage(): boolean {
  * Görseli panoya kopyalar. ClipboardItem'a promise verilir: tıklama anındaki
  * kullanıcı izni, görsel hazırlanırken düşmez (Safari bunu zorunlu tutar).
  */
-export async function copyImageToClipboard(png: Promise<Blob>): Promise<void> {
-  await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+export async function copyImageToClipboard(png: Promise<Blob>, timeoutMs = 15_000): Promise<void> {
+  // Tarayıcı izin sorusunda ya da odak yokken yazma hiç bitmeyebilir: "Poster
+  // hazırlanıyor" ekranı takılı kalmasın, çağıran indirmeye düşsün.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new DOMException("Pano zaman aşımı", "NotAllowedError")), timeoutMs);
+  });
+  try {
+    await Promise.race([navigator.clipboard.write([new ClipboardItem({ "image/png": png })]), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function canShareFile(file: File): boolean {

@@ -75,6 +75,42 @@ service cloud.firestore {
       allow create: if validFeedback();
     }
 
+    // Anonim günlük kullanım sayacı (src/lib/usageStats.ts): herkes yalnızca
+    // tanımlı alanları tam 1 artırabilir; kimse okuyamaz (konsoldan okunur).
+    // Kimlik, IP ya da serbest metin yazılamaz.
+    match /stats/{day} {
+      function counters() {
+        return ['sessions', 'sessions_mobile', 'posters', 'posters_mobile', 'download', 'whatsapp', 'instagram', 'x', 'copy', 'system', 'consent_granted', 'consent_denied'];
+      }
+
+      // Alan değişmediyse ya da tam 1 arttıysa geçerli.
+      function bumped(field) {
+        let before = resource == null ? 0 : resource.data.get(field, 0);
+        let after = request.resource.data.get(field, 0);
+        return after == before || (after is int && after == before + 1);
+      }
+
+      function validCounters() {
+        return day.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(counters())
+          && request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys().size() <= 4
+          && bumped('sessions')
+          && bumped('sessions_mobile')
+          && bumped('posters')
+          && bumped('posters_mobile')
+          && bumped('download')
+          && bumped('whatsapp')
+          && bumped('instagram')
+          && bumped('x')
+          && bumped('copy')
+          && bumped('system')
+          && bumped('consent_granted')
+          && bumped('consent_denied');
+      }
+
+      allow create, update: if validCounters();
+    }
+
     // Tanımlı olmayan her yol kapalı.
     match /{document=**} {
       allow read, write: if false;

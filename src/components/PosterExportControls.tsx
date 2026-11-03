@@ -9,6 +9,8 @@ import { noteFullscreenInterruption } from "@/lib/fullscreen";
 import { isIosDevice } from "@/lib/deviceSupport";
 import { POSTER_EXPORTED_EVENT } from "@/components/mobile/InstallSuggestion";
 import { trackEvent } from "@/lib/analytics";
+import { countUsage, type UsageCounter } from "@/lib/usageStats";
+import { buildShareMessage, posterFileName, xShareUrl } from "@/lib/shareMessage";
 import { reportError } from "@/lib/errorReporting";
 import {
   POSTER_FILENAME,
@@ -20,7 +22,16 @@ import {
   renderPosterJpeg,
 } from "@/lib/posterExport";
 
-type Notice = { text: string; detail?: string; action?: { label: string; url: string }; error?: boolean };
+type NoticeAction = { label: string; url: string };
+type Notice = { text: string; detail?: string; actions?: NoticeAction[]; error?: boolean };
+
+/**
+ * WhatsApp'ı açar ama metin göndermez: wa.me yalnızca metin taşıyabilir, görsel
+ * ekleyemez; hazır metinle açılınca kullanıcı posteri yapıştırmadan yalnızca
+ * linki gönderebiliyordu. Poster panoda / galeride; site adresi posterin imzasında.
+ */
+const WHATSAPP_APP_URL = "whatsapp://send";
+const WHATSAPP_WEB_URL = "https://web.whatsapp.com/";
 type Channel = "whatsapp" | "instagram" | "x" | "copy" | "system";
 
 /** Geliştirmede teşhis için: html-to-image görsel yüklenemeyince Event fırlatır. */
@@ -46,6 +57,12 @@ const PASTE = IS_MAC ? "⌘V" : "Ctrl+V";
 export function PosterExportControls({ compact = false }: { compact?: boolean } = {}) {
   const teamMode = useAppStore((s) => s.teamMode);
   const editVersion = useAppStore((s) => s.editVersion);
+  const matchInfo = useAppStore((s) => s.matchInfo);
+  const homeName = useAppStore((s) => s.homeTeam.name || s.homeTeam.shortName);
+  const awayName = useAppStore((s) => s.awayTeam.name || s.awayTeam.shortName);
+  // Posterle giden mesaj ve dosya adı (her paylaşım siteye geri bağlantı taşısın).
+  const shareMessage = buildShareMessage(matchInfo);
+  const fileName = posterFileName(teamMode === "single" ? [homeName] : [homeName, awayName], matchInfo.date);
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -114,6 +131,9 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
     try {
       await task();
       trackEvent(channel === "download" ? "poster_downloaded" : "poster_shared", { channel });
+      const counters: UsageCounter[] = ["posters", channel];
+      if (compact) counters.push("posters_mobile");
+      countUsage(...counters);
       // Değer anı: poster hazır. Misafire hesabın ne kazandıracağını hatırlat.
       const showNudge = configured && !user && canShowSignInNudge();
       if (showNudge) {
@@ -125,6 +145,7 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return; // paylaşım penceresi kapatıldı
       reportError(err, "export", { extra: { teamMode, channel } });
+      trackEvent("poster_export_failed", { channel });
       console.error("Poster export failed:", err);
       setNotice({
         error: true,
@@ -144,7 +165,7 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
   const download = () =>
     run(async () => {
       noteFullscreenInterruption();
-      downloadBlob(await getJpeg());
+      downloadBlob(await getJpeg(), fileName);
     }, "download");
 
   const copyThen = (channel: Channel, notice: Notice) =>
@@ -156,7 +177,7 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
         // Tarayıcı panoya yazmaya izin vermedi: poster yine de hazır, indir.
         if (!(err instanceof DOMException && err.name === "NotAllowedError")) throw err;
         noteFullscreenInterruption();
-      downloadBlob(await getJpeg());
+      downloadBlob(await getJpeg(), fileName);
         setNotice({
           ...notice,
           text: "Panoya kopyalanamadı, poster indirildi",
@@ -168,15 +189,18 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
   const shareToWhatsApp = () =>
     copyThen("whatsapp", {
       text: "Poster panoya kopyalandı",
-      detail: `WhatsApp Web'de sohbeti aç ve ${PASTE} ile yapıştır.`,
-      action: { label: "WhatsApp Web'i aç", url: "https://web.whatsapp.com/" },
+      detail: `WhatsApp'ta sohbeti aç ve posteri ${PASTE} ile yapıştır.`,
+      actions: [
+        { label: "WhatsApp uygulamasını aç", url: WHATSAPP_APP_URL },
+        { label: "WhatsApp Web'i aç", url: WHATSAPP_WEB_URL },
+      ],
     });
 
   const shareToX = () =>
     copyThen("x", {
       text: "Poster panoya kopyalandı",
-      detail: `Gönderi kutusuna ${PASTE} ile yapıştır.`,
-      action: { label: "X'i aç", url: "https://x.com/compose/post" },
+      detail: `Gönderi metni hazır; posteri ${PASTE} ile ekle.`,
+      actions: [{ label: "X'i aç", url: xShareUrl(shareMessage) }],
     });
 
   const copyOnly = () =>
@@ -188,20 +212,22 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
   const shareToInstagram = () =>
     run(async () => {
       noteFullscreenInterruption();
-      downloadBlob(await getJpeg());
+      downloadBlob(await getJpeg(), fileName);
       setNotice({
         text: "Poster indirildi",
         detail: "Instagram'da + Oluştur → Bilgisayardan seç ile indirilen posteri yükle.",
-        action: { label: "Instagram'ı aç", url: "https://www.instagram.com/" },
+        actions: [{ label: "Instagram'ı aç", url: "https://www.instagram.com/" }],
       });
     }, "instagram");
 
-  const shareWithSystem = () =>
+  /** `withText`: posterin yanına mesaj (WhatsApp'ta açıklama olur). Fotoğraflara kaydetmede metin yok. */
+  const shareWithSystem = (withText = true) =>
     run(async () => {
-      const file = new File([await getJpeg()], POSTER_FILENAME, { type: "image/jpeg" });
+      const file = new File([await getJpeg()], fileName, { type: "image/jpeg" });
+      const data: ShareData = withText ? { files: [file], text: shareMessage } : { files: [file] };
       try {
         noteFullscreenInterruption();
-        await navigator.share({ files: [file], title: "Halı Saha Kadro" });
+        await navigator.share(typeof navigator.canShare === "function" && !navigator.canShare(data) ? { files: [file] } : data);
       } catch (err) {
         // Çizim uzun sürdüyse dokunuşun verdiği izin dolmuş olabilir; poster artık hazır.
         if (!(err instanceof DOMException && err.name === "NotAllowedError")) throw err;
@@ -220,7 +246,7 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
   const mobileDownloadShare = () =>
     run(async () => {
       noteFullscreenInterruption();
-      downloadBlob(await getJpeg());
+      downloadBlob(await getJpeg(), fileName);
       setNotice(
         ios
           ? {
@@ -230,7 +256,8 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
             }
           : {
               text: "Poster telefonuna indirildi",
-              detail: "WhatsApp'ta sohbeti aç → 📎 → Galeri (ya da Belge) ile posteri gönder.",
+              detail: "WhatsApp'ta sohbeti aç → 📎 → Galeri ile posteri gönder.",
+              actions: [{ label: "WhatsApp'ı aç", url: WHATSAPP_APP_URL }],
             }
       );
     }, "download");
@@ -305,14 +332,14 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
                   icon={<Share2 className="w-4 h-4 text-green-400" />}
                   label="Paylaş…"
                   hint={ready ? "WhatsApp, Instagram ve diğerleri" : "Poster hazırlanıyor…"}
-                  onClick={shareWithSystem}
+                  onClick={() => shareWithSystem()}
                 />
                 {ios ? (
                   <MenuItem
                     icon={<Download className="w-4 h-4 text-zinc-300" />}
                     label="Fotoğraflara kaydet"
                     hint="Açılan menüde “Görüntüyü Kaydet”"
-                    onClick={shareWithSystem}
+                    onClick={() => shareWithSystem(false)}
                   />
                 ) : (
                   <MenuItem
@@ -341,7 +368,7 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
                 icon={<Share2 className="w-4 h-4 text-zinc-300" />}
                 label="Diğer…"
                 hint={ready ? "Sistem paylaşım menüsü" : "Poster hazırlanıyor…"}
-                onClick={shareWithSystem}
+                onClick={() => shareWithSystem()}
                 disabled={!ready}
               />
             )}
@@ -375,17 +402,27 @@ export function PosterExportControls({ compact = false }: { compact?: boolean } 
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">{notice.text}</p>
               {notice.detail && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{notice.detail}</p>}
-              {notice.action && (
-                <a
-                  href={notice.action.url}
-                  target="_blank"
-                  rel="noopener"
-                  onClick={() => setNotice(null)}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600"
-                >
-                  {notice.action.label}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+              {notice.actions && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {notice.actions.map((action, i) => (
+                    <a
+                      key={action.url}
+                      href={action.url}
+                      target="_blank"
+                      rel="noopener"
+                      onClick={() => {
+                        trackEvent("share_action_opened", { label: action.label });
+                        setNotice(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${
+                        i === 0 ? "bg-green-700 hover:bg-green-600" : "bg-zinc-800 hover:bg-zinc-700"
+                      }`}
+                    >
+                      {action.label}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
             <button

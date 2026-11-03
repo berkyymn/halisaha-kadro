@@ -7,6 +7,7 @@ import {
   readAnalyticsConsent,
   setAnalyticsConsent,
 } from "@/lib/analytics";
+import { countUsage } from "@/lib/usageStats";
 
 export const CONSENT_RESET_EVENT = "halisaha-consent-reset";
 
@@ -26,6 +27,8 @@ export function ConsentBanner() {
 
   const choose = (consent: "granted" | "denied") => {
     setAnalyticsConsent(consent);
+    // Kaç kişinin reddettiğini bilmek için (GA reddedenleri göremez); anonim toplam.
+    countUsage(consent === "granted" ? "consent_granted" : "consent_denied");
     setOpen(false);
   };
 

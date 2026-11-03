@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { trackEvent } from "@/lib/analytics";
+import { countSessionOnce } from "@/lib/usageStats";
 import { detectLayoutMode, type LayoutMode } from "@/lib/deviceSupport";
 // Kurulum teklifini sayfa açılır açılmaz yakalamak için erken yüklenir.
 import "@/lib/installPrompt";
@@ -29,6 +30,7 @@ export function LayoutModeGate({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode(detected);
     if (detected === "mobile") trackEvent("mobile_layout_shown");
+    countSessionOnce(detected === "mobile");
   }, []);
 
   if (!mode) return <AppLoadingScreen message="Yükleniyor…" />;
