@@ -9,7 +9,7 @@ export function GuideShell({ children, breadcrumb }: { children: ReactNode; brea
       <article className="mx-auto max-w-3xl space-y-10 px-5 py-10 sm:py-14">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <BackToAppLink className="inline-flex items-center gap-2 font-bold text-zinc-300 hover:text-white">
-            <img src="/icon.svg" alt="" width={28} height={28} className="rounded-lg" />
+            <img src="/logo-mark.svg" alt="" width={36} height={30} />
             Halı Saha Kadro
           </BackToAppLink>
           {breadcrumb}

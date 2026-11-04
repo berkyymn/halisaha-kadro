@@ -153,7 +153,7 @@ export function AppShell() {
         <header className="shrink-0 h-11 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
           {/* Sayfanın tek h1'i sunucuda çizilen başlıktır (app/page.tsx). */}
           <p className="flex items-center gap-2 text-sm font-black tracking-wide">
-            <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
+            <img src="/logo-mark.svg" alt="" width={30} height={25} />
             Halı Saha Kadro
           </p>
           <div className="flex items-center gap-2">

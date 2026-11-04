@@ -16,7 +16,7 @@ export function AppErrorBoundary({ children }: { children: ReactNode }) {
       }}
       fallback={
         <main className="flex h-full flex-col items-center justify-center gap-4 bg-zinc-950 px-6 text-center text-white">
-          <img src="/icon.svg" alt="" width={56} height={56} className="rounded-xl" />
+          <img src="/logo-mark.svg" alt="" width={120} height={98} />
           <h1 className="text-lg font-black">Bir şeyler ters gitti</h1>
           <p className="max-w-sm text-sm text-zinc-400">
             Hata bize otomatik olarak bildirildi. Kadron bu cihazda kayıtlı;

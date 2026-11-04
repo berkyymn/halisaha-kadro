@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <article className="mx-auto max-w-3xl space-y-8 px-5 py-10 sm:py-14">
         <header className="space-y-3">
           <BackToAppLink className="inline-flex items-center gap-2 text-sm font-bold text-zinc-300 hover:text-white">
-            <img src="/icon.svg" alt="" width={28} height={28} className="rounded-lg" />
+            <img src="/logo-mark.svg" alt="" width={36} height={30} />
             Halı Saha Kadro
           </BackToAppLink>
           <h1 className="text-2xl font-black sm:text-3xl">
