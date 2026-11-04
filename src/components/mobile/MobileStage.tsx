@@ -161,7 +161,7 @@ export function MobileStage({
           <aside className="absolute inset-x-0 bottom-0 z-50 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-zinc-800 bg-zinc-900 shadow-2xl landscape:inset-x-auto landscape:left-0 landscape:top-0 landscape:max-h-none landscape:w-[min(20rem,46vw)] landscape:rounded-none landscape:border-r landscape:border-t-0">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-800 px-3 py-2">
               <span className="flex items-center gap-2 text-sm font-black tracking-wide">
-                <img src="/icon.svg" alt="" width={20} height={20} className="rounded-md" />
+                <img src="/logo-mark.svg" alt="" width={28} height={23} />
                 Halı Saha Kadro
               </span>
               <button

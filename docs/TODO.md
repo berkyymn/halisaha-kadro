@@ -599,6 +599,8 @@ Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklin
 - [x] Analytics: `share_action_opened`, `poster_export_failed`, Google girişinde gerçek `is_new_user`
 - [x] Not: Android emülatöründe dışa aktarılan poster karanlık çıkıyor (emülatöre özgü; gerçek Android cihazda sorun yok, 2026-10-19 kullanıcı doğruladı) — poster çıktısını emülatörde doğrulama
 - [x] Geçmiş saat / tarih seçilince sessiz atlama yerine "Geçmiş saat seçilemez" / "Geçmiş tarih seçilemez" uyarısı; değer değişmez (eskiden bugünün geçmiş saati sonraki çeyreğe, 23:30'dan sonra hep 23:45'e atlıyordu) (2026-11-03)
+- [x] Yeni logo (izometrik saha): favicon, PWA ikonları, iPhone açılış, OG görseli, uygulama içi başlıklar; yükleme ekranında logo büyüdü (2026-11-04)
+- [x] Tarih / saat kısıtları kaldırıldı: geçmiş saat/tarih seçilebilir, kayıtlı tarih bugüne çekilmez (2026-11-04)
 - [x] Search Console: diziliş hub + 6/7/8 kişilik sayfalar için dizine ekleme istendi (2026-11-03)
 - [ ] 2-4 hafta sonra Search Console verisine göre yeni sayfa kararı (ör. "halı saha maç posteri", kurallar)
 - [ ] Paylaşım metnine site linki

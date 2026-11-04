@@ -761,8 +761,8 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Oyuncu numarası | Harf ve 3. basamak yazılamaz (yapıştırmada da); "07" → 7 |
 | Arka plan kaldırılırken | Fotoğraf değiştir / Geri al / Fotoğrafı kaldır pasif; işlem bitmeden fotoğraf değişse bile sonuç yanlış fotoğrafa yazılmaz |
 | Yedek kartları | Her iki modda 96 px (tek takımda küçülmez), iki sütun |
-| Tarih | Geçmiş tarihli kayıt açılınca bugüne çekilir; seçicide geçmiş günler pasif |
-| Saat | Maç bugünse geçmiş saat seçilemez (bir sonraki çeyrek saate çekilir) |
+| Tarih | Kısıt yok (2026-11-04): geçmiş tarih seçilebilir, kayıtlı tarih açılışta değişmez (bkz. §55) |
+| Saat | Kısıt yok (2026-11-04): her saat seçilebilir (bkz. §55) |
 
 - [x] Geçti (tarayıcı 1440×900; pano izni bu ortamda kapalı olduğu için yedek yol doğrulandı, çıktı 2400×1500 JPEG)
 
@@ -1031,15 +1031,34 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 
 ---
 
-## 54. Geçmiş saat / tarih uyarısı (2026-11-03)
+## 54. Geçmiş saat / tarih uyarısı (2026-11-03) — kaldırıldı
 
-| Adım | Beklenen |
-|------|----------|
+§55 ile tarih/saat kısıtları tamamen kaldırıldı; bu bölüm artık geçerli değil.
+
+------|----------|
 | Tarih bugün, saat şu andan önce seçilir (iPhone çark / Android saat / PC) | Saat değişmez; saat alanının üstünde ~3,5 sn "Geçmiş saat seçilemez" görünür (eskiden sessizce bir sonraki çeyrek saate atlıyordu; gece 23:30'dan sonra her seçim 23:45 oluyordu) |
 | Tarih bugün, ileri saat | Saat değişir, uyarı yok |
 | Tarih yarın ve sonrası | Her saat seçilebilir |
 | Geçmiş tarih seçilir (Android / PC; iPhone `min`'i yok sayar) | Tarih değişmez; "Geçmiş tarih seçilemez" görünür |
 | İndirilen poster | Uyarı postere çıkmaz (`data-export-ignore`) |
+
+- [ ] Geçti
+
+---
+
+## 55. Yeni logo ve serbest tarih / saat (2026-11-04)
+
+| Adım | Beklenen |
+|------|----------|
+| Sekme ikonu (açık ve koyu sekme çubuğu) | Saydam zeminli, yakın plan izometrik saha (`favicon.svg` / `favicon-48.png`); siyah kare yok |
+| PWA ikonu (Android / iPhone ana ekran), iPhone açılış ekranı | İzometrik saha logosu (koyu yuvarlatılmış karo) |
+| Yükleme ekranı | Yeni logo eskisinden belirgin büyük (160 px genişlik) |
+| Üst bar (PC), mobil menü, rehber / gizlilik başlıkları, hata ekranı | Yeni logo (karosuz, şeffaf) |
+| Paylaşım önizlemesi (`og-image.png`) | Solda yeni logo karosu, yazılar aynı |
+| Bugün, şu andan önceki saat seçilir | Saat değişir, uyarı yok |
+| Geçmiş tarih seçilir (PC / Android / iPhone) | Tarih değişir, uyarı yok |
+| Geçmiş tarihli poster yeniden açılır | Tarih olduğu gibi kalır (bugüne çekilmez) |
+| Yeni poster | Tarih yine bugünle başlar |
 
 - [ ] Geçti
 

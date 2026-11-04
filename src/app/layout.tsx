@@ -57,7 +57,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      // Sekme ikonu: saydam, yakın plan saha (uygulama ikonu icon.svg koyu karolu kalır).
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
     ],
     apple: "/apple-touch-icon.png",

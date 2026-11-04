@@ -17,7 +17,7 @@ export function AppLoadingScreen({
       aria-busy="true"
     >
       <div className="flex flex-col items-center gap-5 px-6 text-center">
-        <img src="/icon.svg" alt="" width={56} height={56} className="rounded-xl" />
+        <img src="/logo-mark.svg" alt="" width={160} height={131} />
         <p className="text-lg font-black tracking-wide">Halı Saha Kadro</p>
         <Loader2
           className="h-8 w-8 animate-spin text-green-500"
