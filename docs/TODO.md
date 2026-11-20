@@ -601,6 +601,8 @@ Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklin
 - [x] Geçmiş saat / tarih seçilince sessiz atlama yerine "Geçmiş saat seçilemez" / "Geçmiş tarih seçilemez" uyarısı; değer değişmez (eskiden bugünün geçmiş saati sonraki çeyreğe, 23:30'dan sonra hep 23:45'e atlıyordu) (2026-11-03)
 - [x] Yeni logo (izometrik saha): favicon, PWA ikonları, iPhone açılış, OG görseli, uygulama içi başlıklar; yükleme ekranında logo büyüdü (2026-11-04)
 - [x] Tarih / saat kısıtları kaldırıldı: geçmiş saat/tarih seçilebilir, kayıtlı tarih bugüne çekilmez (2026-11-04)
+- [x] Sentry: iPhone arka planındaki Firebase Auth IndexedDB gürültüsü yok sayıldı; fotoğraf (data:/blob:) iz kayıtları gönderilmiyor (2026-11-05)
+- [x] Safari / iPhone poster çıktısı boştu (saha, logo, fotoğraf yok): Safari'de görseller gelene kadar yeniden çiziliyor (2026-11-06)
 - [x] Search Console: diziliş hub + 6/7/8 kişilik sayfalar için dizine ekleme istendi (2026-11-03)
 - [ ] 2-4 hafta sonra Search Console verisine göre yeni sayfa kararı (ör. "halı saha maç posteri", kurallar)
 - [ ] Paylaşım metnine site linki
