@@ -1078,6 +1078,26 @@ Safari (Mac ve iPhone; iPhone'daki Chrome da WebKit) ilk çizimlerde posterdeki 
 
 - [x] Geçti (Playwright WebKit 18.2 Mac + iPhone düzeni, iOS 26 simülatör Safari — localhost build; canlı sürümde hata doğrulandı; 2026-11-20 gerçek Mac Safari 27’de kullanıcı doğruladı)
 
+## 57. Saat seçimi: tek pencere, dakika çeyrek (2026-11-20)
+
+| Adım | Beklenen |
+|------|----------|
+| Alt şeritte saate tıkla / dokun | "Maç saati" penceresi: üstte seçili saat, altında saatler (00–23) ve dakikalar (00 / 15 / 30 / 45) aynı anda |
+| PC Chrome, Mac Safari, iPhone Safari, Android Chrome | Aynı pencere; telefonda butonlar parmakla rahat seçilir |
+| Saat ve dakika seç → Kaydet | Postere yansır, yenilemede kalır, çıktıda "21:00" biçiminde |
+| Vazgeç / X / dışarı tıkla / Escape | Saat değişmez |
+| Eskiden kaydedilmiş çeyrek olmayan dakika (ör. 20:10) | Pencerede seçili görünür; başka dakika seçilince değişir |
+| Poster çıktısı | Saat yazısı düğme gibi görünmez (çerçeve / arka plan yok) |
+
+- [x] Geçti (WebKit masaüstü + iPhone düzeni: 24 saat + 4 dakika, 20:30 kaydedildi, Vazgeç ve Escape değiştirmedi, yenilemede kaldı, çıktıda düz "20:30"; seçenek düğmesi ~50×40 px; iOS 26 simülatör Safari: pencere açıldı, 21:00 kaydedildi)
+
+### Safari tam tur (2026-11-20)
+
+Playwright WebKit 18.2 (masaüstü 1440×900 ve iPhone 15 düzeni) + iOS 26 simülatör Safari, localhost build. Masaüstü 31/31, iPhone 22/22 adım geçti:
+açılış, çerez bandı, saat / tarih / saha adı, format 6-7-8, diziliş, dört tema, başlık, takım adı ve logo penceresi, oyuncu (ad, numara, kaptan, fotoğraf), arka plan kaldırma (~17 sn, model indirme dahil), sürükle takas, yedek ekle ve sahaya sürükle, saha ücreti, tek / iki takım, yenileme sonrası kalıcılık, Poster İndir, paylaş menüsü (Instagram indirir, WhatsApp panoya kopyalar), sistem paylaşımı ve Fotoğraflara kaydet (metinsiz), giriş penceresi ve Google açılır penceresi, menü / iletişim, sıfırla, rehber sayfaları, `?dizilis` bağlantısı, yatay ekran.
+Gerçek iOS Safari'de ayrıca: saat listesi, tarih takvimi, parmakla sürükleme takası, Fotoğraf Kitaplığı'ndan fotoğraf, paylaşım penceresi → Görüntüyü Kaydet (fotoğraflı poster tam).
+Denenmedi: gerçek hesapla Google girişi ve bulut eşitleme, logo yükleme, Mac'teki Safari 27 uygulamasının kendisi (motoru WebKit 18.2 ile denendi).
+
 ---
 
 ## Otomatik kontroller (her değişiklikte)
@@ -1115,6 +1135,7 @@ npm run lint
 | 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |
 | 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |
 | 2026-11-06 | Safari / iPhone poster çıktısı: görseller gelene kadar yeniden çizim; Sentry IDB gürültüsü + fotoğraf iz kayıtları | §56 + posterExport testi | Geçti (WebKit + iOS simülatör, localhost build) |
+| 2026-11-20 | Saat seçimi: tek pencerede saat 00–23 + dakika 00/15/30/45; Safari tam tur | §57 + 224 test | Geçti (WebKit + iOS simülatör) |
 | 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |
 | 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |
 | 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |

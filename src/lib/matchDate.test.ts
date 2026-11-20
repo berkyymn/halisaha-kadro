@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   displayDateToIso,
   isoDateToDisplay,
+  MATCH_HOUR_OPTIONS,
+  matchMinuteOptions,
   normalizeMatchTime,
 } from "@/lib/matchDate";
 import { isCustomizedPlayer } from "@/lib/playerPool";
@@ -16,6 +18,23 @@ describe("normalizeMatchTime", () => {
     [undefined, "21:00"],
   ])("%s → %s", (input, expected) => {
     expect(normalizeMatchTime(input)).toBe(expected);
+  });
+});
+
+describe("saat / dakika seçenekleri", () => {
+  it("saat 00 … 23", () => {
+    expect(MATCH_HOUR_OPTIONS).toHaveLength(24);
+    expect(MATCH_HOUR_OPTIONS[0]).toBe("00");
+    expect(MATCH_HOUR_OPTIONS[23]).toBe("23");
+  });
+
+  it("dakika yalnızca çeyrekler", () => {
+    expect(matchMinuteOptions("30")).toEqual(["00", "15", "30", "45"]);
+    expect(matchMinuteOptions()).toEqual(["00", "15", "30", "45"]);
+  });
+
+  it("kayıtlı çeyrek olmayan dakika sırasıyla eklenir", () => {
+    expect(matchMinuteOptions("10")).toEqual(["00", "10", "15", "30", "45"]);
   });
 });
 

@@ -31,3 +31,22 @@ export function normalizeMatchTime(value: string | undefined): string {
   if (hours > 23 || minutes > 59) return DEFAULT_MATCH_TIME;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
+
+/** Saat listesi: 00 … 23. */
+export const MATCH_HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
+
+/** Dakika yalnızca çeyrekler: her dakikayı seçtirmek gereksiz. */
+export const MATCH_MINUTE_OPTIONS = ["00", "15", "30", "45"] as const;
+
+/**
+ * Dakika listesi. Eskiden kaydedilmiş çeyrek olmayan dakika (ör. 20:10)
+ * kaybolmasın diye listede kendi yerine eklenir.
+ */
+export function matchMinuteOptions(currentMinute?: string): string[] {
+  const options: string[] = [...MATCH_MINUTE_OPTIONS];
+  if (currentMinute && /^\d{2}$/.test(currentMinute) && !options.includes(currentMinute)) {
+    options.push(currentMinute);
+    options.sort();
+  }
+  return options;
+}
