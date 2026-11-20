@@ -603,6 +603,10 @@ Rakipler (Bing TR, "halı saha kadro kur" ve benzeri): kadrokur.com.tr, quicklin
 - [x] Tarih / saat kısıtları kaldırıldı: geçmiş saat/tarih seçilebilir, kayıtlı tarih bugüne çekilmez (2026-11-04)
 - [x] Sentry: iPhone arka planındaki Firebase Auth IndexedDB gürültüsü yok sayıldı; fotoğraf (data:/blob:) iz kayıtları gönderilmiyor (2026-11-05)
 - [x] Safari / iPhone poster çıktısı boştu (saha, logo, fotoğraf yok): Safari'de görseller gelene kadar yeniden çiziliyor (2026-11-06)
+- [x] Saat seçimi: tek pencerede saat (00–23) + dakika (yalnızca 00/15/30/45), her cihazda aynı (2026-11-20)
+- [x] Safari tam tur: masaüstü 31/31, iPhone 22/22, gerçek iOS Safari seçiciler / fotoğraf / paylaşım (2026-11-20)
+- [ ] Telefonda yedek çekmecesi dışarı dokununca kapanmıyor, açıkken saha ücretini örtüyor (karar: tasarım mı)
+- [ ] Google penceresi kapatılınca giriş penceresi ~9,5 sn "bekliyor" (Firebase; Chrome'da da aynı) — X ile kapanıyor
 - [x] Search Console: diziliş hub + 6/7/8 kişilik sayfalar için dizine ekleme istendi (2026-11-03)
 - [ ] 2-4 hafta sonra Search Console verisine göre yeni sayfa kararı (ör. "halı saha maç posteri", kurallar)
 - [ ] Paylaşım metnine site linki
