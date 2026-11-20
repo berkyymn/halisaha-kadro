@@ -14,15 +14,40 @@ export async function renderPosterJpeg(teamMode: TeamMode): Promise<Blob> {
   if (!el) throw new Error("Poster bulunamadı");
   const { toJpeg } = await import("html-to-image");
   const pixelRatio = Math.max(2, EXPORT_WIDTH[teamMode] / Math.max(1, el.offsetWidth));
-  const dataUrl = await toJpeg(el, {
-    pixelRatio,
+  const options = {
     cacheBust: true,
     quality: EXPORT_JPEG_QUALITY,
     backgroundColor: "#09090b",
     // Düzenleme ipuçları (Düzenle, Başlık ekle) çıktıya girmez.
-    filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
-  });
+    filter: (node: HTMLElement) => !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
+  };
+  let dataUrl = await toJpeg(el, { ...options, pixelRatio });
+  // Safari (WebKit) SVG içine gömülen görselleri çözmeden tuvale basıyor: ilk
+  // çizimlerde saha, logolar ve fotoğraflar boş çıkıyordu. Görseller bir çizim
+  // denemesi sırasında arka planda çözülür; birkaç deneme sonra tam gelir
+  // (zamanlama değişken, küçük boyutlu ısınma işe yaramıyor). Tam çizimler
+  // birebir aynı çıkar, eksikler birbirinden farklı: çıktı iki kez aynı olana
+  // kadar tekrarla, en büyüğünü (en çok görseli olanı) kullan.
+  if (needsWarmupRender()) {
+    let previous = dataUrl;
+    for (let i = 1; i < SAFARI_MAX_RENDERS; i++) {
+      await new Promise((resolve) => setTimeout(resolve, SAFARI_DECODE_WAIT_MS));
+      const next = await toJpeg(el, { ...options, pixelRatio });
+      if (next.length > dataUrl.length) dataUrl = next;
+      if (next === previous) break;
+      previous = next;
+    }
+  }
   return (await fetch(dataUrl)).blob();
+}
+
+const SAFARI_MAX_RENDERS = 6;
+const SAFARI_DECODE_WAIT_MS = 250;
+
+/** Safari ve iPhone'daki tüm tarayıcılar (hepsi WebKit). Chrome/Edge/Firefox masaüstünde gerekmez. */
+export function needsWarmupRender(ua: string = typeof navigator === "undefined" ? "" : navigator.userAgent): boolean {
+  if (/iPhone|iPad|iPod/.test(ua)) return true;
+  return /AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua);
 }
 
 /** Pano yalnızca PNG kabul eder (Chrome/Safari): JPEG'i PNG'ye çevirir. */

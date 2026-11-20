@@ -669,6 +669,7 @@ Asset kontrolü: `public/posters/*.png` → tarayıcıda 404 olmamalı.
 | Google hesabı | Onay için Google penceresi açılır |
 | Logo yükle (giriş yapılı) | "Logo buluta kaydedilemedi" gibi yanlış uyarı çıkmaz |
 | Canlıda bir hata oluşur | Sentry'de `area` etiketiyle görünür; localhost'tan gönderim yok |
+| Sentry olayının iz kayıtları (breadcrumbs) | Oyuncu fotoğrafı (`data:` / `blob:` istekleri) görünmez; iPhone arka plan "database connection is closing" olayı gelmez |
 | Render hatası | Beyaz ekran yerine "Bir şeyler ters gitti" + yenile butonu |
 
 - [x] Geçti (emülatör + LAN build)
@@ -1062,6 +1063,21 @@ Simülatör: `npm run dev:lan` → iOS Simulator Safari'de `http://<LAN IP>:3000
 
 - [ ] Geçti
 
+## 56. Safari poster çıktısı (2026-11-06)
+
+Safari (Mac ve iPhone; iPhone'daki Chrome da WebKit) ilk çizimlerde posterdeki görselleri boş basıyordu: indirilen / paylaşılan posterde saha, logolar ve oyuncu fotoğrafları yoktu, yalnızca kartlar ve alt şerit vardı. Hata fırlatmadığı için Sentry'ye düşmüyordu.
+
+| Adım | Beklenen |
+|------|----------|
+| Mac Safari: Poster İndir (ilk açılışta, ilk tıklama) | Saha, iki logo, tema arka planı tam; dosya ~850 KB (bozuk olan ~320 KB) |
+| Mac Safari: aynı posteri ikinci kez indir | Önbellekten anında, yine tam |
+| iPhone Safari: Paylaş → Fotoğraflara kaydet → Görüntüyü Kaydet | Fotoğraflar'daki poster tam (tek takım ~770 KB; bozuk olan ~220 KB) |
+| iPhone Safari: Paylaş → Paylaş… (WhatsApp) | Paylaşım penceresi açılır; gönderilen poster tam |
+| Oyuncu fotoğrafı ekle → poster çıktısı (Safari) | Fotoğraf posterde görünür |
+| Chrome / Edge / Firefox / Android | Davranış aynı, tek çizim (yavaşlama yok) |
+
+- [x] Geçti (Playwright WebKit 18.2 Mac + iPhone düzeni, iOS 26 simülatör Safari — localhost build; canlı sürümde hata doğrulandı; 2026-11-20 gerçek Mac Safari 27’de kullanıcı doğruladı)
+
 ---
 
 ## Otomatik kontroller (her değişiklikte)
@@ -1098,6 +1114,7 @@ npm run lint
 | 2026-10-01 | Tek takım: logo üst şeritte, saha %19–87, kartlar ~%15 büyük (logo–forvet çakışması giderildi); ücret 'Sadece takımımız' varsayılan (persist v39) | §45 + yerleşim testleri | Geçti |
 | 2026-10-01 | Saha ücreti: toplam tutar, kaleciler öder mi, kişi başı alt şeritte (persist v38) | §44 + matchFee testleri | Geçti |
 | 2026-10-01 | Pilot bulguları: paylaş menüsü + hazırlanıyor animasyonu, başlık gizleme (persist v37), numara alanı, arka plan kaldırma yarışı, yedek kart boyutu, tarih/saat kuralları, gizlilik dönüşü, yeni varsayılanlar | §43 + 184 test | Geçti |
+| 2026-11-06 | Safari / iPhone poster çıktısı: görseller gelene kadar yeniden çizim; Sentry IDB gürültüsü + fotoğraf iz kayıtları | §56 + posterExport testi | Geçti (WebKit + iOS simülatör, localhost build) |
 | 2026-09-29 | Araç çubuğu (segment, tema görselleri, şemalı diziliş), yedek paneli (ızgara, sayaç), alt bilgi ve takım adı/logo postere orantılı, App Check (opsiyonel) | §42 + build/lint/test | Geçti |
 | 2026-09-29 | Saha dizilimi ve oyuncu kartı: hatlar sahaya yayılır, kartlar büyük ve postere orantılı, takım renkli halka/plaka, Bebas numara; önceden var olan çakışmalar giderildi (29 senaryo) | §41 + 103 yerleşim testi | Geçti |
 | 2026-09-29 | Logo/forma penceresi yeniden tasarım: taslak + Kaydet/Vazgeç, game-icons dolgu sembolleri (28), görsel seçiciler, logonun renkleriyle forma, Çapraz şerit | §7 + build/lint/test | Tarayıcıda doğrulandı |

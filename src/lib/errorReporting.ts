@@ -53,10 +53,17 @@ export function initErrorReporting(): void {
       // Kullanıcı Google penceresini kapattı vb.
       "auth/popup-closed-by-user",
       "auth/cancelled-popup-request",
+      // iPhone Safari arka plandaki sekmenin IndexedDB bağlantısını kapatır;
+      // Firebase Auth'un oturum yoklaması (yakalanmamış) bunu raporlar. Sayfa
+      // öne gelince bağlantı yeniden açılır, kullanıcıya etkisi yok.
+      "The database connection is closing",
     ],
     beforeBreadcrumb(breadcrumb) {
       // Konsol kayıtları oyuncu adı/fotoğraf verisi içerebilir; gönderme.
       if (breadcrumb.category === "console") return null;
+      // data:/blob: istekleri oyuncu fotoğrafının kendisidir (base64); gönderme.
+      const url = breadcrumb.data?.url;
+      if (typeof url === "string" && /^(data|blob):/.test(url)) return null;
       return breadcrumb;
     },
   });
